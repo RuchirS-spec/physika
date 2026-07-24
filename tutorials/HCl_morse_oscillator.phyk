@@ -1,0 +1,205 @@
+# ----------------------------------------------------------------------------
+# HCl vibration using a Morse potential
+#
+# Required Physika operation:
+#
+#     eigh(symmetric_matrix)
+# ----------------------------------------------------------------------------
+
+def zero_array(length: ℕ): ℝ[m]:
+    values: ℝ[length] = for i: ℕ(length) -> i * 0.0
+    return values
+
+
+def zero_matrix(rows: ℕ, columns: ℕ): ℝ[m,n]:
+    values: ℝ[rows,columns] = for i: ℕ(rows) -> for j: ℕ(columns) -> j * 0.0
+    return values
+
+
+def linspace(start: ℝ, end: ℝ, number: ℕ): ℝ[m]:
+    values: ℝ[number] = zero_array(number)
+    spacing: ℝ = (end - start) / (number - 1)
+    for i: ℕ(0, number):
+        values[i] = start + i * spacing
+    return values
+
+
+def integrate(values: ℝ[m], grid_spacing: ℝ, number: ℕ): ℝ:
+    integral: ℝ = 0.0
+    for i: ℕ(0, number):
+        integral = integral + values[i] * grid_spacing
+    return integral
+
+
+# ----------------------------------------------------------------------------
+# constants
+# ----------------------------------------------------------------------------
+
+atomic_mass_unit: ℝ = 1.66053906660e-27
+hbar: ℝ = 1.054571817e-34
+planck_constant: ℝ = 6.62607015e-34
+speed_of_light_cm: ℝ = 2.99792458e10
+electron_volt: ℝ = 1.602176634e-19
+
+
+# ----------------------------------------------------------------------------
+# HCl reduced mass
+# ----------------------------------------------------------------------------
+
+mass_H_u: ℝ = 1.00784
+mass_Cl_u: ℝ = 35.45
+
+mass_H: ℝ = mass_H_u * atomic_mass_unit
+mass_Cl: ℝ = mass_Cl_u * atomic_mass_unit
+
+reduced_mass_HCl: ℝ = ((mass_H * mass_Cl) / (mass_H + mass_Cl))
+
+
+# ----------------------------------------------------------------------------
+# Morse-potential
+# V(r) = D_e [1 - exp(-a(r-r_e))]^2
+# ----------------------------------------------------------------------------
+
+dissociation_energy_eV: ℝ = 4.434  #4.62
+dissociation_energy_J: ℝ = (dissociation_energy_eV * electron_volt)
+
+equilibrium_distance: ℝ = 1.2746e-10
+morse_a: ℝ = 1.87e10
+
+N_grid: ℕ = 400
+
+r_min: ℝ = 0.50e-10
+r_max: ℝ = 5.00e-10
+
+grid_spacing: ℝ = ((r_max - r_min) / (N_grid + 1))
+
+r_start: ℝ = r_min + grid_spacing
+r_end: ℝ = r_max - grid_spacing
+
+bond_distance: ℝ[N_grid] = linspace(r_start, r_end, N_grid)
+
+distance_from_equilibrium: ℝ[N_grid] = (bond_distance - equilibrium_distance)
+
+morse_exponential: ℝ[N_grid] = exp(-morse_a * distance_from_equilibrium)
+morse_difference: ℝ[N_grid] = (1.0 - morse_exponential)
+potential_J: ℝ[N_grid] = (dissociation_energy_J * morse_difference * morse_difference)
+potential_eV: ℝ[N_grid] = (potential_J / electron_volt)
+
+# ----------------------------------------------------------------------------
+# Finite-difference kinetic-energy coefficient
+# C = hbar^2 / (2 mu dr^2)
+# ----------------------------------------------------------------------------
+
+kinetic_coefficient_J: ℝ = ((hbar / grid_spacing) * (hbar / (2.0 * reduced_mass_HCl * grid_spacing)))
+kinetic_coefficient_eV: ℝ = (kinetic_coefficient_J / electron_volt)
+
+# ----------------------------------------------------------------------------
+# Construct the finite-difference Hamiltonian
+# Diagonal:
+#     H[i,i] = 2C + V(r_i)
+#
+# Off-diagonal:
+#     H[i,i+1] = H[i+1,i] = -C
+# ----------------------------------------------------------------------------
+
+hamiltonian: ℝ[N_grid,N_grid] = zero_matrix(N_grid, N_grid)
+
+for i: ℕ(0, N_grid):
+    hamiltonian[i, i] = (2.0 * kinetic_coefficient_eV + potential_eV[i])
+
+for i: ℕ(0, N_grid - 1):
+    hamiltonian[i, i + 1] = (-kinetic_coefficient_eV)
+    hamiltonian[i + 1, i] = (-kinetic_coefficient_eV)
+
+eigen_result = eigh(hamiltonian)
+
+vibrational_energies_eV: ℝ[N_grid] = eigen_result[0]
+eigenvectors: ℝ[N_grid,N_grid] = eigen_result[1]
+
+# ----------------------------------------------------------------------------
+# Extract the 2 lowest vibrational energies
+# ----------------------------------------------------------------------------
+
+energy_0_eV: ℝ = vibrational_energies_eV[0]
+energy_1_eV: ℝ = vibrational_energies_eV[1]
+
+# ----------------------------------------------------------------------------
+# Extract the first two numerical wavefunctions
+# ----------------------------------------------------------------------------
+
+psi_0_raw: ℝ[N_grid] = zero_array(N_grid)
+psi_1_raw: ℝ[N_grid] = zero_array(N_grid)
+
+for i: ℕ(0, N_grid):
+    psi_0_raw[i] = eigenvectors[i, 0]
+    psi_1_raw[i] = eigenvectors[i, 1]
+
+
+# ----------------------------------------------------------------------------
+# Normalize the wavefunctions
+# Integral |psi(r)|^2 dr = 1
+# ----------------------------------------------------------------------------
+
+norm_0_squared: ℝ = integrate(psi_0_raw * psi_0_raw, grid_spacing, N_grid)
+norm_1_squared: ℝ = integrate(psi_1_raw * psi_1_raw, grid_spacing, N_grid)
+
+normalization_factor_0: ℝ = sqrt(norm_0_squared)
+normalization_factor_1: ℝ = sqrt(norm_1_squared)
+
+psi_0: ℝ[N_grid] = (psi_0_raw / normalization_factor_0)
+psi_1: ℝ[N_grid] = (psi_1_raw / normalization_factor_1)
+
+normalization_check_0: ℝ = integrate(psi_0 * psi_0, grid_spacing, N_grid)
+normalization_check_1: ℝ = integrate(psi_1 * psi_1, grid_spacing, N_grid)
+
+# ----------------------------------------------------------------------------
+# Vibrational transitions
+# ----------------------------------------------------------------------------
+
+transition_01_eV: ℝ = (energy_1_eV - energy_0_eV)
+transition_01_J: ℝ = (transition_01_eV * electron_volt)
+
+# ----------------------------------------------------------------------------
+# Convert transition energies to wavenumbers
+# wavenumber = Delta_E/(h*c)
+# ----------------------------------------------------------------------------
+
+wavenumber_01: ℝ = (transition_01_J / (planck_constant * speed_of_light_cm)
+)
+
+wavelength_01_micrometer: ℝ = (10000.0 / wavenumber_01)
+
+# Print results
+#physika_print(reduced_mass_HCl)
+#physika_print(kinetic_coefficient_eV)
+#physika_print(energy_0_eV)
+#physika_print(energy_1_eV)
+#physika_print(transition_01_eV)
+#physika_print(wavenumber_01)
+#physika_print(wavelength_01_micrometer)
+#physika_print(normalization_check_0)
+#physika_print(normalization_check_1)
+
+
+# ----------------------------------------------------------------------------
+# plot
+# ----------------------------------------------------------------------------
+
+bond_distance_angstrom: ℝ[N_grid] = (bond_distance / 1.0e-10)
+
+equilibrium_distance_angstrom: ℝ = (equilibrium_distance / 1.0e-10)
+
+psi_0_angstrom: ℝ[N_grid] = (sqrt(1.0e-10) * psi_0)
+
+psi_1_angstrom: ℝ[N_grid] = (sqrt(1.0e-10) * psi_1)
+
+physika_plot_t(
+    bond_distance_angstrom,
+    potential_eV,
+    psi_0_angstrom,
+    psi_1_angstrom,
+    vibrational_energies_eV,
+    dissociation_energy_eV,
+    equilibrium_distance_angstrom,
+    25
+)
