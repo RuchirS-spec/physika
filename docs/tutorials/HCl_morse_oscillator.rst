@@ -188,6 +188,19 @@ should be approximately:
    * - Normalization integrals
      - 1
 
+.. figure:: ../_static/tutorial_files/HCl_morse_oscillator.png
+   :alt: Morse potential and vibrational wavefunctions of HCl
+   :width: 70%
+   :align: center
+
+   **Figure: Morse-potential representation of the HCl molecule.** The upper panel
+   shows the potential-energy curve as a function of the H--Cl internuclear
+   distance, together with vibrational energy levels,
+   equilibrium bond length :math:`r_e`, and dissociation energy :math:`D_e`.
+   The lower panel displays the normalized vibrational wavefunctions for the
+   ground (:math:`v=0`) and first excited (:math:`v=1`) states.
+
+
 Creating a Plot
 ---------------------
 
@@ -321,23 +334,10 @@ runtime. Add the following function to ``physika/runtime.py``:
        plt.show()
        plt.close()
 
-The upper panel shows the Morse potential and its bound vibrational energy
-levels. The decreasing separation between successive levels near
-:math:`D_e` illustrates the anharmonicity of the H--Cl bond.
-
-The lower panel shows the normalized ground- and first-excited-state
-wavefunctions. The ground-state wavefunction :math:`\psi_0(r)` has no nodes,
-whereas :math:`\psi_1(r)` has one node.
-
-.. .. image:: /HCl_morse_oscillator.png
-..   :alt: Morse potential and HCl vibrational states
-..   :width: 70%
-..   :align: center
-
 Source File
 -----------
 
 The complete Physika implementation is provided in
-``HCl_morse_oscillator.phyk``.  It requires the symmetric-matrix operation
+``physika/tutorials/HCl_morse_oscillator.phyk``.  It requires the symmetric-matrix operation
 ``eigh``, mapped by the runtime to an appropriate numerical eigensolver.
 
