@@ -928,3 +928,12 @@ def animate(func: Any, *args: Any) -> None:
         print(
             "[animate] No visualization backend available (install pyvista or matplotlib)"  # noqa: E501
         )
+
+def random_complex(*shape, scale=0.1):
+    real = torch.randn(*shape) * scale
+    imag = torch.randn(*shape) * scale
+    return torch.complex(real, imag)
+
+
+def compl_mul1d(x_ft, weights1):
+    return torch.einsum("ix,iox->ox", x_ft, weights1)

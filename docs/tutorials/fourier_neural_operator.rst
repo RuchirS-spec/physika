@@ -308,7 +308,7 @@ For this tutorial we are only using ``tests/`` samples and then splitting total 
 Runtime Helper functions
 ------------------------
 
-Add this following code snippet to ``physika/runtime.py`` file.
+In ``physika/runtime.py`` file we have below 2 functions which helps the ``FNO1d`` class.
 
 .. code-block:: python
 
@@ -658,7 +658,7 @@ Full code
     # --------------------------------------------------------
 
 
-    epochs: ℕ = 1
+    epochs: ℕ = 2000
     loss: ℝ = fno_obj.train(train_X, train_y, epochs, 0.0001)
     loss
 
