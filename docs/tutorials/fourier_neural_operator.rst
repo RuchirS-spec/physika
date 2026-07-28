@@ -75,7 +75,7 @@ In our implementation code, :math:`P` is a simple ``Conv1d`` block, and :math:`Q
         def λ(x: ℝ[in, n]) -> ℝ[out, n]:
             z1: ℝ[mid, n] = this.W1 @ x + this.b1
             a1: ℝ[mid, n] = gelu(z1)
-            z2: ℝ[mid, n] = this.W2 @ a1 + this.b2
+            z2: ℝ[out, n] = this.W2 @ a1 + this.b2
             return z2
         def update_params(lr: ℝ, learnable_grads: ℝ[m]):
             this.W1 = this.W1 - lr * learnable_grads[0]
@@ -454,7 +454,7 @@ Full code
         def λ(x: ℝ[in, n]) -> ℝ[out, n]:
             z1: ℝ[mid, n] = this.W1 @ x + this.b1
             a1: ℝ[mid, n] = gelu(z1)
-            z2: ℝ[mid, n] = this.W2 @ a1 + this.b2
+            z2: ℝ[out, n] = this.W2 @ a1 + this.b2
             return z2
         def update_params(lr: ℝ, learnable_grads: ℝ[m]):
             this.W1 = this.W1 - lr * learnable_grads[0]
