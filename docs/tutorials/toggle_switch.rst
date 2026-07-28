@@ -27,12 +27,13 @@ Writing :math:`u` and :math:`v` for the two repressor concentrations:
 
 .. math::
 
-   \frac{du}{dt} = \frac{a_1}{1 + v^{\,n}} - u
+   \frac{du}{dt} = \frac{a_1}{1 + v^n} - u
 
-   \frac{dv}{dt} = \frac{a_2}{1 + u^{\,n}} - v
+   \frac{dv}{dt} = \frac{a_2}{1 + u^n} - v
 
-Each Hill term :math:`a_i/(1 + \cdot^{\,n})` is mutual repression: when one
-protein is high, it shuts off production of the other. Here :math:`a_1, a_2`
+Each Hill term (:math:`a_1/(1 + v^n)` and :math:`a_2/(1 + u^n)`) is mutual
+repression: when one protein is high, it shuts off production of the other.
+Here :math:`a_1, a_2`
 are the maximal synthesis rates, and :math:`n = 2` is the Hill cooperativity
 (fixed) — cooperativity is what makes the switch bistable rather than
 graded. The parameters we learn are :math:`\theta = [a_1, a_2]`, with true
@@ -43,8 +44,8 @@ Why one experiment is not enough
 --------------------------------
 
 Suppose we run a single experiment whose initial condition falls into the
-"``u`` high, ``v`` low" basin. The trajectory settles with :math:`v \approx 0`.
-But :math:`a_2` only ever enters the dynamics through :math:`a_2/(1 + u^{\,n})`,
+":math:`u` high, :math:`v` low" basin. The trajectory settles with :math:`v \approx 0`.
+But :math:`a_2` only ever enters the dynamics through :math:`a_2/(1 + u^n)`,
 and with :math:`u` large that term is tiny — so the observed trajectory barely
 depends on :math:`a_2`. Concretely, at a wrong guess the loss gradient
 :math:`\partial \mathcal{L} / \partial a_2` is roughly **40× smaller** than
@@ -53,7 +54,7 @@ strictly *unidentifiable* — with clean data and enough iterations it eventuall
 crawls to the right value — but it is badly **ill-conditioned**: it converges
 far more slowly and is easily swamped by measurement noise.
 
-The other basin ("``v`` high, ``u`` low") is the mirror image: there
+The other basin (":math:`v` high, :math:`u` low") is the mirror image: there
 :math:`a_2` is well-constrained and :math:`a_1` is the weak one. The remedy is
 therefore to **fit both basins together**. We express the two experiments as a
 single four-dimensional augmented state :math:`[u_1, v_1, u_2, v_2]`, where
@@ -155,7 +156,7 @@ Step 3: Build the Trajectory Solver
 
 We integrate forward over 100 steps, collecting the trajectory of all four
 variables. The two initial conditions ``[2.0, 0.1, 0.1, 2.0]`` place experiment
-1 in the "``u`` high" basin and experiment 2 in the "``v`` high" basin:
+1 in the ":math:`u` high" basin and experiment 2 in the ":math:`v` high" basin:
 
 .. code-block:: text
 
@@ -296,7 +297,7 @@ trajectory-MSE loss falls to machine precision:
 
    Left: phase portrait in the :math:`(u, v)` plane. The two experiments start
    from opposite initial conditions (open circles) and settle into the two
-   different stable states (stars) — experiment 1 to "``u`` high, ``v`` low"
+   different stable states (stars) — experiment 1 to ":math:`u` high, :math:`v` low"
    and experiment 2 to the mirror; ground truth is solid, the learned fit
    (dashed) lies on top. Right: recovery of :math:`a_2` versus epoch. Fitting a
    single experiment leaves :math:`a_2` crawling for hundreds of epochs;
