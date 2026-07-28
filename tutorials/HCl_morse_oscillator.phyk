@@ -1,20 +1,12 @@
-# ----------------------------------------------------------------------------
 # HCl vibration using a Morse potential
-#
-# Required Physika operation:
-#
-#     eigh(symmetric_matrix)
-# ----------------------------------------------------------------------------
 
 def zero_array(length: ℕ): ℝ[m]:
     values: ℝ[length] = for i: ℕ(length) -> i * 0.0
     return values
 
-
 def zero_matrix(rows: ℕ, columns: ℕ): ℝ[m,n]:
-    values: ℝ[rows,columns] = for i: ℕ(rows) -> for j: ℕ(columns) -> j * 0.0
+    values: ℝ[rows,columns] = for i: ℕ(rows) -> for j: ℕ(columns) -> (i + j) * 0.0
     return values
-
 
 def linspace(start: ℝ, end: ℝ, number: ℕ): ℝ[m]:
     values: ℝ[number] = zero_array(number)
@@ -23,183 +15,217 @@ def linspace(start: ℝ, end: ℝ, number: ℕ): ℝ[m]:
         values[i] = start + i * spacing
     return values
 
-
 def integrate(values: ℝ[m], grid_spacing: ℝ, number: ℕ): ℝ:
     integral: ℝ = 0.0
     for i: ℕ(0, number):
         integral = integral + values[i] * grid_spacing
     return integral
 
+def dot_product(first: ℝ[m], second: ℝ[n], number: ℕ): ℝ:
+    value: ℝ = 0.0
+    for i: ℕ(0, number):
+        value = value + first[i] * second[i]
+    return value
 
-# ----------------------------------------------------------------------------
-# constants
-# ----------------------------------------------------------------------------
+def normalize_vector(values: ℝ[m], number: ℕ): ℝ[m]:
+    result: ℝ[number] = zero_array(number)
+    norm: ℝ = sqrt(dot_product(values, values, number))
+    for i: ℕ(0, number):
+        result[i] = values[i] / norm
+    return result
+
+def apply_hamiltonian(wavefunction: ℝ[m], potential: ℝ[n], kinetic_coefficient: ℝ, number: ℕ): ℝ[m]:
+    result: ℝ[number] = zero_array(number)
+    result[0] = ((2.0 * kinetic_coefficient + potential[0]) * wavefunction[0] - kinetic_coefficient * wavefunction[1])
+    for i: ℕ(1, number - 1):
+        result[i] = (-kinetic_coefficient * wavefunction[i - 1] + (2.0 * kinetic_coefficient + potential[i]) * wavefunction[i] - kinetic_coefficient * wavefunction[i + 1])
+    result[number - 1] = (-kinetic_coefficient * wavefunction[number - 2] + (2.0 * kinetic_coefficient + potential[number - 1]) * wavefunction[number - 1])
+    return result
+
+def jacobi_diagonalize(): ℕ:
+    jacobi_not_converged: ℕ = 0
+    jacobi_converged: ℕ = 1
+    jacobi_converged_local: ℕ = jacobi_not_converged
+    for i: ℕ(0, Krylov_dimension):
+        Ritz_vectors[i,i] = 1.0
+        for j: ℕ(0, Krylov_dimension):
+            projected_work_matrix[i,j] = projected_hamiltonian[i,j]
+    for rotation: ℕ(0, jacobi_maximum_rotations):
+        jacobi_p = 0
+        jacobi_q = 1
+        jacobi_largest = abs(projected_work_matrix[0,1])
+        for i: ℕ(0, Krylov_dimension):
+            for j: ℕ(i + 1, Krylov_dimension):
+                if abs(projected_work_matrix[i,j]) > jacobi_largest:
+                    jacobi_largest = abs(projected_work_matrix[i,j])
+                    jacobi_p = i
+                    jacobi_q = j
+        if jacobi_converged_local == jacobi_not_converged:
+            if jacobi_largest <= jacobi_tolerance:
+                jacobi_converged_local = jacobi_converged
+        if jacobi_largest > jacobi_tolerance:
+            jacobi_angle = 0.5 * atan2(2.0 * projected_work_matrix[jacobi_p,jacobi_q], projected_work_matrix[jacobi_q,jacobi_q] - projected_work_matrix[jacobi_p,jacobi_p])
+            jacobi_cosine = cos(jacobi_angle)
+            jacobi_sine = sin(jacobi_angle)
+            jacobi_app = (projected_work_matrix[jacobi_p,jacobi_p] + 0.0)
+            jacobi_aqq = (projected_work_matrix[jacobi_q,jacobi_q] + 0.0)
+            jacobi_apq = (projected_work_matrix[jacobi_p,jacobi_q] + 0.0)
+            for k: ℕ(0, Krylov_dimension):
+                if k != jacobi_p:
+                    if k != jacobi_q:
+                        jacobi_akp = (projected_work_matrix[k,jacobi_p] + 0.0)
+                        jacobi_akq = (projected_work_matrix[k,jacobi_q] + 0.0)
+                        projected_work_matrix[k,jacobi_p] = (jacobi_cosine * jacobi_akp - jacobi_sine * jacobi_akq)
+                        projected_work_matrix[jacobi_p,k] = (projected_work_matrix[k,jacobi_p])
+                        projected_work_matrix[k,jacobi_q] = (jacobi_sine * jacobi_akp + jacobi_cosine * jacobi_akq)
+                        projected_work_matrix[jacobi_q,k] = (projected_work_matrix[k,jacobi_q])
+            projected_work_matrix[jacobi_p,jacobi_p] = (jacobi_cosine * jacobi_cosine * jacobi_app - 2.0 * jacobi_sine * jacobi_cosine * jacobi_apq + jacobi_sine * jacobi_sine * jacobi_aqq)
+            projected_work_matrix[jacobi_q,jacobi_q] = (jacobi_sine * jacobi_sine * jacobi_app + 2.0 * jacobi_sine * jacobi_cosine * jacobi_apq + jacobi_cosine * jacobi_cosine * jacobi_aqq)
+            projected_work_matrix[jacobi_p,jacobi_q] = 0.0
+            projected_work_matrix[jacobi_q,jacobi_p] = 0.0
+            for k: ℕ(0, Krylov_dimension):
+                jacobi_vkp = Ritz_vectors[k,jacobi_p] + 0.0
+                jacobi_vkq = Ritz_vectors[k,jacobi_q] + 0.0
+                Ritz_vectors[k,jacobi_p] = (jacobi_cosine * jacobi_vkp - jacobi_sine * jacobi_vkq)
+                Ritz_vectors[k,jacobi_q] = (jacobi_sine * jacobi_vkp + jacobi_cosine * jacobi_vkq)
+    for i: ℕ(0, Krylov_dimension):
+        Ritz_values[i] = projected_work_matrix[i,i]
+    for i: ℕ(0, Krylov_dimension - 1):
+        jacobi_minimum = i
+        for j: ℕ(i + 1, Krylov_dimension):
+            if Ritz_values[j] < Ritz_values[jacobi_minimum]:
+                jacobi_minimum = j
+        if jacobi_minimum != i:
+            jacobi_temporary_value = Ritz_values[i] + 0.0
+            Ritz_values[i] = Ritz_values[jacobi_minimum]
+            Ritz_values[jacobi_minimum] = jacobi_temporary_value
+            for k: ℕ(0, Krylov_dimension):
+                jacobi_temporary_vector = Ritz_vectors[k,i] + 0.0
+                Ritz_vectors[k,i] = Ritz_vectors[k,jacobi_minimum]
+                Ritz_vectors[k,jacobi_minimum] = jacobi_temporary_vector
+    return jacobi_converged_local
 
 atomic_mass_unit: ℝ = 1.66053906660e-27
 hbar: ℝ = 1.054571817e-34
 planck_constant: ℝ = 6.62607015e-34
 speed_of_light_cm: ℝ = 2.99792458e10
 electron_volt: ℝ = 1.602176634e-19
-
-
-# ----------------------------------------------------------------------------
-# HCl reduced mass
-# ----------------------------------------------------------------------------
-
 mass_H_u: ℝ = 1.00784
 mass_Cl_u: ℝ = 35.45
-
 mass_H: ℝ = mass_H_u * atomic_mass_unit
 mass_Cl: ℝ = mass_Cl_u * atomic_mass_unit
-
 reduced_mass_HCl: ℝ = ((mass_H * mass_Cl) / (mass_H + mass_Cl))
-
-
-# ----------------------------------------------------------------------------
-# Morse-potential
-# V(r) = D_e [1 - exp(-a(r-r_e))]^2
-# ----------------------------------------------------------------------------
-
-dissociation_energy_eV: ℝ = 4.434  #4.62
+dissociation_energy_eV: ℝ = 4.61907
 dissociation_energy_J: ℝ = (dissociation_energy_eV * electron_volt)
-
 equilibrium_distance: ℝ = 1.2746e-10
-morse_a: ℝ = 1.87e10
-
-N_grid: ℕ = 400
-
+morse_a: ℝ = 1.868e10
+N_grid: ℕ = 100 #150
+N_levels: ℕ = 2
+block_size: ℕ = 2
+Krylov_dimension: ℕ = 40
 r_min: ℝ = 0.50e-10
-r_max: ℝ = 5.00e-10
-
+r_max: ℝ = 2.00e-10
 grid_spacing: ℝ = ((r_max - r_min) / (N_grid + 1))
-
 r_start: ℝ = r_min + grid_spacing
 r_end: ℝ = r_max - grid_spacing
-
 bond_distance: ℝ[N_grid] = linspace(r_start, r_end, N_grid)
-
 distance_from_equilibrium: ℝ[N_grid] = (bond_distance - equilibrium_distance)
-
 morse_exponential: ℝ[N_grid] = exp(-morse_a * distance_from_equilibrium)
 morse_difference: ℝ[N_grid] = (1.0 - morse_exponential)
 potential_J: ℝ[N_grid] = (dissociation_energy_J * morse_difference * morse_difference)
 potential_eV: ℝ[N_grid] = (potential_J / electron_volt)
-
-# ----------------------------------------------------------------------------
-# Finite-difference kinetic-energy coefficient
-# C = hbar^2 / (2 mu dr^2)
-# ----------------------------------------------------------------------------
-
 kinetic_coefficient_J: ℝ = ((hbar / grid_spacing) * (hbar / (2.0 * reduced_mass_HCl * grid_spacing)))
 kinetic_coefficient_eV: ℝ = (kinetic_coefficient_J / electron_volt)
-
-# ----------------------------------------------------------------------------
-# Construct the finite-difference Hamiltonian
-# Diagonal:
-#     H[i,i] = 2C + V(r_i)
-#
-# Off-diagonal:
-#     H[i,i+1] = H[i+1,i] = -C
-# ----------------------------------------------------------------------------
-
-hamiltonian: ℝ[N_grid,N_grid] = zero_matrix(N_grid, N_grid)
-
-for i: ℕ(0, N_grid):
-    hamiltonian[i, i] = (2.0 * kinetic_coefficient_eV + potential_eV[i])
-
-for i: ℕ(0, N_grid - 1):
-    hamiltonian[i, i + 1] = (-kinetic_coefficient_eV)
-    hamiltonian[i + 1, i] = (-kinetic_coefficient_eV)
-
-eigen_result = eigh(hamiltonian)
-
-vibrational_energies_eV: ℝ[N_grid] = eigen_result[0]
-eigenvectors: ℝ[N_grid,N_grid] = eigen_result[1]
-
-# ----------------------------------------------------------------------------
-# Extract the 2 lowest vibrational energies
-# ----------------------------------------------------------------------------
-
-energy_0_eV: ℝ = vibrational_energies_eV[0]
-energy_1_eV: ℝ = vibrational_energies_eV[1]
-
-# ----------------------------------------------------------------------------
-# Extract the first two numerical wavefunctions
-# ----------------------------------------------------------------------------
-
-psi_0_raw: ℝ[N_grid] = zero_array(N_grid)
-psi_1_raw: ℝ[N_grid] = zero_array(N_grid)
+trial_width: ℝ = 0.20e-10
+gaussian_argument: ℝ[N_grid] = (distance_from_equilibrium / trial_width)
+gaussian_envelope: ℝ[N_grid] = exp(-gaussian_argument * gaussian_argument)
+Krylov_basis: ℝ[Krylov_dimension,N_grid] = zero_matrix(Krylov_dimension, N_grid)
+H_Krylov: ℝ[Krylov_dimension,N_grid] = zero_matrix(Krylov_dimension, N_grid)
+projected_hamiltonian: ℝ[Krylov_dimension,Krylov_dimension] = zero_matrix(Krylov_dimension, Krylov_dimension)
+projected_work_matrix: ℝ[Krylov_dimension,Krylov_dimension] = zero_matrix(Krylov_dimension, Krylov_dimension)
+Ritz_vectors: ℝ[Krylov_dimension,Krylov_dimension] = zero_matrix(Krylov_dimension, Krylov_dimension)
+Ritz_values: ℝ[Krylov_dimension] = zero_array(Krylov_dimension)
+jacobi_tolerance: ℝ = 1.0e-7
+jacobi_maximum_rotations: ℕ = 10000
+jacobi_largest: ℝ = 0.0
+jacobi_angle: ℝ = 0.0
+jacobi_cosine: ℝ = 0.0
+jacobi_sine: ℝ = 0.0
+jacobi_app: ℝ = 0.0
+jacobi_aqq: ℝ = 0.0
+jacobi_apq: ℝ = 0.0
+jacobi_akp: ℝ = 0.0
+jacobi_akq: ℝ = 0.0
+jacobi_vkp: ℝ = 0.0
+jacobi_vkq: ℝ = 0.0
+jacobi_temporary_value: ℝ = 0.0
+jacobi_temporary_vector: ℝ = 0.0
+jacobi_p: ℕ = 0
+jacobi_q: ℕ = 1
+jacobi_minimum: ℕ = 0
+candidate: ℝ[N_grid] = zero_array(N_grid)
+overlap: ℝ = 0.0
+candidate_norm: ℝ = 0.0
 
 for i: ℕ(0, N_grid):
-    psi_0_raw[i] = eigenvectors[i, 0]
-    psi_1_raw[i] = eigenvectors[i, 1]
+    Krylov_basis[0,i] = gaussian_envelope[i]
+Krylov_basis[0] = normalize_vector(Krylov_basis[0], N_grid)
 
+for q_index: ℕ(1, Krylov_dimension):
+    if q_index < block_size:
+        for i: ℕ(0, N_grid):
+            candidate[i] = (gaussian_argument[i] * Krylov_basis[q_index - 1,i])
+    else:
+        candidate = apply_hamiltonian(Krylov_basis[q_index - block_size], potential_eV, kinetic_coefficient_eV, N_grid)
+    for orthogonalization_pass: ℕ(0, 2):
+        for lower: ℕ(0, q_index):
+            overlap = dot_product(Krylov_basis[lower], candidate, N_grid)
+            for i: ℕ(0, N_grid):
+                candidate[i] = (candidate[i] - overlap * Krylov_basis[lower,i])
+    candidate_norm = sqrt(dot_product(candidate, candidate, N_grid))
+    for i: ℕ(0, N_grid):
+        Krylov_basis[q_index,i] = (candidate[i] / candidate_norm)
+for q_index: ℕ(0, Krylov_dimension):
+    H_Krylov[q_index] = apply_hamiltonian(Krylov_basis[q_index], potential_eV, kinetic_coefficient_eV, N_grid)
 
-# ----------------------------------------------------------------------------
-# Normalize the wavefunctions
-# Integral |psi(r)|^2 dr = 1
-# ----------------------------------------------------------------------------
+for row: ℕ(0, Krylov_dimension):
+    for column: ℕ(row, Krylov_dimension):
+        projected_hamiltonian[row,column] = dot_product(Krylov_basis[row], H_Krylov[column], N_grid)
+        projected_hamiltonian[column,row] = (projected_hamiltonian[row,column])
 
-norm_0_squared: ℝ = integrate(psi_0_raw * psi_0_raw, grid_spacing, N_grid)
-norm_1_squared: ℝ = integrate(psi_1_raw * psi_1_raw, grid_spacing, N_grid)
+jacobi_diagonalize()
+vibrational_energies_eV: ℝ[N_levels] = zero_array(N_levels)
+psi_raw: ℝ[N_levels,N_grid] = zero_matrix(N_levels, N_grid)
 
-normalization_factor_0: ℝ = sqrt(norm_0_squared)
-normalization_factor_1: ℝ = sqrt(norm_1_squared)
+for n: ℕ(0, N_levels):
+    vibrational_energies_eV[n] = Ritz_values[n]
+    for i: ℕ(0, N_grid):
+        for q_index: ℕ(0, Krylov_dimension):
+            psi_raw[n,i] = (psi_raw[n,i] + Krylov_basis[q_index,i] * Ritz_vectors[q_index,n])
+    psi_raw[n] = normalize_vector(psi_raw[n], N_grid)
 
-psi_0: ℝ[N_grid] = (psi_0_raw / normalization_factor_0)
-psi_1: ℝ[N_grid] = (psi_1_raw / normalization_factor_1)
+normalization_factor: ℝ[N_levels] = zero_array(N_levels)
+psi: ℝ[N_levels,N_grid] = zero_matrix(N_levels, N_grid)
 
-normalization_check_0: ℝ = integrate(psi_0 * psi_0, grid_spacing, N_grid)
-normalization_check_1: ℝ = integrate(psi_1 * psi_1, grid_spacing, N_grid)
+for n: ℕ(0, N_levels):
+    normalization_factor[n] = sqrt(integrate(psi_raw[n] * psi_raw[n], grid_spacing, N_grid))
+    for i: ℕ(0, N_grid):
+        psi[n,i] = (psi_raw[n,i] / normalization_factor[n])
 
-# ----------------------------------------------------------------------------
-# Vibrational transitions
-# ----------------------------------------------------------------------------
+transition_eV: ℝ = (vibrational_energies_eV[1] - vibrational_energies_eV[0])
+transition_J: ℝ = transition_eV * electron_volt
+wavenumber: ℝ = (transition_J / (planck_constant * speed_of_light_cm))
+wavelength_micrometer: ℝ = (10000.0 / wavenumber)
 
-transition_01_eV: ℝ = (energy_1_eV - energy_0_eV)
-transition_01_J: ℝ = (transition_01_eV * electron_volt)
-
-# ----------------------------------------------------------------------------
-# Convert transition energies to wavenumbers
-# wavenumber = Delta_E/(h*c)
-# ----------------------------------------------------------------------------
-
-wavenumber_01: ℝ = (transition_01_J / (planck_constant * speed_of_light_cm)
-)
-
-wavelength_01_micrometer: ℝ = (10000.0 / wavenumber_01)
-
-# Print results
-#physika_print(reduced_mass_HCl)
-#physika_print(kinetic_coefficient_eV)
-#physika_print(energy_0_eV)
-#physika_print(energy_1_eV)
-#physika_print(transition_01_eV)
-#physika_print(wavenumber_01)
-#physika_print(wavelength_01_micrometer)
-#physika_print(normalization_check_0)
-#physika_print(normalization_check_1)
-
-
-# ----------------------------------------------------------------------------
-# plot
-# ----------------------------------------------------------------------------
+physika_print(vibrational_energies_eV[0])
+physika_print(vibrational_energies_eV[1])
+physika_print(transition_eV)
+physika_print(wavenumber)
+physika_print(wavelength_micrometer)
 
 bond_distance_angstrom: ℝ[N_grid] = (bond_distance / 1.0e-10)
-
 equilibrium_distance_angstrom: ℝ = (equilibrium_distance / 1.0e-10)
+psi_angstrom: ℝ[N_levels,N_grid] = (sqrt(1.0e-10) * psi)
 
-psi_0_angstrom: ℝ[N_grid] = (sqrt(1.0e-10) * psi_0)
-
-psi_1_angstrom: ℝ[N_grid] = (sqrt(1.0e-10) * psi_1)
-
-physika_plot_t(
-    bond_distance_angstrom,
-    potential_eV,
-    psi_0_angstrom,
-    psi_1_angstrom,
-    vibrational_energies_eV,
-    dissociation_energy_eV,
-    equilibrium_distance_angstrom,
-    25
-)
+# Use the below function to plot the results (Optional)
+#physika_plot(bond_distance_angstrom, potential_eV, psi_angstrom, vibrational_energies_eV, dissociation_energy_eV, equilibrium_distance_angstrom, N_levels, N_levels)
