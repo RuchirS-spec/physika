@@ -931,10 +931,67 @@ def animate(func: Any, *args: Any) -> None:
 
 
 def random_complex(*shape, scale=0.1):
+    """
+    Generate a random complex-valued tensor real and imaginary parts.
+
+    Parameters
+    ----------
+    *shape : int
+        Shape of the tensor to generate, passed as separate integer
+        arguments (e.g. ``random_complex(3, 4)`` creates a tensor of
+        shape ``(3, 4)``).
+    scale : float, optional
+        Standard deviation used to scale the real and imaginary parts.
+        Default is 0.1.
+
+    Returns
+    -------
+    torch.Tensor
+        A complex-valued tensor of the given shape, where both the real
+        and imaginary parts are drawn from a normal distribution scaled
+        by `scale`.
+
+    Examples
+    --------
+    >>> x = random_complex(2, 3, scale=0.5)
+    >>> x.shape
+    torch.Size([2, 3])
+    >>> x.dtype
+    torch.complex64
+    """
     real = torch.randn(*shape) * scale
     imag = torch.randn(*shape) * scale
     return torch.complex(real, imag)
 
 
 def compl_mul1d(x_ft, weights1):
+    """
+    Perform 1D complex multiplication between input and weight tensors
+    using Einstein summation. (used in FNO SpectralConv block)
+
+    Parameters
+    ----------
+    x_ft : torch.Tensor
+        Input tensor in the frequency domain, of shape ``(i, x)`` where
+        ``i`` is the number of input channels and ``x`` is the number of
+        frequency modes.
+    weights1 : torch.Tensor
+        Weight tensor of shape ``(i, o, x)`` where ``i`` is the number of
+        input channels, ``o`` is the number of output channels, and ``x``
+        is the number of frequency modes.
+
+    Returns
+    -------
+    torch.Tensor
+        Output tensor of shape ``(o, x)``, obtained by contracting the
+        input channel dimension between `x_ft` and `weights1`.
+
+    Examples
+    --------
+    >>> x_ft = random_complex(4, 16)
+    >>> weights1 = random_complex(4, 8, 16)
+    >>> out = compl_mul1d(x_ft, weights1)
+    >>> out.shape
+    torch.Size([8, 16])
+    """
     return torch.einsum("ix,iox->ox", x_ft, weights1)
