@@ -24,11 +24,9 @@ The Equations
 
 .. math::
 
-   \frac{dS}{dt} = -\beta\, S\, I
-
-   \frac{dI}{dt} = \beta\, S\, I - \gamma\, I
-
-   \frac{dR}{dt} = \gamma\, I
+   \frac{dS}{dt} &= -\beta\, S\, I \\
+   \frac{dI}{dt} &= \beta\, S\, I - \gamma\, I \\
+   \frac{dR}{dt} &= \gamma\, I
 
 The bilinear term :math:`\beta S I` is mass-action transmission: infections occur
 when susceptibles meet infecteds. Infecteds then recover at rate :math:`\gamma`.
@@ -118,13 +116,11 @@ sibling tutorials, over the three-dimensional state:
 
 .. math::
 
-    \begin{align*}
     k_1 &= f(y_n, \theta) \\
     k_2 &= f\left(y_n + \tfrac{h}{2} k_1, \theta\right) \\
     k_3 &= f\left(y_n + \tfrac{h}{2} k_2, \theta\right) \\
     k_4 &= f(y_n + h \, k_3, \theta) \\
     y_{n+1} &= y_n + \tfrac{h}{6}(k_1 + 2k_2 + 2k_3 + k_4)
-    \end{align*}
 
 .. code-block:: text
 
