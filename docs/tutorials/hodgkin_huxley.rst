@@ -31,16 +31,13 @@ dimensionless *gating variables* :math:`m, h, n \in [0,1]` open and close the ch
 
 .. math::
 
-   C_m \frac{dV}{dt} = I_\mathrm{app}
+   C_m \frac{dV}{dt} &= I_\mathrm{app}
      - \bar{g}_{\mathrm{Na}}\, m^3 h\, (V - E_{\mathrm{Na}})
      - \bar{g}_{\mathrm{K}}\, n^4\, (V - E_{\mathrm{K}})
-     - \bar{g}_{\mathrm{L}}\, (V - E_{\mathrm{L}})
-
-   \frac{dm}{dt} = \alpha_m(V)\,(1-m) - \beta_m(V)\,m
-
-   \frac{dh}{dt} = \alpha_h(V)\,(1-h) - \beta_h(V)\,h
-
-   \frac{dn}{dt} = \alpha_n(V)\,(1-n) - \beta_n(V)\,n
+     - \bar{g}_{\mathrm{L}}\, (V - E_{\mathrm{L}}) \\
+   \frac{dm}{dt} &= \alpha_m(V)\,(1-m) - \beta_m(V)\,m \\
+   \frac{dh}{dt} &= \alpha_h(V)\,(1-h) - \beta_h(V)\,h \\
+   \frac{dn}{dt} &= \alpha_n(V)\,(1-n) - \beta_n(V)\,n
 
 The voltage-dependent rates (in the standard convention, :math:`V` in mV, resting near
 :math:`-65`) are
