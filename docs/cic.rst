@@ -147,6 +147,24 @@ Inductive types allows computation through ι(iota)-reduction.  When a recursor 
 of its inductive type, the kernel identifies a major premise (input of the function) and applies
 logic defined in minor premises (specify how to compute each constructor).
 
+Before an inductive type is added to Physika's environment (``Environment``), an strict positivity check is applied.
+Strict positivity checks that an inductive type is constructed correctly before it is elaborated or the kernel sees it.
+A constructor is strictly positive for the inductive type ``T`` if ``T`` appears in positive positions in each field type.
+First, inductive type ``T`` must not appear in ``Expr``. Second, an inductive type must not be inside the
+domain of an arrow type or function application. This imples anywhere inside
+the domain, no matter how deeply nested arrows are within it. In other
+words, the domain of a constructor's field cannot contain a self referenced
+inductive type, because this can lead to logical inconsistencies. Finally, since
+a constructor is a chain of fields (one ``ForallE`` arrow per field), this
+domain check is applied separately to each field along that chain.
+
+Environment
+-----------
+An environment (``Environment``) maps names, including inductive types, to declarations. A global environment keeps track of axioms,
+definitions, and inductive types used in a Physika program. ``Environment`` is initialized
+before elaboration and type checking. During this step, constant declarations and inductive types are added, and checked for positivity, to be allowed to be used for elaborator
+and kernel. Once each CIC term verified and added, ``Environment`` serves as a lookup table for constants and inductive types.
+
 
 Physika implementation
 ----------------------
@@ -427,7 +445,25 @@ declaration records its name is ``"Nat"``, that it has two
 constructors (``Nat.zero`` and ``Nat.succ``), and that it is recursive (since ``Nat.succ`` mentions
 ``Nat`` itself).
 
+``ConstantInfo``
+~~~~~~~~~~~~~~~~
+``ConstantInfo`` stores constant declarations
+data such as it's name, universe parameters, type, and
+value and is used inside ``Environment``.
 
+``InductiveInfo``
+~~~~~~~~~~~~~~~~~
+``InductiveInfo`` is used in ``Environment`` to store data
+about an inductive type. ``InductiveInfo`` keeps track of an
+inductive type's declaration, its constructors and recursor
+as ``ConstantInfo``, and its ``Recursor``.
+   
+``Environment``
+~~~~~~~~~~~~~~~
+``Environment`` keeps track axioms, definitions, and inductive
+types used in a Physika program. `Environment`` is initialized
+before elaboration and type checking. Once each CIC term (axioms, theorems
+and declarations) is added, ``Environment`` serves as a lookup table.
 
 References
 ----------
