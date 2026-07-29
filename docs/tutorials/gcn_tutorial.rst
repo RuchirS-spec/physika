@@ -12,17 +12,19 @@ energy (kcal/mol) for small molecules.
 
 .. code-block:: text
 
-    dataset = create_dataset(80, 642)
+    dataset = create_dataset(80, 600, 25)
     train_dataset = dataset[0]
     test_dataset = dataset[1]
 
     train_A = train_dataset[0]
     train_H = train_dataset[1]
-    train_y = train_dataset[2]
+    train_sizes = train_dataset[2]
+    train_y = train_dataset[3]
 
     test_A = test_dataset[0]
     test_H = test_dataset[1]
-    test_y = test_dataset[2]
+    test_sizes = test_dataset[2]
+    test_y = test_dataset[3]
 
 
 .. note::
@@ -31,7 +33,7 @@ energy (kcal/mol) for small molecules.
 
    .. code-block:: python
 
-        def create_dataset(train_test_split=80, total_dataset_size=100, max_atoms=10):
+        def create_dataset(train_test_split=80, total_dataset_size=600, max_atoms=25):
             import deepchem as dc
             import torch
             from rdkit import Chem
@@ -43,31 +45,39 @@ energy (kcal/mol) for small molecules.
                 frac_test=1-train_test_split/100.0, seed=42
             )
             train_dataset, valid_dataset, test_dataset = datasets
-
             featurizer = dc.feat.MolGraphConvFeaturizer(use_edges=False)
 
             def build(dataset, limit):
-                A_list = []
-                H_list = []
-                y_list = []
+                A_list, H_list, sizes, y_list = [], [], [], []
                 for i in range(min(limit, len(dataset.X))):
                     mol = Chem.AddHs(dataset.X[i])
-                    A_list.append(torch.tensor(rdmolops.GetAdjacencyMatrix(mol), dtype=torch.float32))
+                    n = mol.GetNumAtoms()
+                    if n > max_atoms:
+                        continue
                     graph = featurizer.featurize([mol])[0]
+                    A_list.append(torch.tensor(rdmolops.GetAdjacencyMatrix(mol), dtype=torch.float32))
                     H_list.append(torch.tensor(graph.node_features, dtype=torch.float32))
+                    sizes.append(float(n))
                     y_list.append(dataset.y[i][0])
-                return [A_list, H_list, y_list]
+                return [A_list, H_list, torch.tensor(sizes), torch.tensor(y_list, dtype=torch.float32)]
 
             train_data = build(train_dataset, total_dataset_size)
             test_data = build(test_dataset, total_dataset_size)
             return [train_data, test_data]
 
 
-Each molecule in the dataset is represented by its own adjacency matrix,
-built directly from RDKit's ``GetAdjacencyMatrix``, sized to that molecule's
-own atom count. The feature matrix comes from DeepChem's own
-``MolGraphConvFeaturizer``, which gives each atom a 30-dimensional feature
-vector.
+Each molecule keeps its own real, natural size -- ``A`` and ``H`` are never
+padded to a shared width, since Physika has no type for "a batch of
+differently-shaped arrays" and there is no need to force one here: each
+molecule is only ever pulled out and processed one at a time. ``max_atoms``
+is still used as a filter (molecules larger than it are skipped), not as a
+padding target -- FreeSolv's molecules average around 18 atoms, so this
+value needs to sit comfortably above that average or most of the dataset
+gets filtered out. Bond connectivity comes from RDKit's
+``GetAdjacencyMatrix``; the 30-dimensional per-atom features come from
+DeepChem's own ``MolGraphConvFeaturizer``. A separate ``sizes`` array
+records each molecule's real atom count, since the model still needs it
+to know where each molecule's own adjacency matrix ends.
 
 
 Helper functions
@@ -135,13 +145,28 @@ Mathematically, sigmoid is defined as:
 .. code-block:: text
 
     def sigma(x: ℝ[a,b]): ℝ[a,b]:
-        rows: ℝ = get_2d_array_num_rows(x)
-        cols: ℝ = get_1d_array_length(x[0])
-        results: ℝ[cols, rows] = zero_2d_array(rows, cols)
-        for i:ℕ(rows):
-            for j:ℕ(cols):
-                results[i,j] = 1.0 / (1.0 + exp(0.0 - x[i,j]))
-        return results
+        return 1.0 / (1.0 + exp(0.0 - x))
+
+
+GCN Architecture
+------------------------
+
+**Purpose:** A GCN aims to make predictions on data that is naturally
+expressed like a graph rather than an array or a grid. In our scenario,
+each molecule is not a list of numbers or an image, but a graph of atoms
+connected by bonds in a specific pattern. Our GCN learns to predict
+hydration free energy by exploiting the graph structure of each molecule.
+
+**Problem:** a standard neural network has no understanding of what atoms
+are connected to each other, and therefore needs to learn the graph
+structure from scratch. This is inefficient and requires a lot of data. A
+GCN is designed to take advantage of the graph structure of data, so it can
+learn much more efficiently.
+
+**Solution:** a GCN exploits the adjacency matrix of a graph to propagate
+information between the nodes of the graph. Each atom's own features are
+blended with its bonded neighbors' features to produce a new set of
+features for each atom.
 
 
 GCNModel class
@@ -234,9 +259,18 @@ where:
         cols: ℝ = get_1d_array_length(H[0])
         result: ℝ[cols] = zero_1d_array(cols)
         for i:ℕ(sz):
+            row = H[i]
             for j:ℕ(cols):
-                result[j] += H[i,j]
+                result[j] += row[j]
         return result
+
+Note
+
+The row is pulled out with ``row = H[i]`` before indexing into it, rather
+than indexing both dimensions at once as ``H[i,j]``. Both are
+mathematically identical, but a combined two-index expression here
+tripped a code-generation bug in at least one physika build -- pulling
+the row out first sidesteps it and is the version confirmed working.
 
 
 Forward Pass
@@ -294,16 +328,6 @@ Initializing GCNModel object
 
 .. code-block:: text
 
-    class GCNModel:
-        W1: ℝ[30, 4]
-        W2: ℝ[4]
-        def λ(A: ℝ[n,n], H: ℝ[n,30], sz: ℝ) -> ℝ:
-            A_hat: ℝ[n,n] = normalize_adj(A)
-            H1: ℝ[n,4] = sigma(A_hat @ (H @ this.W1))
-            pooled: ℝ[4] = masked_graph_sum_pool(H1, sz)
-            pred: ℝ = pooled @ this.W2
-            return pred
-
     W1: ℝ[30, 4] = for i:ℕ(30) -> row: ℝ[4] ~ Normal(0.0, 0.3, 4)
     W2: ℝ[4] ~ Normal(0.0, 0.3, 4)
 
@@ -348,17 +372,16 @@ where:
 
 .. code-block:: text
 
-    len_train_X: ℝ = get_2d_array_num_rows(train_A)
-
     epochs: ℕ = 100
     lr: ℝ = 0.0005
+    len_train_X: ℝ = get_1d_array_length(train_sizes)
 
     for i:ℕ(epochs):
         loss = 0
         for j:ℕ(len_train_X):
             A_j = train_A[j]
             H_j = train_H[j]
-            sz_j = get_2d_array_num_rows(A_j)
+            sz_j = train_sizes[j]
             label = train_y[j]
             z = gcn_object(A_j, H_j, sz_j)
             current_loss = mse(z, label)
@@ -401,13 +424,13 @@ The final accuracy is computed as:
             return 0.0
 
     correct: ℝ = 0
-    len_test_X: ℝ = get_2d_array_num_rows(test_A)
+    len_test_X: ℝ = get_1d_array_length(test_sizes)
     y_true: ℝ = 0
 
     for i:ℕ(len_test_X):
         A_i = test_A[i]
         H_i = test_H[i]
-        sz_i = get_2d_array_num_rows(A_i)
+        sz_i = test_sizes[i]
         y_true = test_y[i]
         y_pred = gcn_object(A_i, H_i, sz_i)
         correct += within_tolerance(y_pred, y_true, 1.0)
@@ -460,13 +483,7 @@ Full Code
         return for i:ℕ(n) -> 0.0*i + 1.0
 
     def sigma(x: ℝ[a,b]): ℝ[a,b]:
-        rows: ℝ = get_2d_array_num_rows(x)
-        cols: ℝ = get_1d_array_length(x[0])
-        results: ℝ[cols, rows] = zero_2d_array(rows, cols)
-        for i:ℕ(rows):
-            for j:ℕ(cols):
-                results[i,j] = 1.0 / (1.0 + exp(0.0 - x[i,j]))
-        return results
+        return 1.0 / (1.0 + exp(0.0 - x))
 
     def normalize_adj(A: ℝ[n, n]): ℝ[n, n]:
         sz: ℝ = get_2d_array_num_rows(A)
@@ -481,8 +498,9 @@ Full Code
         cols: ℝ = get_1d_array_length(H[0])
         result: ℝ[cols] = zero_1d_array(cols)
         for i:ℕ(sz):
+            row = H[i]
             for j:ℕ(cols):
-                result[j] += H[i,j]
+                result[j] += row[j]
         return result
 
     def mse(pred: ℝ, target: ℝ): ℝ:
@@ -503,28 +521,30 @@ Full Code
 
     gcn_object: GCNModel = GCNModel(W1, W2)
 
-    dataset = create_dataset(80, 642)
+    dataset = create_dataset(80, 600, 25)
     train_dataset = dataset[0]
     test_dataset = dataset[1]
 
     train_A = train_dataset[0]
     train_H = train_dataset[1]
-    train_y = train_dataset[2]
+    train_sizes = train_dataset[2]
+    train_y = train_dataset[3]
 
     test_A = test_dataset[0]
     test_H = test_dataset[1]
-    test_y = test_dataset[2]
+    test_sizes = test_dataset[2]
+    test_y = test_dataset[3]
 
-    len_train_X: ℝ = get_2d_array_num_rows(train_A)
     epochs: ℕ = 100
     lr: ℝ = 0.0005
+    len_train_X: ℝ = get_1d_array_length(train_sizes)
 
     for i:ℕ(epochs):
         loss = 0
         for j:ℕ(len_train_X):
             A_j = train_A[j]
             H_j = train_H[j]
-            sz_j = get_2d_array_num_rows(A_j)
+            sz_j = train_sizes[j]
             label = train_y[j]
             z = gcn_object(A_j, H_j, sz_j)
             current_loss = mse(z, label)
@@ -547,13 +567,13 @@ Full Code
             return 0.0
 
     correct: ℝ = 0
-    len_test_X: ℝ = get_2d_array_num_rows(test_A)
+    len_test_X: ℝ = get_1d_array_length(test_sizes)
     y_true: ℝ = 0
 
     for i:ℕ(len_test_X):
         A_i = test_A[i]
         H_i = test_H[i]
-        sz_i = get_2d_array_num_rows(A_i)
+        sz_i = test_sizes[i]
         y_true = test_y[i]
         y_pred = gcn_object(A_i, H_i, sz_i)
         correct += within_tolerance(y_pred, y_true, 1.0)
