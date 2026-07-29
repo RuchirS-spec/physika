@@ -86,7 +86,7 @@ In our implementation code, :math:`P` is a simple ``Conv1d`` block, and :math:`Q
 .. note::
 
     ``learnable_grads`` is a special, reserved variable name. Physika has no general
-    ``list`` data type, so we cannot creates a list of grad variables (which usually have different shapes)/
+    ``list`` data type, so we cannot creates a list of grad variables (which usually have different shapes).
     This should get improved once Physika supports ``list`` data type.
 
 
@@ -324,8 +324,8 @@ In ``physika/runtime.py`` file we have below 2 functions which helps the ``FNO1d
 ``random_complex`` :-  Physika's default random initializers only produce real tensors, so we need this to initialize the spectral
 weights as proper complex numbers with separate real and imaginary components.
 
-``compl_mul1d`` :- Physika currently dont have String as data type, so we can't pass ``ix, iox->ox`` as argument to einsum through
-physika, thats why we have to add this helper function in runtime.
+``compl_mul1d``: Physika currently does not support ``String`` as a data type, so we cannot pass the expression ``"ix, iox->ox"``
+as an argument to ``einsum``. Therefore, we add this helper function in the runtime.
 
 
 Training the FNO model
