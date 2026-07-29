@@ -163,6 +163,10 @@ structure from scratch. This is inefficient and requires a lot of data. A
 GCN is designed to take advantage of the graph structure of data, so it can
 learn much more efficiently.
 
+.. figure:: /_static/tutorial_files/GCN_vs_CNN_overview.png
+   :align: center
+   :width: 500px
+
 **Solution:** a GCN exploits the adjacency matrix of a graph to propagate
 information between the nodes of the graph. Each atom's own features are
 blended with its bonded neighbors' features to produce a new set of
