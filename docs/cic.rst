@@ -165,6 +165,24 @@ definitions, and inductive types used in a Physika program. ``Environment`` is i
 before elaboration and type checking. During this step, constant declarations and inductive types are added, and checked for positivity, to be allowed to be used for elaborator
 and kernel. Once each CIC term verified and added, ``Environment`` serves as a lookup table for constants and inductive types.
 
+Local context
+-------------
+When working with dependent types, a binder's type can reference a
+previously bound variable. For example:
+
+.. code-block:: text
+
+   def matvec(A : ℝ[m,n], v : ℝ[n]) : ℝ[m]
+
+Here ``v``'s type references ``n``, which comes from ``A``'s type. Terms are
+stored with de Bruijn indices. Bound variables are represented as ``BVar`` by position
+rather than using a name. Indices can produce errors when working with nested binders.
+So, inspired by Lean 4, Physika during elaboration steps under a binder,
+``BVar`` are promoted to a new ``FVar`` and sotred in a
+``LocalContext``. Elaboration then proceeds with ``FVar``\ s, and
+once the binder's body is done being processed, the ``FVar``\ s created for
+it are abstracted back into ``BVar``\ s for storage.
+
 
 Physika implementation
 ----------------------
@@ -464,6 +482,32 @@ as ``ConstantInfo``, and its ``Recursor``.
 types used in a Physika program. `Environment`` is initialized
 before elaboration and type checking. Once each CIC term (axioms, theorems
 and declarations) is added, ``Environment`` serves as a lookup table.
+
+``LocalDeclVar``
+~~~~~~~~~~~~~~~~
+Represents a binder where a variable is introduced with a specific type
+but no assigned value. ``LocalDeclVar`` is used when opening a binder from a local context.
+
+``LocalDeclDef``
+~~~~~~~~~~~~~~~~
+Represents a local definition (let binding), which includes both a type
+and a value (``x: T = t``). ``LocalDeclDef`` is used when opening definition from a local context.
+
+``LocalContext``
+~~~~~~~~~~~~~~~~
+``LocalContext`` handles two types of declarations:
+
+- ``LocalDeclVar``: A variable introduced by a binder, with a type but no value.
+
+- ``LocalDeclDef``: a let-definition: A variable with both a type and a known value.
+
+``LocalContext`` is immutable: ``push_local`` and ``push_let`` return
+a new ``LocalContext`` rather than mutating the existing one. ``push_local`` opens
+a binder. Registers a ``FVar`` for a name and type variable (used for ``Lam``/``ForallE``).
+``push_let`` does the same for a let-value, additionally recording the bound value (used for ``LetE``).
+
+``mk_lambda`` and ``mk_forall``  abstract one or more ``FVar``\ s back into ``BVar``\ s and wrap the result
+in ``Lam``/``ForallE`` expressions, closing a binder once its body has been elaborated.
 
 References
 ----------
