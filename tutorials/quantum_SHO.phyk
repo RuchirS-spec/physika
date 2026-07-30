@@ -1,0 +1,86 @@
+# Physical constants in dimensionless units
+hbar: ℝ = 1.0
+mass: ℝ = 1.0
+angular_frequency: ℝ = 1.0
+pi: ℝ = 3.141592653589793
+
+# Numerical parameters
+N_levels: ℕ = 5
+x_max: ℝ = 6.0
+N_grid: ℕ = 601
+dx: ℝ = (2.0 * x_max) / (N_grid - 1)
+
+# Position grid and harmonic potential
+position: ℝ[N_grid] = for i: ℕ(N_grid) -> -x_max + i * dx
+potential: ℝ[N_grid] = for i: ℕ(N_grid) -> (0.5 * mass * angular_frequency
+    * angular_frequency * position[i] * position[i])
+
+# Initialize all result arrays
+wavefunctions: ℝ[N_levels,N_grid] = (for n: ℕ(N_levels) -> for i: ℕ(N_grid) -> (n + i) * 0.0)
+hamiltonian_wavefunctions: ℝ[N_levels,N_grid] = (for n: ℕ(N_levels) ->
+   for i: ℕ(N_grid) -> (n + i) * 0.0)
+energies: ℝ[N_levels] = for n: ℕ(N_levels) -> n * 0.0
+
+# Initialize scalar work variables
+x: ℝ = 0.0
+gaussian: ℝ = 0.0
+n_real: ℝ = 0.0
+next_n_real: ℝ = 0.0
+first_coefficient: ℝ = 0.0
+second_coefficient: ℝ = 0.0
+second_derivative: ℝ = 0.0
+kinetic_part: ℝ = 0.0
+potential_part: ℝ = 0.0
+energy_numerator: ℝ = 0.0
+normalization_integral: ℝ = 0.0
+
+# Calculate the analytical ground-state wavefunction
+normalization_constant: ℝ = 1.0 / (pi ** 0.25)
+for i: ℕ(N_grid):
+    x = position[i]
+    gaussian = exp(-0.5 * x * x)
+    wavefunctions[0,i] = normalization_constant * gaussian
+
+# Generate the first excited-state wavefunction
+one_level: ℕ = 1
+if N_levels > one_level:
+    for i: ℕ(N_grid):
+        x = position[i]
+        wavefunctions[1,i] = (sqrt(2.0) * x * wavefunctions[0,i])
+
+# Generate all remaining states using the recurrence relation
+two_levels: ℕ = 2
+if N_levels > two_levels:
+    for n: ℕ(1, N_levels - 1):
+        n_real = n * 1.0
+        next_n_real = n_real + 1.0
+        first_coefficient = sqrt(2.0 / next_n_real)
+        second_coefficient = sqrt(n_real / next_n_real)
+        for i: ℕ(N_grid):
+            x = position[i]
+            wavefunctions[n + 1,i] = (first_coefficient * x * wavefunctions[n,i]
+                - second_coefficient * wavefunctions[n - 1,i])
+
+# Apply the finite-difference Hamiltonian to each state
+for n: ℕ(N_levels):
+    for i: ℕ(1, N_grid - 1):
+        second_derivative = (wavefunctions[n,i + 1] - 2.0 * wavefunctions[n,i]
+            + wavefunctions[n,i - 1]) / (dx * dx)
+        kinetic_part = (-(hbar * hbar) / (2.0 * mass) * second_derivative)
+        potential_part = (potential[i] * wavefunctions[n,i])
+        hamiltonian_wavefunctions[n,i] = (kinetic_part + potential_part)
+
+# Calculate each energy from its expectation value
+for n: ℕ(N_levels):
+    energy_numerator = 0.0
+    normalization_integral = 0.0
+    for i: ℕ(1, N_grid - 1):
+        energy_numerator = (energy_numerator
+            + wavefunctions[n,i] * hamiltonian_wavefunctions[n,i] * dx)
+        normalization_integral = (normalization_integral
+            + wavefunctions[n,i] * wavefunctions[n,i] * dx)
+    energies[n] = (energy_numerator / normalization_integral)
+    physika_print(energies[n])
+
+# Plotting (optional)
+physika_plot(position, wavefunctions, energies, N_levels, potential)
