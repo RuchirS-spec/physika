@@ -9,6 +9,7 @@ Tutorials
    learn_parameter_pde
    learn_parameter_lotka_volterra_ode
    fitzhugh_nagumo
+   hodgkin_huxley
    repressilator
    sir
    toggle_switch
