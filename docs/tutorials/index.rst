@@ -11,6 +11,7 @@ Tutorials
    fitzhugh_nagumo
    repressilator
    sir
+   toggle_switch
    simple_harmonic_oscillator
    learn_parameter_1d_wave_equation
    cnn_tutorial
