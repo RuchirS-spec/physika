@@ -33,9 +33,10 @@ energy (kcal/mol) for small molecules.
 
    .. code-block:: python
 
-        def create_dataset(train_test_split=80, total_dataset_size=600, max_atoms=25):
+        def create_dataset(train_test_split=80, total_dataset_size=100, max_atoms=10):
             import deepchem as dc
             import torch
+            import torch.nn.functional as F
             from rdkit import Chem
             from rdkit.Chem import rdmolops
 
@@ -55,29 +56,31 @@ energy (kcal/mol) for small molecules.
                     if n > max_atoms:
                         continue
                     graph = featurizer.featurize([mol])[0]
-                    A_list.append(torch.tensor(rdmolops.GetAdjacencyMatrix(mol), dtype=torch.float32))
-                    H_list.append(torch.tensor(graph.node_features, dtype=torch.float32))
-                    sizes.append(float(n))
+                    A = torch.tensor(rdmolops.GetAdjacencyMatrix(mol), dtype=torch.float32)
+                    H = torch.tensor(graph.node_features, dtype=torch.float32)
+                    A_list.append(F.pad(A, (0, max_atoms-n, 0, max_atoms-n)))
+                    H_list.append(F.pad(H, (0, 0, 0, max_atoms-n)))
+                    sizes.append(n)
                     y_list.append(dataset.y[i][0])
-                return [A_list, H_list, torch.tensor(sizes), torch.tensor(y_list, dtype=torch.float32)]
+                return [torch.stack(A_list), torch.stack(H_list),
+                        torch.tensor(sizes, dtype=torch.float32), torch.tensor(y_list, dtype=torch.float32)]
 
             train_data = build(train_dataset, total_dataset_size)
             test_data = build(test_dataset, total_dataset_size)
             return [train_data, test_data]
 
 
-Each molecule keeps its own real, natural size -- ``A`` and ``H`` are never
-padded to a shared width, since Physika has no type for "a batch of
-differently-shaped arrays" and there is no need to force one here: each
-molecule is only ever pulled out and processed one at a time. ``max_atoms``
-is still used as a filter (molecules larger than it are skipped), not as a
-padding target -- FreeSolv's molecules average around 18 atoms, so this
-value needs to sit comfortably above that average or most of the dataset
-gets filtered out. Bond connectivity comes from RDKit's
-``GetAdjacencyMatrix``; the 30-dimensional per-atom features come from
-DeepChem's own ``MolGraphConvFeaturizer``. A separate ``sizes`` array
-records each molecule's real atom count, since the model still needs it
-to know where each molecule's own adjacency matrix ends.
+Every molecule's adjacency matrix and feature matrix are padded up to a
+fixed ``max_atoms`` width with ``torch.nn.functional.pad``, then stacked
+into one real, uniformly-shaped tensor per split -- this is what lets
+``train``/``evaluate`` live as methods on ``GCNModel`` further down, calling
+the model from inside its own methods. ``max_atoms=25`` (passed explicitly
+above, overriding the default of ``10``) needs to sit comfortably above
+FreeSolv's roughly 18-atom average, or most of the dataset gets filtered
+out by the ``if n > max_atoms: continue`` check. Bond connectivity comes
+from RDKit's ``GetAdjacencyMatrix``; the 30-dimensional per-atom features
+come from DeepChem's own ``MolGraphConvFeaturizer``. A separate ``sizes``
+tensor records each molecule's real (pre-padding) atom count.
 
 
 Helper functions
@@ -164,6 +167,7 @@ GCN is designed to take advantage of the graph structure of data, so it can
 learn much more efficiently.
 
 .. figure:: /_static/tutorial_files/GCN_vs_CNN_overview.png
+   :alt: 
    :align: center
    :width: 500px
 
@@ -342,7 +346,10 @@ Define loss
 ---------------------------
 
 For training the network we use mean squared error, since hydration free
-energy is a continuous value rather than a discrete class.
+energy is a continuous value rather than a discrete class. Unlike ``train``
+and ``evaluate`` below, ``mse`` is a plain free function, not a method --
+it gets called from inside ``train`` the same way ``sigma`` or
+``normalize_adj`` do.
 
 .. math::
 
@@ -376,33 +383,40 @@ where:
 
 .. code-block:: text
 
+    def train(epochs: ℕ, lr: ℝ) -> ℝ:
+        len_train_X = get_1d_array_length(train_sizes)
+        loss = 0
+        for i:ℕ(epochs):
+            loss = 0
+            for j:ℕ(len_train_X):
+                A_j = train_A[j]
+                H_j = train_H[j]
+                sz_j = train_sizes[j]
+                label = train_y[j]
+                z = this(A_j, H_j, sz_j)
+                current_loss = mse(z, label)
+                loss += current_loss
+                learnable_grads = grad(current_loss, this.learnable_params)
+                this.update_params(lr, learnable_grads)
+            loss = loss / len_train_X
+        return loss
+
+    def update_params(lr: ℝ, learnable_grads: ℝ[m]):
+        this.W1 = this.W1 - lr * learnable_grads[0]
+        this.W2 = this.W2 - lr * learnable_grads[1]
+
+Training is then a single call:
+
+.. code-block:: text
+
     epochs: ℕ = 100
     lr: ℝ = 0.0005
-    len_train_X: ℝ = get_1d_array_length(train_sizes)
-
-    for i:ℕ(epochs):
-        loss = 0
-        for j:ℕ(len_train_X):
-            A_j = train_A[j]
-            H_j = train_H[j]
-            sz_j = train_sizes[j]
-            label = train_y[j]
-            z = gcn_object(A_j, H_j, sz_j)
-            current_loss = mse(z, label)
-            loss += current_loss
-            dW1 = grad(current_loss, gcn_object.W1)
-            dW2 = grad(current_loss, gcn_object.W2)
-            new_W1 = gcn_object.W1 - lr * dW1
-            new_W2 = gcn_object.W2 - lr * dW2
-            gcn_object = GCNModel(new_W1, new_W2)
-        loss = loss / len_train_X
-        physika_print(loss)
+    final_loss = gcn_object.train(epochs, lr)
+    physika_print(final_loss)
 
 
 Testing the Model
 -----------------
-
-After training, we evaluate the model on unseen test data.
 
 Since hydration free energy is a continuous value, a prediction is counted
 as correct when it falls within a tolerance of the true value, rather than
@@ -427,18 +441,23 @@ The final accuracy is computed as:
         else:
             return 0.0
 
-    correct: ℝ = 0
-    len_test_X: ℝ = get_1d_array_length(test_sizes)
-    y_true: ℝ = 0
+    def evaluate() -> ℝ:
+        len_test_X = get_1d_array_length(test_sizes)
+        correct = 0
+        for i:ℕ(len_test_X):
+            A_i = test_A[i]
+            H_i = test_H[i]
+            sz_i = test_sizes[i]
+            y_pred = this(A_i, H_i, sz_i)
+            correct += within_tolerance(y_pred, test_y[i], 1.0)
+        return correct / len_test_X
 
-    for i:ℕ(len_test_X):
-        A_i = test_A[i]
-        H_i = test_H[i]
-        sz_i = test_sizes[i]
-        y_true = test_y[i]
-        y_pred = gcn_object(A_i, H_i, sz_i)
-        correct += within_tolerance(y_pred, y_true, 1.0)
-    accuracy = correct / len_test_X
+Evaluation is then a single call too:
+
+.. code-block:: text
+
+    accuracy = gcn_object.evaluate()
+    physika_print(accuracy)
 
 
 Full Code
@@ -510,6 +529,15 @@ Full Code
     def mse(pred: ℝ, target: ℝ): ℝ:
         return (pred - target) ** 2.0
 
+    def within_tolerance(pred: ℝ, target: ℝ, tol: ℝ): ℝ:
+        diff = pred - target
+        if diff < 0.0:
+            diff = 0.0 - diff
+        if diff < tol:
+            return 1.0
+        else:
+            return 0.0
+
     class GCNModel:
         W1: ℝ[30, 4]
         W2: ℝ[4]
@@ -519,6 +547,36 @@ Full Code
             pooled: ℝ[4] = masked_graph_sum_pool(H1, sz)
             pred: ℝ = pooled @ this.W2
             return pred
+        def train(epochs: ℕ, lr: ℝ) -> ℝ:
+            len_train_X = get_1d_array_length(train_sizes)
+            loss = 0
+            for i:ℕ(epochs):
+                loss = 0
+                for j:ℕ(len_train_X):
+                    A_j = train_A[j]
+                    H_j = train_H[j]
+                    sz_j = train_sizes[j]
+                    label = train_y[j]
+                    z = this(A_j, H_j, sz_j)
+                    current_loss = mse(z, label)
+                    loss += current_loss
+                    learnable_grads = grad(current_loss, this.learnable_params)
+                    this.update_params(lr, learnable_grads)
+                loss = loss / len_train_X
+            return loss
+        def evaluate() -> ℝ:
+            len_test_X = get_1d_array_length(test_sizes)
+            correct = 0
+            for i:ℕ(len_test_X):
+                A_i = test_A[i]
+                H_i = test_H[i]
+                sz_i = test_sizes[i]
+                y_pred = this(A_i, H_i, sz_i)
+                correct += within_tolerance(y_pred, test_y[i], 1.0)
+            return correct / len_test_X
+        def update_params(lr: ℝ, learnable_grads: ℝ[m]):
+            this.W1 = this.W1 - lr * learnable_grads[0]
+            this.W2 = this.W2 - lr * learnable_grads[1]
 
     W1: ℝ[30, 4] = for i:ℕ(30) -> row: ℝ[4] ~ Normal(0.0, 0.3, 4)
     W2: ℝ[4] ~ Normal(0.0, 0.3, 4)
@@ -541,53 +599,16 @@ Full Code
 
     epochs: ℕ = 100
     lr: ℝ = 0.0005
-    len_train_X: ℝ = get_1d_array_length(train_sizes)
+    final_loss = gcn_object.train(epochs, lr)
+    physika_print(final_loss)
 
-    for i:ℕ(epochs):
-        loss = 0
-        for j:ℕ(len_train_X):
-            A_j = train_A[j]
-            H_j = train_H[j]
-            sz_j = train_sizes[j]
-            label = train_y[j]
-            z = gcn_object(A_j, H_j, sz_j)
-            current_loss = mse(z, label)
-            loss += current_loss
-            dW1 = grad(current_loss, gcn_object.W1)
-            dW2 = grad(current_loss, gcn_object.W2)
-            new_W1 = gcn_object.W1 - lr * dW1
-            new_W2 = gcn_object.W2 - lr * dW2
-            gcn_object = GCNModel(new_W1, new_W2)
-        loss = loss / len_train_X
-        physika_print(loss)
-
-    def within_tolerance(pred: ℝ, target: ℝ, tol: ℝ): ℝ:
-        diff = pred - target
-        if diff < 0.0:
-            diff = 0.0 - diff
-        if diff < tol:
-            return 1.0
-        else:
-            return 0.0
-
-    correct: ℝ = 0
-    len_test_X: ℝ = get_1d_array_length(test_sizes)
-    y_true: ℝ = 0
-
-    for i:ℕ(len_test_X):
-        A_i = test_A[i]
-        H_i = test_H[i]
-        sz_i = test_sizes[i]
-        y_true = test_y[i]
-        y_pred = gcn_object(A_i, H_i, sz_i)
-        correct += within_tolerance(y_pred, y_true, 1.0)
-    accuracy = correct / len_test_X
+    accuracy = gcn_object.evaluate()
+    physika_print(accuracy)
 
 
 References
 ----------
 
-- `Semi-Supervised Classification with Graph Convolutional Networks (Kipf & Welling) <https://arxiv.org/abs/1609.02907>`_
 - `A Gentle Introduction to Graph Neural Networks (Distill) <https://distill.pub/2021/gnn-intro/>`_
 - `FreeSolv: The Free Solvation Database (Mobley Lab) <https://github.com/MobleyLab/FreeSolv>`_
 - `RDKit: Open-source cheminformatics <https://www.rdkit.org/>`_
