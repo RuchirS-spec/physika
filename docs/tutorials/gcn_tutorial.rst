@@ -70,17 +70,10 @@ energy (kcal/mol) for small molecules.
             return [train_data, test_data]
 
 
-Every molecule's adjacency matrix and feature matrix are padded up to a
-fixed ``max_atoms`` width with ``torch.nn.functional.pad``, then stacked
-into one real, uniformly-shaped tensor per split -- this is what lets
-``train``/``evaluate`` live as methods on ``GCNModel`` further down, calling
-the model from inside its own methods. ``max_atoms=25`` (passed explicitly
-above, overriding the default of ``10``) needs to sit comfortably above
-FreeSolv's roughly 18-atom average, or most of the dataset gets filtered
-out by the ``if n > max_atoms: continue`` check. Bond connectivity comes
-from RDKit's ``GetAdjacencyMatrix``; the 30-dimensional per-atom features
-come from DeepChem's own ``MolGraphConvFeaturizer``. A separate ``sizes``
-tensor records each molecule's real (pre-padding) atom count.
+Every molecule's adjacency matrix and feature matrix are padded upto a 
+fixed size using torch.nn.functional.pad, which pads zeros to the matrix.
+Bond connectivity is figured out from RDKit's "GetAjacencyMatrix" and 
+the 30 dimensional per-atom features come from DeepChem's "MolGraphConvFeaturizer"
 
 
 Helper functions
