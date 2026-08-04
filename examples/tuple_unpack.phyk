@@ -80,3 +80,13 @@ d
 a, b: ℝ = 7, 8
 a
 b
+
+
+x_complex, y_complex: ℂ = 1j, 2j
+x_complex
+y_complex
+
+
+x_arr, y_arr: ℝ[2, 2] = [[1, 1], [1, 1]], [[1, 1], [1, 1]] 
+x_arr
+y_arr

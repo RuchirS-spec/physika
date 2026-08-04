@@ -227,3 +227,9 @@ physika_print(d)
 a, b = 7, 8
 physika_print(a)
 physika_print(b)
+x_complex, y_complex = 1j, 2j
+physika_print(x_complex)
+physika_print(y_complex)
+x_arr, y_arr = torch.tensor([[1, 1], [1, 1]], device=DEVICE), torch.tensor([[1, 1], [1, 1]], device=DEVICE)
+physika_print(x_arr)
+physika_print(y_arr)
