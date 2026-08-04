@@ -34,7 +34,7 @@ The tutorial is divided into two parts:
 Physical model
 --------------
 
-The harmonic potential for a molecular vibration is
+The harmonic potential for a molecular vibration [#griffiths]_ is
 
 .. math::
 
@@ -55,10 +55,10 @@ The reduced mass of CO is
 .. code-block:: python
 
    # Physical constants
-   hbar_SI: ℝ = 1.054571817e-34
+   ℏ_SI: ℝ = 1.054571817e-34
    joule_per_electronvolt: ℝ = 1.602176634e-19
    atomic_mass_unit: ℝ = 1.66053906660e-27
-   pi: ℝ = 3.141592653589793
+   π: ℝ = 3.141592653589793
    meter_to_angstrom: ℝ = 1.0e10
 
    # CO reduced mass
@@ -88,7 +88,7 @@ Part 1: Learning the energy spacing
 ~~~~~~~~~~~~~~~~~~~~~~
 
 The training data contain ideal harmonic-oscillator energies constructed
-from a reference CO vibrational spacing.
+from a reference CO vibrational spacing [#huber]_.
 
 .. code-block:: python
 
@@ -151,7 +151,8 @@ For each state, the code calculates the energy error.
 1.4 Adam optimizer
 ~~~~~~~~~~~~~~~~~~
 
-Adam uses the gradient of the loss together with moving averages of the
+The model was optimized using the Adam algorithm [#adam]_.
+It uses the gradient of the loss together with moving averages of the
 gradient and squared gradient. Bias correction compensates for initializing
 both moving averages at zero, and ``epsilon`` prevents division by zero. The
 function returns the updated parameter, both updated moments, and the next
@@ -231,7 +232,7 @@ The corresponding force constant is
 .. code-block:: python
 
    # Calculate learned physical parameters
-   learned_angular_frequency: ℝ = learned_energy_spacing_eV * joule_per_electronvolt / hbar_SI
+   learned_angular_frequency: ℝ = learned_energy_spacing_eV * joule_per_electronvolt / ℏ_SI
    learned_force_constant: ℝ = reduced_mass * (learned_angular_frequency**2)
 
 Part 2: Constructing the Wavefunctions and Evaluating the Hamiltonian
@@ -239,7 +240,8 @@ Part 2: Constructing the Wavefunctions and Evaluating the Hamiltonian
 
 Part 2 uses the learned angular frequency to construct analytical
 harmonic-oscillator states and verify their energies by applying the
-time-independent Schrödinger Hamiltonian numerically.
+time-independent Schrödinger Hamiltonian numerically, following
+the standard quantum harmonic oscillator formulation [#griffiths]_.
 
 .. math::
 
@@ -265,7 +267,7 @@ derivatives, wavefunctions, potential, and integrals.
 .. code-block:: python
 
    # Calculate oscillator length
-   oscillator_length_m: ℝ = sqrt(hbar_SI / (reduced_mass * learned_angular_frequency))
+   oscillator_length_m: ℝ = sqrt(ℏ_SI / (reduced_mass * learned_angular_frequency))
 
    # Numerical grid in the physical displacement x (metres)
    x_max_m: ℝ = 10.0 * oscillator_length_m
@@ -299,8 +301,8 @@ the numerical domain extends to :math:`\pm10l_{\mathrm{osc}}`.
    wavefunctions: ℝ[N_levels,N_grid] = for n: ℕ(N_levels) -> for i: ℕ(N_grid) -> (n + i) * 0.0
 
    # Construct normalized harmonic-oscillator wavefunctions psi_n(x)
-   mass_frequency_over_hbar: ℝ = reduced_mass * learned_angular_frequency / hbar_SI
-   normalization_constant: ℝ = (mass_frequency_over_hbar / pi)**0.25
+   mass_frequency_over_hbar: ℝ = reduced_mass * learned_angular_frequency / ℏ_SI
+   normalization_constant: ℝ = (mass_frequency_over_hbar / π)**0.25
 
    for i: ℕ(N_grid):
        wavefunctions[0,i] = normalization_constant * exp(-0.5 * mass_frequency_over_hbar * position_m[i]**2)
@@ -396,7 +398,7 @@ joules and their sum is converted to eV.
 .. code-block:: python
 
    # Full Hamiltonian
-   kinetic_coefficient_J_m2: ℝ = hbar_SI**2 / (2.0 * reduced_mass)
+   kinetic_coefficient_J_m2: ℝ = ℏ_SI**2 / (2.0 * reduced_mass)
    second_derivative: ℝ = 0.0
    hamiltonian_wavefunctions: ℝ[N_levels,N_grid] = for n: ℕ(N_levels) -> for i: ℕ(N_grid) -> (n + i) * 0.0
    kinetic_part_J: ℝ = 0.0
@@ -556,10 +558,10 @@ The complete Physika implementation is provided in
 .. code-block:: python
 
    # Physical constants
-   hbar_SI: ℝ = 1.054571817e-34
+   ℏ_SI: ℝ = 1.054571817e-34
    joule_per_electronvolt: ℝ = 1.602176634e-19
    atomic_mass_unit: ℝ = 1.66053906660e-27
-   pi: ℝ = 3.141592653589793
+   π: ℝ = 3.141592653589793
    meter_to_angstrom: ℝ = 1.0e10
 
    # CO reduced mass
@@ -620,11 +622,11 @@ The complete Physika implementation is provided in
        optimizer_step = adam_result[3]
 
    # Calculate learned physical parameters
-   learned_angular_frequency: ℝ = learned_energy_spacing_eV * joule_per_electronvolt / hbar_SI
+   learned_angular_frequency: ℝ = learned_energy_spacing_eV * joule_per_electronvolt / ℏ_SI
    learned_force_constant: ℝ = reduced_mass * (learned_angular_frequency**2)
 
    # Calculate oscillator length
-   oscillator_length_m: ℝ = sqrt(hbar_SI / (reduced_mass * learned_angular_frequency))
+   oscillator_length_m: ℝ = sqrt(ℏ_SI / (reduced_mass * learned_angular_frequency))
 
    # Numerical grid in the physical displacement x (metres)
    x_max_m: ℝ = 10.0 * oscillator_length_m
@@ -637,8 +639,8 @@ The complete Physika implementation is provided in
    wavefunctions: ℝ[N_levels,N_grid] = for n: ℕ(N_levels) -> for i: ℕ(N_grid) -> (n + i) * 0.0
 
    # Construct normalized harmonic-oscillator wavefunctions psi_n(x)
-   mass_frequency_over_hbar: ℝ = reduced_mass * learned_angular_frequency / hbar_SI
-   normalization_constant: ℝ = (mass_frequency_over_hbar / pi)**0.25
+   mass_frequency_over_hbar: ℝ = reduced_mass * learned_angular_frequency / ℏ_SI
+   normalization_constant: ℝ = (mass_frequency_over_hbar / π)**0.25
 
    for i: ℕ(N_grid):
        wavefunctions[0,i] = normalization_constant * exp(-0.5 * mass_frequency_over_hbar * position_m[i]**2)
@@ -664,7 +666,7 @@ The complete Physika implementation is provided in
                wavefunctions[n + 1,i] = first_coefficient * sqrt(mass_frequency_over_hbar) * position_m[i] * wavefunctions[n,i] - second_coefficient * wavefunctions[n - 1,i]
 
    # Full Hamiltonian
-   kinetic_coefficient_J_m2: ℝ = hbar_SI**2 / (2.0 * reduced_mass)
+   kinetic_coefficient_J_m2: ℝ = ℏ_SI**2 / (2.0 * reduced_mass)
    second_derivative: ℝ = 0.0
    hamiltonian_wavefunctions: ℝ[N_levels,N_grid] = for n: ℕ(N_levels) -> for i: ℕ(N_grid) -> (n + i) * 0.0
    kinetic_part_J: ℝ = 0.0
@@ -699,20 +701,20 @@ The complete Physika implementation is provided in
    physika_print(learned_force_constant)
 
    # Use the function below to plot the wavefunctions and energies
-   #physika_plot(position_A, wavefunctions, numerical_energies_eV, N_levels, potential_eV)
+   physika_plot(position_A, wavefunctions, numerical_energies_eV, N_levels, potential_eV)
 
 References
 ----------
 
-#. D. J. Griffiths and D. F. Schroeter, *Introduction to Quantum
+.. [#griffiths] D. J. Griffiths and D. F. Schroeter, *Introduction to Quantum
    Mechanics*, 3rd ed., Cambridge University Press, 2018.
 
-#. K. P. Huber and G. Herzberg, *Molecular Spectra and Molecular
+.. [#huber] K. P. Huber and G. Herzberg, *Molecular Spectra and Molecular
    Structure IV: Constants of Diatomic Molecules*, Van Nostrand
    Reinhold, New York, 1979. Spectroscopic data are available through
    the `NIST Chemistry WebBook <https://webbook.nist.gov/cgi/cbook.cgi?ID=C630080&Mask=1000>`_.
 
-#. D. P. Kingma and J. Ba, "Adam: A Method for Stochastic
+.. [#adam] D. P. Kingma and J. Ba, "Adam: A Method for Stochastic
    Optimization," *International Conference on Learning
    Representations* (ICLR), 2015.
    `arXiv:1412.6980 <https://arxiv.org/abs/1412.6980>`_.
