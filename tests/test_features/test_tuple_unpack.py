@@ -577,6 +577,15 @@ class TestTypeRulesLiteralComma:
         src = "a, b, c, d: ℝ = 1, 2, 3, 4\n"
         assert type_errors(src) == []
 
+    def test_shared_type_twenty_literals_no_error(self):
+        """
+        ``a0, ..., a19: ℝ = 0, ..., 19`` passes the type checker.
+        """
+        names = ", ".join(f"a{i}" for i in range(20))
+        values = ", ".join(str(i) for i in range(20))
+        src = f"{names}: ℝ = {values}\n"
+        assert type_errors(src) == []
+
     def test_shared_type_literal_wrong_type_caught(self):
         """
         ``a, b: ℝ[3] = 1.0, 2.0`` — both variables are declared as ℝ[3]
