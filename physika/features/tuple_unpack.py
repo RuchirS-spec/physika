@@ -84,13 +84,18 @@ class TupleUnpackFeature(ELF):
                 p[0] = ("tuple_type", [p[1], p[3]])
 
         def p_typed_id_list(p):
-            """typed_id_list : ID COLON type_spec COMMA ID COLON type_spec
-                             | typed_id_list COMMA ID COLON type_spec"""
-            # Returns [(name, type_spec), ...] pairs and the type checker
-            # verifies each declared type against the actual element type.
-            if isinstance(p[1], str):
+            """typed_id_list : ID COLON type_spec
+                            | id_list COLON type_spec
+                            | ID COLON type_spec COMMA ID COLON type_spec
+                            | typed_id_list COMMA ID COLON type_spec"""
+            if len(p) == 4:
+                # x, y, z: ℝ
+                p[0] = [(name, p[3]) for name in p[1]]
+            elif len(p) == 8:
+                # x: ℝ, y: ℝ
                 p[0] = [(p[1], p[3]), (p[5], p[7])]
             else:
+                # x: ℝ, y: ℝ, z: ℝ, ....
                 p[0] = p[1] + [(p[3], p[5])]
 
         def p_return_expr_list(p):
