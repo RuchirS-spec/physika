@@ -1,27 +1,310 @@
 Functions:
+  calculate_model_energies_eV:
+    params: [('energy_spacing_eV', 'ℝ')]
+    statements:
+      (
+        'body_decl',
+        'model_energies_eV',
+        (
+          'tensor',
+          [
+            ('N_levels', 'invariant'),
+          ],
+        ),
+        (
+          'for_expr',
+          'n',
+          ('var', 'N_levels'),
+          (
+            'mul',
+            ('var', 'n'),
+            ('num', 0.0),
+          ),
+        ),
+      )
+      (
+        'body_for_range',
+        'n',
+        ('num', 0),
+        ('var', 'N_levels'),
+        [
+          (
+            'loop_index_assign_nd',
+            'model_energies_eV',
+            [
+              (
+                'index_item',
+                ('var', 'n'),
+              ),
+            ],
+            (
+              'mul',
+              ('var', 'energy_spacing_eV'),
+              (
+                'add',
+                (
+                  'mul',
+                  ('var', 'n'),
+                  ('num', 1.0),
+                ),
+                ('num', 0.5),
+              ),
+            ),
+          ),
+        ],
+      )
+    body:
+      ('var', 'model_energies_eV')
+  calculate_energy_spacing_loss:
+    params: [('energy_spacing_eV', 'ℝ')]
+    statements:
+      (
+        'body_decl',
+        'model_energies_eV',
+        (
+          'tensor',
+          [
+            ('N_levels', 'invariant'),
+          ],
+        ),
+        (
+          'call',
+          'calculate_model_energies_eV',
+          [
+            ('var', 'energy_spacing_eV'),
+          ],
+        ),
+      )
+      (
+        'body_decl',
+        'total_loss',
+        'ℝ',
+        ('num', 0.0),
+      )
+      (
+        'body_decl',
+        'energy_error_eV',
+        'ℝ',
+        ('num', 0.0),
+      )
+      (
+        'body_for_range',
+        'n',
+        ('num', 0),
+        ('var', 'N_levels'),
+        [
+          (
+            'loop_assign',
+            'energy_error_eV',
+            (
+              'sub',
+              (
+                'index',
+                'model_energies_eV',
+                ('var', 'n'),
+              ),
+              (
+                'index',
+                'reference_energies_eV',
+                ('var', 'n'),
+              ),
+            ),
+          ),
+          (
+            'loop_assign',
+            'total_loss',
+            (
+              'add',
+              ('var', 'total_loss'),
+              (
+                'pow',
+                ('var', 'energy_error_eV'),
+                ('num', 2),
+              ),
+            ),
+          ),
+        ],
+      )
+    body:
+      (
+        'div',
+        ('var', 'total_loss'),
+        (
+          'mul',
+          ('var', 'N_levels'),
+          ('num', 1.0),
+        ),
+      )
+  adam:
+    params: [('parameter', 'ℝ'), ('gradient_value', 'ℝ'), ('first_moment', 'ℝ'), ('second_moment', 'ℝ'), ('step', 'ℝ'), ('learning_rate', 'ℝ')]
+    statements:
+      (
+        'body_decl',
+        'beta_1',
+        'ℝ',
+        ('num', 0.9),
+      )
+      (
+        'body_decl',
+        'beta_2',
+        'ℝ',
+        ('num', 0.999),
+      )
+      (
+        'body_decl',
+        'epsilon',
+        'ℝ',
+        ('num', 1e-06),
+      )
+      (
+        'body_decl',
+        'new_first_moment',
+        'ℝ',
+        (
+          'add',
+          (
+            'mul',
+            ('var', 'beta_1'),
+            ('var', 'first_moment'),
+          ),
+          (
+            'mul',
+            (
+              'sub',
+              ('num', 1.0),
+              ('var', 'beta_1'),
+            ),
+            ('var', 'gradient_value'),
+          ),
+        ),
+      )
+      (
+        'body_decl',
+        'new_second_moment',
+        'ℝ',
+        (
+          'add',
+          (
+            'mul',
+            ('var', 'beta_2'),
+            ('var', 'second_moment'),
+          ),
+          (
+            'mul',
+            (
+              'sub',
+              ('num', 1.0),
+              ('var', 'beta_2'),
+            ),
+            (
+              'pow',
+              ('var', 'gradient_value'),
+              ('num', 2),
+            ),
+          ),
+        ),
+      )
+      (
+        'body_decl',
+        'corrected_first_moment',
+        'ℝ',
+        (
+          'div',
+          ('var', 'new_first_moment'),
+          (
+            'sub',
+            ('num', 1.0),
+            (
+              'pow',
+              ('var', 'beta_1'),
+              ('var', 'step'),
+            ),
+          ),
+        ),
+      )
+      (
+        'body_decl',
+        'corrected_second_moment',
+        'ℝ',
+        (
+          'div',
+          ('var', 'new_second_moment'),
+          (
+            'sub',
+            ('num', 1.0),
+            (
+              'pow',
+              ('var', 'beta_2'),
+              ('var', 'step'),
+            ),
+          ),
+        ),
+      )
+      (
+        'body_decl',
+        'new_parameter',
+        'ℝ',
+        (
+          'sub',
+          ('var', 'parameter'),
+          (
+            'div',
+            (
+              'mul',
+              ('var', 'learning_rate'),
+              ('var', 'corrected_first_moment'),
+            ),
+            (
+              'add',
+              (
+                'call',
+                'sqrt',
+                [
+                  ('var', 'corrected_second_moment'),
+                ],
+              ),
+              ('var', 'epsilon'),
+            ),
+          ),
+        ),
+      )
+    body:
+      (
+        'array',
+        [
+          ('var', 'new_parameter'),
+          ('var', 'new_first_moment'),
+          ('var', 'new_second_moment'),
+          (
+            'add',
+            ('var', 'step'),
+            ('num', 1.0),
+          ),
+        ],
+      )
 
 Classes:
 
 Program:
   (
     'decl',
-    'hbar',
+    'hbar_SI',
     'ℝ',
-    ('num', 1.0),
+    ('num', 1.054571817e-34),
     2,
   )
   (
     'decl',
-    'mass',
+    'joule_per_electronvolt',
     'ℝ',
-    ('num', 1.0),
+    ('num', 1.602176634e-19),
     3,
   )
   (
     'decl',
-    'angular_frequency',
+    'atomic_mass_unit',
     'ℝ',
-    ('num', 1.0),
+    ('num', 1.6605390666e-27),
     4,
   )
   (
@@ -33,47 +316,323 @@ Program:
   )
   (
     'decl',
-    'N_levels',
-    'ℕ',
-    ('num', 5),
-    8,
+    'meter_to_angstrom',
+    'ℝ',
+    ('num', 10000000000.0),
+    6,
   )
   (
     'decl',
-    'x_max',
+    'carbon_mass_amu',
     'ℝ',
-    ('num', 6.0),
+    ('num', 12.0),
     9,
   )
   (
     'decl',
-    'N_grid',
-    'ℕ',
-    ('num', 601),
+    'oxygen_mass_amu',
+    'ℝ',
+    ('num', 15.99491461957),
     10,
   )
   (
     'decl',
-    'dx',
+    'reduced_mass_amu',
     'ℝ',
     (
       'div',
       (
         'mul',
-        ('num', 2.0),
-        ('var', 'x_max'),
+        ('var', 'carbon_mass_amu'),
+        ('var', 'oxygen_mass_amu'),
       ),
       (
-        'sub',
-        ('var', 'N_grid'),
-        ('num', 1),
+        'add',
+        ('var', 'carbon_mass_amu'),
+        ('var', 'oxygen_mass_amu'),
       ),
     ),
     11,
   )
   (
     'decl',
-    'position',
+    'reduced_mass',
+    'ℝ',
+    (
+      'mul',
+      ('var', 'reduced_mass_amu'),
+      ('var', 'atomic_mass_unit'),
+    ),
+    12,
+  )
+  (
+    'decl',
+    'N_levels',
+    'ℕ',
+    ('num', 5),
+    15,
+  )
+  (
+    'decl',
+    'reference_energies_eV',
+    (
+      'tensor',
+      [
+        ('N_levels', 'invariant'),
+      ],
+    ),
+    (
+      'array',
+      [
+        ('num', 0.134509),
+        ('num', 0.403527),
+        ('num', 0.672545),
+        ('num', 0.941563),
+        ('num', 1.210581),
+      ],
+    ),
+    16,
+  )
+  ('func_def', 'calculate_model_energies_eV')
+  ('func_def', 'calculate_energy_spacing_loss')
+  ('func_def', 'adam')
+  (
+    'decl',
+    'learned_energy_spacing_eV',
+    'ℝ',
+    ('num', 0.0),
+    48,
+  )
+  (
+    'decl',
+    'first_moment',
+    'ℝ',
+    ('num', 0.0),
+    49,
+  )
+  (
+    'decl',
+    'second_moment',
+    'ℝ',
+    ('num', 0.0),
+    50,
+  )
+  (
+    'decl',
+    'optimizer_step',
+    'ℝ',
+    ('num', 1.0),
+    51,
+  )
+  (
+    'decl',
+    'learning_rate',
+    'ℝ',
+    ('num', 0.01),
+    52,
+  )
+  (
+    'decl',
+    'epochs',
+    'ℕ',
+    ('num', 100),
+    53,
+  )
+  (
+    'decl',
+    'energy_spacing_gradient',
+    'ℝ',
+    ('num', 0.0),
+    54,
+  )
+  (
+    'decl',
+    'adam_result',
+    (
+      'tensor',
+      [
+        (4, 'invariant'),
+      ],
+    ),
+    (
+      'array',
+      [
+        ('var', 'learned_energy_spacing_eV'),
+        ('var', 'first_moment'),
+        ('var', 'second_moment'),
+        ('var', 'optimizer_step'),
+      ],
+    ),
+    55,
+  )
+  (
+    'for_loop_range',
+    'epoch',
+    ('num', 0),
+    ('var', 'epochs'),
+    [
+      (
+        'for_assign',
+        'energy_spacing_gradient',
+        (
+          'call',
+          'grad',
+          [
+            ('var', 'calculate_energy_spacing_loss'),
+            ('var', 'learned_energy_spacing_eV'),
+          ],
+        ),
+      ),
+      (
+        'for_assign',
+        'adam_result',
+        (
+          'call',
+          'adam',
+          [
+            ('var', 'learned_energy_spacing_eV'),
+            ('var', 'energy_spacing_gradient'),
+            ('var', 'first_moment'),
+            ('var', 'second_moment'),
+            ('var', 'optimizer_step'),
+            ('var', 'learning_rate'),
+          ],
+        ),
+      ),
+      (
+        'for_assign',
+        'learned_energy_spacing_eV',
+        (
+          'index',
+          'adam_result',
+          ('num', 0),
+        ),
+      ),
+      (
+        'for_assign',
+        'first_moment',
+        (
+          'index',
+          'adam_result',
+          ('num', 1),
+        ),
+      ),
+      (
+        'for_assign',
+        'second_moment',
+        (
+          'index',
+          'adam_result',
+          ('num', 2),
+        ),
+      ),
+      (
+        'for_assign',
+        'optimizer_step',
+        (
+          'index',
+          'adam_result',
+          ('num', 3),
+        ),
+      ),
+    ],
+    57,
+  )
+  (
+    'decl',
+    'learned_angular_frequency',
+    'ℝ',
+    (
+      'div',
+      (
+        'mul',
+        ('var', 'learned_energy_spacing_eV'),
+        ('var', 'joule_per_electronvolt'),
+      ),
+      ('var', 'hbar_SI'),
+    ),
+    66,
+  )
+  (
+    'decl',
+    'learned_force_constant',
+    'ℝ',
+    (
+      'mul',
+      ('var', 'reduced_mass'),
+      (
+        'pow',
+        ('var', 'learned_angular_frequency'),
+        ('num', 2),
+      ),
+    ),
+    67,
+  )
+  (
+    'decl',
+    'oscillator_length_m',
+    'ℝ',
+    (
+      'call',
+      'sqrt',
+      [
+        (
+          'div',
+          ('var', 'hbar_SI'),
+          (
+            'mul',
+            ('var', 'reduced_mass'),
+            ('var', 'learned_angular_frequency'),
+          ),
+        ),
+      ],
+    ),
+    70,
+  )
+  (
+    'decl',
+    'x_max_m',
+    'ℝ',
+    (
+      'mul',
+      ('num', 10.0),
+      ('var', 'oscillator_length_m'),
+    ),
+    73,
+  )
+  (
+    'decl',
+    'N_grid',
+    'ℕ',
+    ('num', 601),
+    74,
+  )
+  (
+    'decl',
+    'dx_m',
+    'ℝ',
+    (
+      'div',
+      (
+        'mul',
+        ('num', 2.0),
+        ('var', 'x_max_m'),
+      ),
+      (
+        'mul',
+        (
+          'sub',
+          ('var', 'N_grid'),
+          ('num', 1),
+        ),
+        ('num', 1.0),
+      ),
+    ),
+    75,
+  )
+  (
+    'decl',
+    'position_m',
     (
       'tensor',
       [
@@ -88,20 +647,20 @@ Program:
         'add',
         (
           'neg',
-          ('var', 'x_max'),
+          ('var', 'x_max_m'),
         ),
         (
           'mul',
           ('imaginary'),
-          ('var', 'dx'),
+          ('var', 'dx_m'),
         ),
       ),
     ),
-    14,
+    76,
   )
   (
     'decl',
-    'potential',
+    'position_A',
     (
       'tensor',
       [
@@ -115,34 +674,14 @@ Program:
       (
         'mul',
         (
-          'mul',
-          (
-            'mul',
-            (
-              'mul',
-              (
-                'mul',
-                ('num', 0.5),
-                ('var', 'mass'),
-              ),
-              ('var', 'angular_frequency'),
-            ),
-            ('var', 'angular_frequency'),
-          ),
-          (
-            'index',
-            'position',
-            ('imaginary'),
-          ),
-        ),
-        (
           'index',
-          'position',
+          'position_m',
           ('imaginary'),
         ),
+        ('var', 'meter_to_angstrom'),
       ),
     ),
-    15,
+    77,
   )
   (
     'decl',
@@ -173,151 +712,37 @@ Program:
         ),
       ),
     ),
-    19,
+    80,
   )
   (
     'decl',
-    'hamiltonian_wavefunctions',
+    'mass_frequency_over_hbar',
+    'ℝ',
     (
-      'tensor',
-      [
-        ('N_levels', 'invariant'),
-        ('N_grid', 'invariant'),
-      ],
-    ),
-    (
-      'for_expr',
-      'n',
-      ('var', 'N_levels'),
-      (
-        'for_expr',
-        'i',
-        ('var', 'N_grid'),
-        (
-          'mul',
-          (
-            'add',
-            ('var', 'n'),
-            ('imaginary'),
-          ),
-          ('num', 0.0),
-        ),
-      ),
-    ),
-    20,
-  )
-  (
-    'decl',
-    'energies',
-    (
-      'tensor',
-      [
-        ('N_levels', 'invariant'),
-      ],
-    ),
-    (
-      'for_expr',
-      'n',
-      ('var', 'N_levels'),
+      'div',
       (
         'mul',
-        ('var', 'n'),
-        ('num', 0.0),
+        ('var', 'reduced_mass'),
+        ('var', 'learned_angular_frequency'),
       ),
+      ('var', 'hbar_SI'),
     ),
-    22,
-  )
-  (
-    'decl',
-    'x',
-    'ℝ',
-    ('num', 0.0),
-    25,
-  )
-  (
-    'decl',
-    'gaussian',
-    'ℝ',
-    ('num', 0.0),
-    26,
-  )
-  (
-    'decl',
-    'n_real',
-    'ℝ',
-    ('num', 0.0),
-    27,
-  )
-  (
-    'decl',
-    'next_n_real',
-    'ℝ',
-    ('num', 0.0),
-    28,
-  )
-  (
-    'decl',
-    'first_coefficient',
-    'ℝ',
-    ('num', 0.0),
-    29,
-  )
-  (
-    'decl',
-    'second_coefficient',
-    'ℝ',
-    ('num', 0.0),
-    30,
-  )
-  (
-    'decl',
-    'second_derivative',
-    'ℝ',
-    ('num', 0.0),
-    31,
-  )
-  (
-    'decl',
-    'kinetic_part',
-    'ℝ',
-    ('num', 0.0),
-    32,
-  )
-  (
-    'decl',
-    'potential_part',
-    'ℝ',
-    ('num', 0.0),
-    33,
-  )
-  (
-    'decl',
-    'energy_numerator',
-    'ℝ',
-    ('num', 0.0),
-    34,
-  )
-  (
-    'decl',
-    'normalization_integral',
-    'ℝ',
-    ('num', 0.0),
-    35,
+    83,
   )
   (
     'decl',
     'normalization_constant',
     'ℝ',
     (
-      'div',
-      ('num', 1.0),
+      'pow',
       (
-        'pow',
+        'div',
+        ('var', 'mass_frequency_over_hbar'),
         ('var', 'pi'),
-        ('num', 0.25),
       ),
+      ('num', 0.25),
     ),
-    38,
+    84,
   )
   (
     'for_loop_range',
@@ -325,37 +750,6 @@ Program:
     ('num', 0),
     ('var', 'N_grid'),
     [
-      (
-        'for_assign',
-        'x',
-        (
-          'index',
-          'position',
-          ('imaginary'),
-        ),
-      ),
-      (
-        'for_assign',
-        'gaussian',
-        (
-          'call',
-          'exp',
-          [
-            (
-              'mul',
-              (
-                'mul',
-                (
-                  'neg',
-                  ('num', 0.5),
-                ),
-                ('var', 'x'),
-              ),
-              ('var', 'x'),
-            ),
-          ],
-        ),
-      ),
       (
         'for_index_assign_nd',
         'wavefunctions',
@@ -372,18 +766,43 @@ Program:
         (
           'mul',
           ('var', 'normalization_constant'),
-          ('var', 'gaussian'),
+          (
+            'call',
+            'exp',
+            [
+              (
+                'mul',
+                (
+                  'mul',
+                  (
+                    'neg',
+                    ('num', 0.5),
+                  ),
+                  ('var', 'mass_frequency_over_hbar'),
+                ),
+                (
+                  'pow',
+                  (
+                    'index',
+                    'position_m',
+                    ('imaginary'),
+                  ),
+                  ('num', 2),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     ],
-    39,
+    86,
   )
   (
     'decl',
     'one_level',
     'ℕ',
     ('num', 1),
-    45,
+    89,
   )
   (
     'if_only',
@@ -399,15 +818,6 @@ Program:
         ('num', 0),
         ('var', 'N_grid'),
         [
-          (
-            'for_assign',
-            'x',
-            (
-              'index',
-              'position',
-              ('imaginary'),
-            ),
-          ),
           (
             'for_index_assign_nd',
             'wavefunctions',
@@ -429,10 +839,18 @@ Program:
                   'call',
                   'sqrt',
                   [
-                    ('num', 2.0),
+                    (
+                      'mul',
+                      ('num', 2.0),
+                      ('var', 'mass_frequency_over_hbar'),
+                    ),
                   ],
                 ),
-                ('var', 'x'),
+                (
+                  'index',
+                  'position_m',
+                  ('imaginary'),
+                ),
               ),
               (
                 'indexN',
@@ -451,7 +869,7 @@ Program:
             ),
           ),
         ],
-        47,
+        91,
       ),
     ],
   )
@@ -460,7 +878,35 @@ Program:
     'two_levels',
     'ℕ',
     ('num', 2),
-    52,
+    94,
+  )
+  (
+    'decl',
+    'n_real',
+    'ℝ',
+    ('num', 0.0),
+    95,
+  )
+  (
+    'decl',
+    'next_n_real',
+    'ℝ',
+    ('num', 0.0),
+    96,
+  )
+  (
+    'decl',
+    'first_coefficient',
+    'ℝ',
+    ('num', 0.0),
+    97,
+  )
+  (
+    'decl',
+    'second_coefficient',
+    'ℝ',
+    ('num', 0.0),
+    98,
   )
   (
     'if_only',
@@ -535,15 +981,6 @@ Program:
             ('var', 'N_grid'),
             [
               (
-                'for_assign',
-                'x',
-                (
-                  'index',
-                  'position',
-                  ('imaginary'),
-                ),
-              ),
-              (
                 'for_index_assign_nd',
                 'wavefunctions',
                 [
@@ -566,8 +1003,22 @@ Program:
                     'mul',
                     (
                       'mul',
-                      ('var', 'first_coefficient'),
-                      ('var', 'x'),
+                      (
+                        'mul',
+                        ('var', 'first_coefficient'),
+                        (
+                          'call',
+                          'sqrt',
+                          [
+                            ('var', 'mass_frequency_over_hbar'),
+                          ],
+                        ),
+                      ),
+                      (
+                        'index',
+                        'position_m',
+                        ('imaginary'),
+                      ),
                     ),
                     (
                       'indexN',
@@ -609,12 +1060,149 @@ Program:
                 ),
               ),
             ],
-            59,
+            106,
           ),
         ],
-        54,
+        101,
       ),
     ],
+  )
+  (
+    'decl',
+    'kinetic_coefficient_J_m2',
+    'ℝ',
+    (
+      'div',
+      (
+        'pow',
+        ('var', 'hbar_SI'),
+        ('num', 2),
+      ),
+      (
+        'mul',
+        ('num', 2.0),
+        ('var', 'reduced_mass'),
+      ),
+    ),
+    110,
+  )
+  (
+    'decl',
+    'second_derivative',
+    'ℝ',
+    ('num', 0.0),
+    111,
+  )
+  (
+    'decl',
+    'hamiltonian_wavefunctions',
+    (
+      'tensor',
+      [
+        ('N_levels', 'invariant'),
+        ('N_grid', 'invariant'),
+      ],
+    ),
+    (
+      'for_expr',
+      'n',
+      ('var', 'N_levels'),
+      (
+        'for_expr',
+        'i',
+        ('var', 'N_grid'),
+        (
+          'mul',
+          (
+            'add',
+            ('var', 'n'),
+            ('imaginary'),
+          ),
+          ('num', 0.0),
+        ),
+      ),
+    ),
+    112,
+  )
+  (
+    'decl',
+    'kinetic_part_J',
+    'ℝ',
+    ('num', 0.0),
+    113,
+  )
+  (
+    'decl',
+    'potential_part_J',
+    'ℝ',
+    ('num', 0.0),
+    114,
+  )
+  (
+    'decl',
+    'potential_J',
+    (
+      'tensor',
+      [
+        ('N_grid', 'invariant'),
+      ],
+    ),
+    (
+      'for_expr',
+      'i',
+      ('var', 'N_grid'),
+      (
+        'mul',
+        (
+          'mul',
+          (
+            'mul',
+            ('num', 0.5),
+            ('var', 'reduced_mass'),
+          ),
+          (
+            'pow',
+            ('var', 'learned_angular_frequency'),
+            ('num', 2),
+          ),
+        ),
+        (
+          'pow',
+          (
+            'index',
+            'position_m',
+            ('imaginary'),
+          ),
+          ('num', 2),
+        ),
+      ),
+    ),
+    115,
+  )
+  (
+    'decl',
+    'potential_eV',
+    (
+      'tensor',
+      [
+        ('N_grid', 'invariant'),
+      ],
+    ),
+    (
+      'for_expr',
+      'i',
+      ('var', 'N_grid'),
+      (
+        'div',
+        (
+          'index',
+          'potential_J',
+          ('imaginary'),
+        ),
+        ('var', 'joule_per_electronvolt'),
+      ),
+    ),
+    116,
   )
   (
     'for_loop_range',
@@ -699,43 +1287,31 @@ Program:
               ),
               (
                 'mul',
-                ('var', 'dx'),
-                ('var', 'dx'),
+                ('var', 'dx_m'),
+                ('var', 'dx_m'),
               ),
             ),
           ),
           (
             'for_assign',
-            'kinetic_part',
+            'kinetic_part_J',
             (
               'mul',
               (
-                'div',
-                (
-                  'neg',
-                  (
-                    'mul',
-                    ('var', 'hbar'),
-                    ('var', 'hbar'),
-                  ),
-                ),
-                (
-                  'mul',
-                  ('num', 2.0),
-                  ('var', 'mass'),
-                ),
+                'neg',
+                ('var', 'kinetic_coefficient_J_m2'),
               ),
               ('var', 'second_derivative'),
             ),
           ),
           (
             'for_assign',
-            'potential_part',
+            'potential_part_J',
             (
               'mul',
               (
                 'index',
-                'potential',
+                'potential_J',
                 ('imaginary'),
               ),
               (
@@ -768,16 +1344,55 @@ Program:
               ),
             ],
             (
-              'add',
-              ('var', 'kinetic_part'),
-              ('var', 'potential_part'),
+              'div',
+              (
+                'add',
+                ('var', 'kinetic_part_J'),
+                ('var', 'potential_part_J'),
+              ),
+              ('var', 'joule_per_electronvolt'),
             ),
           ),
         ],
-        66,
+        120,
       ),
     ],
-    65,
+    119,
+  )
+  (
+    'decl',
+    'energy_numerator',
+    'ℝ',
+    ('num', 0.0),
+    127,
+  )
+  (
+    'decl',
+    'normalization_integral',
+    'ℝ',
+    ('num', 0.0),
+    128,
+  )
+  (
+    'decl',
+    'numerical_energies_eV',
+    (
+      'tensor',
+      [
+        ('N_levels', 'invariant'),
+      ],
+    ),
+    (
+      'for_expr',
+      'n',
+      ('var', 'N_levels'),
+      (
+        'mul',
+        ('var', 'n'),
+        ('num', 0.0),
+      ),
+    ),
+    129,
   )
   (
     'for_loop_range',
@@ -844,7 +1459,7 @@ Program:
                     ],
                   ),
                 ),
-                ('var', 'dx'),
+                ('var', 'dx_m'),
               ),
             ),
           ),
@@ -887,16 +1502,16 @@ Program:
                     ],
                   ),
                 ),
-                ('var', 'dx'),
+                ('var', 'dx_m'),
               ),
             ),
           ),
         ],
-        77,
+        134,
       ),
       (
         'for_index_assign_nd',
-        'energies',
+        'numerical_energies_eV',
         [
           (
             'index_item',
@@ -909,17 +1524,39 @@ Program:
           ('var', 'normalization_integral'),
         ),
       ),
-      (
-        'for_call',
-        'physika_print',
-        [
-          (
-            'index',
-            'energies',
-            ('var', 'n'),
-          ),
-        ],
-      ),
     ],
-    74,
+    131,
+  )
+  (
+    'expr',
+    (
+      'call',
+      'physika_print',
+      [
+        ('var', 'learned_energy_spacing_eV'),
+      ],
+    ),
+    0,
+  )
+  (
+    'expr',
+    (
+      'call',
+      'physika_print',
+      [
+        ('var', 'learned_angular_frequency'),
+      ],
+    ),
+    0,
+  )
+  (
+    'expr',
+    (
+      'call',
+      'physika_print',
+      [
+        ('var', 'learned_force_constant'),
+      ],
+    ),
+    0,
   )
