@@ -1,8 +1,8 @@
 # Physical constants
-hbar_SI: ℝ = 1.054571817e-34
+ℏ_SI: ℝ = 1.054571817e-34
 joule_per_electronvolt: ℝ = 1.602176634e-19
 atomic_mass_unit: ℝ = 1.66053906660e-27
-pi: ℝ = 3.141592653589793
+π: ℝ = 3.141592653589793
 meter_to_angstrom: ℝ = 1.0e10
 
 # CO reduced mass
@@ -50,7 +50,11 @@ first_moment: ℝ = 0.0
 second_moment: ℝ = 0.0
 optimizer_step: ℝ = 1.0
 learning_rate: ℝ = 0.01
-epochs: ℕ = 100
+
+# Set epochs to ~100 to fully recover energy spacing; here it is 1 so the
+# tutorial runs quickly through tests/test_tutorials.py.
+
+epochs: ℕ = 1
 energy_spacing_gradient: ℝ = 0.0
 adam_result: ℝ[4] = [learned_energy_spacing_eV, first_moment, second_moment, optimizer_step]
 
@@ -63,11 +67,11 @@ for epoch: ℕ(epochs):
     optimizer_step = adam_result[3]
 
 # Calculate learned physical parameters
-learned_angular_frequency: ℝ = learned_energy_spacing_eV * joule_per_electronvolt / hbar_SI
+learned_angular_frequency: ℝ = learned_energy_spacing_eV * joule_per_electronvolt / ℏ_SI
 learned_force_constant: ℝ = reduced_mass * (learned_angular_frequency**2)
 
 # Calculate oscillator length
-oscillator_length_m: ℝ = sqrt(hbar_SI / (reduced_mass * learned_angular_frequency))
+oscillator_length_m: ℝ = sqrt(ℏ_SI / (reduced_mass * learned_angular_frequency))
 
 # Numerical grid in the physical displacement x (metres)
 x_max_m: ℝ = 10.0 * oscillator_length_m
@@ -80,8 +84,8 @@ position_A: ℝ[N_grid] = for i: ℕ(N_grid) -> position_m[i] * meter_to_angstro
 wavefunctions: ℝ[N_levels,N_grid] = for n: ℕ(N_levels) -> for i: ℕ(N_grid) -> (n + i) * 0.0
 
 # Construct normalized harmonic-oscillator wavefunctions psi_n(x)
-mass_frequency_over_hbar: ℝ = reduced_mass * learned_angular_frequency / hbar_SI
-normalization_constant: ℝ = (mass_frequency_over_hbar / pi)**0.25
+mass_frequency_over_hbar: ℝ = reduced_mass * learned_angular_frequency / ℏ_SI
+normalization_constant: ℝ = (mass_frequency_over_hbar / π)**0.25
 
 for i: ℕ(N_grid):
     wavefunctions[0,i] = normalization_constant * exp(-0.5 * mass_frequency_over_hbar * position_m[i]**2)
@@ -107,7 +111,7 @@ if N_levels > two_levels:
             wavefunctions[n + 1,i] = first_coefficient * sqrt(mass_frequency_over_hbar) * position_m[i] * wavefunctions[n,i] - second_coefficient * wavefunctions[n - 1,i]
 
 # Full Hamiltonian
-kinetic_coefficient_J_m2: ℝ = hbar_SI**2 / (2.0 * reduced_mass)
+kinetic_coefficient_J_m2: ℝ = ℏ_SI**2 / (2.0 * reduced_mass)
 second_derivative: ℝ = 0.0
 hamiltonian_wavefunctions: ℝ[N_levels,N_grid] = for n: ℕ(N_levels) -> for i: ℕ(N_grid) -> (n + i) * 0.0
 kinetic_part_J: ℝ = 0.0
@@ -142,4 +146,4 @@ physika_print(learned_angular_frequency)
 physika_print(learned_force_constant)
 
 # Use the function below to plot the wavefunctions and energies
-#physika_plot(position_A, wavefunctions, numerical_energies_eV, N_levels, potential_eV)
+# physika_plot(position_A, wavefunctions, numerical_energies_eV, N_levels, potential_eV)
