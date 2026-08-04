@@ -501,6 +501,42 @@ class TestParserRules:
         assert rhs[0] == "expr_list"
         assert len(rhs[1]) == 3
 
+    def test_shared_type_two_variables_literal_rhs(self):
+        """
+        ``a, b: ℝ = 1, 2`` produces a tuple unpack with the shared type
+        applied to both variables.
+        """
+        src = "a, b: ℝ = 1, 2\n"
+        ast = parse_physika(src)
+
+        unpack = next(s for s in ast["program"]
+                      if isinstance(s, tuple) and s[0] == "stmt_tuple_unpack")
+
+        assert unpack[1] == [("a", "ℝ"), ("b", "ℝ")]
+        rhs = unpack[2]
+        assert rhs[0] == "expr_list"
+        assert len(rhs[1]) == 2
+
+    def test_shared_type_three_variables_literal_rhs(self):
+        """
+        ``a, b, c: ℝ = 10, 20, 30`` produces a tuple unpack with the shared
+        type applied to all variables.
+        """
+        src = "a, b, c: ℝ = 10, 20, 30\n"
+        ast = parse_physika(src)
+
+        unpack = next(s for s in ast["program"]
+                      if isinstance(s, tuple) and s[0] == "stmt_tuple_unpack")
+
+        assert unpack[1] == [
+            ("a", "ℝ"),
+            ("b", "ℝ"),
+            ("c", "ℝ"),
+        ]
+        rhs = unpack[2]
+        assert rhs[0] == "expr_list"
+        assert len(rhs[1]) == 3
+
 
 class TestTypeRulesLiteralComma:
     """Type-checker behaviour for the new literal-comma unpack forms."""
@@ -528,6 +564,29 @@ class TestTypeRulesLiteralComma:
         """``a, b = 1, 2`` (no type annotations) passes the type checker."""
         src = "a, b = 1, 2\n"
         assert type_errors(src) == []
+
+    def test_shared_type_literal_comma_no_error(self):
+        """``a, b: ℝ = 1.0, 2.0`` passes the type checker."""
+        src = "a, b: ℝ = 1.0, 2.0\n"
+        assert type_errors(src) == []
+
+    def test_shared_type_four_literals_no_error(self):
+        """
+        ``a, b, c, d: ℝ = 1, 2, 3, 4`` passes the type checker.
+        """
+        src = "a, b, c, d: ℝ = 1, 2, 3, 4\n"
+        assert type_errors(src) == []
+
+    def test_shared_type_literal_wrong_type_caught(self):
+        """
+        ``a, b: ℝ[3] = 1.0, 2.0`` — both variables are declared as ℝ[3]
+        but receive scalar ℝ values.
+        """
+        src = "a, b: ℝ[3] = 1.0, 2.0\n"
+        errors = type_errors(src)
+        assert len(errors) >= 2
+        assert any("'a'" in e and "ℝ[3]" in e for e in errors)
+        assert any("'b'" in e and "ℝ[3]" in e for e in errors)
 
 
 class TestTupleUnpackIntegration:
