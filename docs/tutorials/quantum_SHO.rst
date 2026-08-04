@@ -199,7 +199,7 @@ the next epoch.
        second_moment = adam_result[2]
        optimizer_step = adam_result[3]
 
-.. figure:: ../_static/tutorial_files/quantum_SHO_loss.png
+.. figure:: ../_static/tutorial_files/quantum_SHO/quantum_SHO_loss.png
    :align: center
    :width: 70%
    :alt: Training loss
@@ -466,7 +466,7 @@ mass, the learned force constant is
    | 407538575081472.0 ∈ ℝ
    | 1890.90869140625 ∈ ℝ
 
-.. figure:: ../_static/tutorial_files/quantum_SHO.png
+.. figure:: ../_static/tutorial_files/quantum_SHO/quantum_SHO.png
    :align: center
    :width: 70%
    :alt: Harmonic-oscillator energy levels, wavefunctions, and parabolic potential
