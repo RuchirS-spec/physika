@@ -224,3 +224,6 @@ physika_print(a)
 physika_print(b)
 physika_print(c)
 physika_print(d)
+a, b = 7, 8
+physika_print(a)
+physika_print(b)

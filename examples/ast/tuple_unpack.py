@@ -282,4 +282,9 @@ EXPECTED = {'functions': {},
              ('expr', ('var', 'a'), 0),
              ('expr', ('var', 'b'), 0),
              ('expr', ('var', 'c'), 0),
-             ('expr', ('var', 'd'), 0)]}
+             ('expr', ('var', 'd'), 0),
+             ('stmt_tuple_unpack',
+              [('a', 'ℝ'), ('b', 'ℝ')],
+              ('expr_list', [('num', 7), ('num', 8)])),
+             ('expr', ('var', 'a'), 0),
+             ('expr', ('var', 'b'), 0)]}
