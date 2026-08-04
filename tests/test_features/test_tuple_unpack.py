@@ -597,6 +597,35 @@ class TestTypeRulesLiteralComma:
         assert any("'a'" in e and "ℝ[3]" in e for e in errors)
         assert any("'b'" in e and "ℝ[3]" in e for e in errors)
 
+    def test_complex_tuple_unpack_no_error(self):
+        """
+        ``a, b: ℂ = 1j, 2j`` passes the type checker.
+        """
+        src = "a, b: ℂ = 1j, 2j\n"
+        assert type_errors(src) == []
+
+    def test_real_assigned_to_complex_error(self):
+        """
+        ``a, b: ℂ = 1, 2`` should fail because ℝ is assigned to ℂ.
+        """
+        src = "a, b: ℂ = 1, 2\n"
+        errors = type_errors(src)
+
+        assert len(errors) >= 1
+        assert any("'a'" in e and "ℂ" in e for e in errors)
+        assert any("'b'" in e and "ℂ" in e for e in errors)
+
+    def test_complex_assigned_to_real_error(self):
+        """
+        ``x, y: ℝ = 1j, 2j`` should fail because ℂ is assigned to ℝ.
+        """
+        src = "x, y: ℝ = 1j, 2j\n"
+        errors = type_errors(src)
+
+        assert len(errors) >= 1
+        assert any("'x'" in e and "ℝ" in e for e in errors)
+        assert any("'y'" in e and "ℝ" in e for e in errors)
+
 
 class TestTupleUnpackIntegration:
     """
