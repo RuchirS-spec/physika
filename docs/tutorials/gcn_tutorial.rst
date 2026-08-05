@@ -4,6 +4,36 @@ Graph Convolutional Networks
 In this tutorial we implemented a Graph Convolutional Network (GCN) in physika
 and trained it on Hydration free energy prediction with the FreeSolv dataset.
 
+GCN Architecture
+------------------------
+
+**Purpose:** A GCN aims to make predictions on data that is naturally
+expressed as a graph rather than an array or a grid. In our scenario,
+each molecule is not a list of numbers or an image, but a graph of atoms
+connected by bonds in a specific pattern. Our GCN learns to predict
+hydration free energy by exploiting the graph structure of each molecule.
+
+**Problem:** A standard neural network has no understanding of which atoms 
+are connected to each other, and therefore has to learn the graph structure 
+from scratch. This is inefficient and requires a lot of data. A GCN is designed 
+to take advantage of the graph structure of the data instead, allowing it to
+learn much more efficiently.
+
+.. figure:: /_static/tutorial_files/GCN_vs_CNN_overview.png
+   :alt: Comparison of a GCN and a CNN processing a molecule
+   :align: center
+   :width: 500px
+
+   Comparison of a GCN and a CNN processing a molecule
+
+   Source: `mbernste.github.io <https://mbernste.github.io/posts/gcn/>`_
+
+**Solution:** A GCN exploits the adjacency matrix of a graph to propagate
+information between the nodes of the graph. Each atom's own features are
+blended with its bonded neighbors' features to produce a new set of
+features for each atom.
+
+
 Dataset
 --------
 
@@ -12,19 +42,19 @@ energy (kcal/mol) for small molecules.
 
 .. code-block:: text
 
-    dataset = create_dataset(80, 600, 25)
+    dataset = create_dataset(80, 642, 44)
     train_dataset = dataset[0]
     test_dataset = dataset[1]
 
-    train_A = train_dataset[0]
-    train_H = train_dataset[1]
-    train_sizes = train_dataset[2]
-    train_y = train_dataset[3]
+    train_A: R[513, 44, 44] = train_dataset[0]
+    train_H: R[513, 44, 30] = train_dataset[1]
+    train_sizes: R[513] = train_dataset[2]
+    train_y: R[513] = train_dataset[3]
 
-    test_A = test_dataset[0]
-    test_H = test_dataset[1]
-    test_sizes = test_dataset[2]
-    test_y = test_dataset[3]
+    test_A: R[65, 44, 44] = test_dataset[0]
+    test_H: R[65, 44, 30] = test_dataset[1]
+    test_sizes: R[65] = test_dataset[2]
+    test_y: R[65] = test_dataset[3]
 
 
 .. note::
@@ -33,7 +63,7 @@ energy (kcal/mol) for small molecules.
 
    .. code-block:: python
 
-        def create_dataset(train_test_split=80, total_dataset_size=100, max_atoms=10):
+        def create_dataset(train_test_split=80, total_dataset_size=642, max_atoms=44):
             import deepchem as dc
             import torch
             import torch.nn.functional as F
@@ -53,8 +83,6 @@ energy (kcal/mol) for small molecules.
                 for i in range(min(limit, len(dataset.X))):
                     mol = Chem.AddHs(dataset.X[i])
                     n = mol.GetNumAtoms()
-                    if n > max_atoms:
-                        continue
                     graph = featurizer.featurize([mol])[0]
                     A = torch.tensor(rdmolops.GetAdjacencyMatrix(mol), dtype=torch.float32)
                     H = torch.tensor(graph.node_features, dtype=torch.float32)
@@ -71,7 +99,8 @@ energy (kcal/mol) for small molecules.
 
 
 Every molecule's adjacency matrix and feature matrix are padded upto a 
-fixed size using torch.nn.functional.pad, which pads zeros to the matrix.
+fixed size (molecule with maximum atoms) using torch.nn.functional.pad, 
+which pads zeros to the matrix.
 Bond connectivity is figured out from RDKit's "GetAjacencyMatrix" and 
 the 30 dimensional per-atom features come from DeepChem's "MolGraphConvFeaturizer"
 
@@ -106,7 +135,7 @@ Helper functions
         return results
 
     def get_sum_of_1d_array(x: ℝ[m]): ℝ:
-        total = 0
+        total: ℝ  = 0
         for i:
             total += x[i]
         return total
@@ -114,7 +143,7 @@ Helper functions
     def diag_matrix(d: ℝ[n]): ℝ[n, n]:
         sz: ℝ = get_1d_array_length(d)
         result: ℝ[sz, sz] = zero_2d_array(sz, sz)
-        for i:ℕ(sz):
+        for i:
             result[i, i] = d[i]
         return result
 
@@ -142,32 +171,6 @@ Mathematically, sigmoid is defined as:
 
     def sigma(x: ℝ[a,b]): ℝ[a,b]:
         return 1.0 / (1.0 + exp(0.0 - x))
-
-
-GCN Architecture
-------------------------
-
-**Purpose:** A GCN aims to make predictions on data that is naturally
-expressed like a graph rather than an array or a grid. In our scenario,
-each molecule is not a list of numbers or an image, but a graph of atoms
-connected by bonds in a specific pattern. Our GCN learns to predict
-hydration free energy by exploiting the graph structure of each molecule.
-
-**Problem:** a standard neural network has no understanding of what atoms
-are connected to each other, and therefore needs to learn the graph
-structure from scratch. This is inefficient and requires a lot of data. A
-GCN is designed to take advantage of the graph structure of data, so it can
-learn much more efficiently.
-
-.. figure:: /_static/tutorial_files/GCN_vs_CNN_overview.png
-   :alt: 
-   :align: center
-   :width: 500px
-
-**Solution:** a GCN exploits the adjacency matrix of a graph to propagate
-information between the nodes of the graph. Each atom's own features are
-blended with its bonded neighbors' features to produce a new set of
-features for each atom.
 
 
 GCNModel class
@@ -329,20 +332,18 @@ Initializing GCNModel object
 
 .. code-block:: text
 
-    W1: ℝ[30, 4] = for i:ℕ(30) -> row: ℝ[4] ~ Normal(0.0, 0.3, 4)
-    W2: ℝ[4] ~ Normal(0.0, 0.3, 4)
+    μ : ℝ = 0.0
+    σ : ℝ = 1
 
-    gcn_object: GCNModel = GCNModel(W1, W2)
+    W1: ℝ[30, 4] = for i:ℕ(30) -> row: ℝ[4] ~ Normal(μ, σ, 4)
+    W2: ℝ[4] ~ Normal(μ, σ, 4)
 
 
 Define loss
 ---------------------------
 
 For training the network we use mean squared error, since hydration free
-energy is a continuous value rather than a discrete class. Unlike ``train``
-and ``evaluate`` below, ``mse`` is a plain free function, not a method --
-it gets called from inside ``train`` the same way ``sigma`` or
-``normalize_adj`` do.
+energy is a continuous value rather than a discrete class. 
 
 .. math::
 
@@ -377,7 +378,7 @@ where:
 .. code-block:: text
 
     def train(epochs: ℕ, lr: ℝ) -> ℝ:
-        len_train_X = get_1d_array_length(train_sizes)
+        len_train_X: ℝ = get_1d_array_length(train_sizes)
         loss = 0
         for i:ℕ(epochs):
             loss = 0
@@ -426,7 +427,7 @@ The final accuracy is computed as:
 .. code-block:: text
 
     def within_tolerance(pred: ℝ, target: ℝ, tol: ℝ): ℝ:
-        diff = pred - target
+        diff: ℝ = pred - target
         if diff < 0.0:
             diff = 0.0 - diff
         if diff < tol:
@@ -435,7 +436,7 @@ The final accuracy is computed as:
             return 0.0
 
     def evaluate() -> ℝ:
-        len_test_X = get_1d_array_length(test_sizes)
+        len_test_X: ℝ = get_1d_array_length(test_sizes)
         correct = 0
         for i:ℕ(len_test_X):
             A_i = test_A[i]
@@ -483,7 +484,7 @@ Full Code
         return results
 
     def get_sum_of_1d_array(x: ℝ[m]): ℝ:
-        total = 0
+        total: ℝ = 0
         for i:
             total += x[i]
         return total
@@ -491,7 +492,7 @@ Full Code
     def diag_matrix(d: ℝ[n]): ℝ[n, n]:
         sz: ℝ = get_1d_array_length(d)
         result: ℝ[sz, sz] = zero_2d_array(sz, sz)
-        for i:ℕ(sz):
+        for i:
             result[i, i] = d[i]
         return result
 
@@ -523,7 +524,7 @@ Full Code
         return (pred - target) ** 2.0
 
     def within_tolerance(pred: ℝ, target: ℝ, tol: ℝ): ℝ:
-        diff = pred - target
+        diff: ℝ = pred - target
         if diff < 0.0:
             diff = 0.0 - diff
         if diff < tol:
@@ -541,7 +542,7 @@ Full Code
             pred: ℝ = pooled @ this.W2
             return pred
         def train(epochs: ℕ, lr: ℝ) -> ℝ:
-            len_train_X = get_1d_array_length(train_sizes)
+            len_train_X: ℝ = get_1d_array_length(train_sizes)
             loss = 0
             for i:ℕ(epochs):
                 loss = 0
@@ -558,7 +559,7 @@ Full Code
                 loss = loss / len_train_X
             return loss
         def evaluate() -> ℝ:
-            len_test_X = get_1d_array_length(test_sizes)
+            len_test_X: ℝ = get_1d_array_length(test_sizes)
             correct = 0
             for i:ℕ(len_test_X):
                 A_i = test_A[i]
@@ -571,24 +572,28 @@ Full Code
             this.W1 = this.W1 - lr * learnable_grads[0]
             this.W2 = this.W2 - lr * learnable_grads[1]
 
-    W1: ℝ[30, 4] = for i:ℕ(30) -> row: ℝ[4] ~ Normal(0.0, 0.3, 4)
-    W2: ℝ[4] ~ Normal(0.0, 0.3, 4)
+    μ : ℝ = 0.0
+    σ : ℝ = 1
+
+    W1: ℝ[30, 4] = for i:ℕ(30) -> row: ℝ[4] ~ Normal(μ, σ, 4)
+    W2: ℝ[4] ~ Normal(μ, σ, 4)
+
 
     gcn_object: GCNModel = GCNModel(W1, W2)
 
-    dataset = create_dataset(80, 600, 25)
+    dataset = create_dataset(80, 642, 44)
     train_dataset = dataset[0]
     test_dataset = dataset[1]
 
-    train_A = train_dataset[0]
-    train_H = train_dataset[1]
-    train_sizes = train_dataset[2]
-    train_y = train_dataset[3]
+    train_A: R[513, 44, 44] = train_dataset[0]
+    train_H: R[513, 44, 30] = train_dataset[1]
+    train_sizes: R[513] = train_dataset[2]
+    train_y: R[513] = train_dataset[3]
 
-    test_A = test_dataset[0]
-    test_H = test_dataset[1]
-    test_sizes = test_dataset[2]
-    test_y = test_dataset[3]
+    test_A: R[65, 44, 44] = test_dataset[0]
+    test_H: R[65, 44, 30] = test_dataset[1]
+    test_sizes: R[65] = test_dataset[2]
+    test_y: R[65] = test_dataset[3]
 
     epochs: ℕ = 100
     lr: ℝ = 0.0005
@@ -603,6 +608,7 @@ References
 ----------
 
 - `A Gentle Introduction to Graph Neural Networks (Distill) <https://distill.pub/2021/gnn-intro/>`_
+- `Graph convolutional neural networks <https://mbernste.github.io/posts/gcn/>`_
 - `FreeSolv: The Free Solvation Database (Mobley Lab) <https://github.com/MobleyLab/FreeSolv>`_
 - `RDKit: Open-source cheminformatics <https://www.rdkit.org/>`_
 - `DeepChem Documentation <https://deepchem.readthedocs.io/>`_
