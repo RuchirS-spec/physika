@@ -84,10 +84,25 @@ class TestPhysikaPrint:
 
     def test_physika_print_inside_loop(self):
         # Test ``physika_print()`` inside loops.
-        src = ("arr: ℝ[2] = [1,2]\n"
+        src = ("arr: ℝ[2] = [1, 2]\n"
                "for i: ℕ(2):\n"
                "    physika_print(arr[i])\n")
         assert type_errors(src) == []
         out = capture_output(src)
         assert "1" in out
         assert "2" in out
+    
+    def test_physika_print_inside_function_loop(self):
+        # Test ``physika_print()`` inside function loops.
+        src = ("def test_f(x: ℝ[m]): ℝ:\n"
+               "    for k:ℕ(2):\n"
+               "        physika_print(x[k])\n"
+               "    return 1\n"
+               "arr: ℝ[2] = [10, 20]\n"
+               "test_f(arr)")
+        assert type_errors(src) == []
+        out = capture_output(src) == []
+        out = capture_output(src)
+        assert "10" in out
+        assert "20" in out
+        assert "1" in out
