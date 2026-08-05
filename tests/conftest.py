@@ -4,6 +4,8 @@ from physika.parser import parser, symbol_table
 from physika.utils.ast_utils import build_unified_ast
 from physika.codegen import from_ast_to_torch
 from physika.utils.import_manager import resolve_imports
+from io import StringIO
+from contextlib import redirect_stdout
 
 EXAMPLES_DIR = Path(__file__).parent.parent / "examples"
 
@@ -29,3 +31,41 @@ def exec_phyk(stem: str) -> dict:
     ns: dict = {}
     exec(code, ns)
     return ns
+
+
+def type_errors(src: str) -> list:
+    """
+    Parse Physika source string, run the type checker and return the list of
+    error strings if any.
+    """
+    import physika.parser as pm
+    from physika.lexer import lexer
+    from physika.type_checker import TypeChecker
+    pm.symbol_table.clear()
+    lexer.lexer.lineno = 1
+    ast = build_unified_ast(pm.parser.parse(src, lexer=lexer), pm.symbol_table)
+    return TypeChecker(ast).run()
+
+
+def run_phyk(src: str) -> dict:
+    """
+    Helper function to parse, emits codegen, and exec a Physika source
+    string.
+    """
+    import physika.parser as pm
+    from physika.lexer import lexer
+    pm.symbol_table.clear()
+    lexer.lexer.lineno = 1
+    ast = build_unified_ast(pm.parser.parse(src, lexer=lexer), pm.symbol_table)
+    code = from_ast_to_torch(ast, print_code=False)
+    ns: dict = {}
+    exec(code, ns)
+    return ns
+
+
+def capture_output(src):
+    """Helper function to capture the full output of Physika program."""
+    buf = StringIO()
+    with redirect_stdout(buf):
+        run_phyk(src)
+    return buf.getvalue()
