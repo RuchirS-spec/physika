@@ -91,7 +91,7 @@ class TestPhysikaPrint:
         out = capture_output(src)
         assert "1" in out
         assert "2" in out
-    
+
     def test_physika_print_inside_function_loop(self):
         # Test ``physika_print()`` inside function loops.
         src = ("def test_f(x: ℝ[m]): ℝ:\n"
