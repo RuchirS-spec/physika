@@ -1083,6 +1083,9 @@ def emit_body_stmts(
             expr_code = generate_solve_call(expr)
             lines.append(f"{prefix}{var_name} = {expr_code}")
             known_vars.append(var_name)
+        elif stmt_op == "expr":
+            _, expr, _ = stmt
+            lines.append(f"{prefix}{ast_to_torch_expr(expr)}")
         elif stmt_op == "body_assign":
             _, var_name, expr = stmt
             expr_code = generate_solve_call(expr)
