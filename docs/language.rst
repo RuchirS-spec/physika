@@ -1330,3 +1330,20 @@ are parsed, and only the requested symbols are injected into the current program
 
    f(1.0)
    torch_funcs_with_scalar_R(1.0)
+
+Print statements
+----------------
+
+Physika provides built-in ``physika_print`` to print values during program execution.
+It is primarily useful for inspecting results, debugging programs etc..
+
+.. code-block:: text
+
+   # General ``physika_print`` statement usecase
+   x: ℝ = 10
+   physika_print(x)
+
+   # Print values of array one by one
+   arr: ℝ[2] = [1, 2]
+   for i:ℕ(2):
+      physika_print(arr[i])
