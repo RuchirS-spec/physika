@@ -271,11 +271,17 @@ def p_func_body_stmt_empty(p):
     p[0] = None
 
 
-def p_func_body_stmt_expr(p):
-    """func_body_stmt : func_expr NEWLINE"""
-    # Return AST node for standalone expression inside function body.
-    # Include line number for error reporting
-    p[0] = ("expr", p[1], p.lineno(1))
+def p_func_body_stmt_call(p):
+    """func_body_stmt : ID LPAREN func_args RPAREN NEWLINE"""
+    # Standalone function call inside a function body.
+    # Examples:
+    #   physika_print(x)
+    # Parameters:
+    #   p[1] — function name
+    #   p[3] — list of argument expressions
+    # Returns:
+    #   ("body_call", function_name, arguments)
+    p[0] = ("body_call", p[1], p[3])
 
 
 def p_func_body_stmt_if_return(p):
