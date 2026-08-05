@@ -964,6 +964,10 @@ def emit_func_loop_body(
             lines.append(
                 f"{prefix}{var_name} = {ast_to_torch_expr(expr, current_loop_var=active)}"  # noqa: E501
             )
+        elif tag == "loop_call":
+            _, func_name, args = loop_stmt
+            arg_strs = [ast_to_torch_expr(a) for a in args]
+            lines.append(f"{prefix}{func_name}({', '.join(arg_strs)})")
         elif tag == "loop_pluseq":
             _, var_name, expr = loop_stmt
             lines.append(

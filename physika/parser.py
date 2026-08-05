@@ -677,6 +677,21 @@ def p_func_loop_stmt_empty(p):
     p[0] = None
 
 
+def p_func_loop_stmt_call(p):
+    """func_loop_stmt : ID LPAREN func_args RPAREN NEWLINE"""
+    # Standalone function call inside a loop body.
+    # Examples:
+    #   arr: ℝ[2] = [1, 2]
+    #   for i:ℕ(2):
+    #       physika_print(arr[i])
+    # Parameters:
+    #   p[1] — function name
+    #   p[3] — list of argument expressions
+    # Returns:
+    #   ("loop_call", function_name, arguments)
+    p[0] = ("loop_call", p[1], p[3])
+
+
 def p_statement_decl(p):
     """statement : ID COLON type_spec EQUALS expr NEWLINE"""
     # NEWLINE forces to parse the full expression on one line before reducing
