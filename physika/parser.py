@@ -271,6 +271,13 @@ def p_func_body_stmt_empty(p):
     p[0] = None
 
 
+def p_func_body_stmt_expr(p):
+    """func_body_stmt : func_expr NEWLINE"""
+    # Return AST node for standalone expression inside function body.
+    # Include line number for error reporting
+    p[0] = ("expr", p[1], p.lineno(1))
+
+
 def p_func_body_stmt_if_return(p):
     """func_body_stmt : IF condition COLON NEWLINE INDENT RETURN func_expr NEWLINE DEDENT"""  # noqa: E501
     # Early-return, no else branch.
