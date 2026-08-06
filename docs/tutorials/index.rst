@@ -19,3 +19,4 @@ Tutorials
    ising_model
    learn_flux_limiter_euler_equations
    fft_tutorial
+   quantum_SHO
