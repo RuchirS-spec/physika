@@ -92,3 +92,9 @@ Tutorials
    fft_tutorial
    fourier_neural_operator
    2d_pde_parameter_estimation
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Numerical solvers
+
+   linear_solve_gaussian_elimination
