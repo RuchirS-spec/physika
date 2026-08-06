@@ -9,6 +9,8 @@ from physika.core.expr import (
     LetE,
     Lit,
     MData,
+    MVar,
+    MVarId,
     Proj,
     BinderInfo,
 )
@@ -18,6 +20,8 @@ from physika.utils.cic_utils.expr_utils import (
     get_app_args,
     get_app_fn,
     get_app_fn_args,
+    has_mvar,
+    loose_bvar_range,
 )
 
 
@@ -295,3 +299,139 @@ class TestAbstractFvars:
 
         assert abstract_fvars(body,
                               [x, y]) == abstract(body, ["x.0", "y.1"], 0)
+
+
+class TestLooseBvarRange:
+    """
+    Tests for ``loose_bvar_range``
+    """
+
+    def test_loose_bvars(self):
+        """
+        Checks loose BVars in different expression contexts
+        """
+        # checks a bare ``BVar(k)`` needs ``k + 1`` wrapping binders.
+        assert loose_bvar_range(BVar(0)) == 1
+        assert loose_bvar_range(BVar(2)) == 3
+
+        # checks closed expressions do not have loose BVars.
+        assert loose_bvar_range(Const("Nat", ())) == 0
+        assert loose_bvar_range(Lit(2)) == 0
+
+    def test_app_loose_bvars(self):
+        """
+        Checks ``App`` reports the deepest loose reference from either
+        side.
+        """
+        assert loose_bvar_range(App(BVar(0), BVar(2))) == 3
+
+    def test_lam_binder(self):
+        """
+        Checks ``λx. x`` is closed.
+        """
+        id_fn = Lam("x", Const("Nat", ()), BVar(0), BinderInfo.DEFAULT)
+
+        assert loose_bvar_range(id_fn) == 0
+
+    def test_lam_body_deeper(self):
+        """
+        Checks a body referencing one binder further out have a loose range of
+        1.
+        """
+        frag = Lam("x", Const("Nat", ()), BVar(1), BinderInfo.DEFAULT)
+
+        assert loose_bvar_range(frag) == 1
+
+    def test_forall(self):
+        """
+        Checks ``ForallE`` treats ``binder_type``/``body`` the same way
+        ``Lam`` does.
+        """
+        frag = ForallE("x", BVar(0), BVar(1), BinderInfo.DEFAULT)
+
+        assert loose_bvar_range(frag) == 1
+
+    def test_lete_body(self):
+        """
+        Checks ``LetE`` are measured at its own depth while ``body``
+        is one level deeper.
+        """
+        frag = LetE("n", BVar(0), BVar(0), BVar(1), False)
+
+        assert loose_bvar_range(frag) == 1
+
+        closed_body = LetE("n", Const("Nat", ()), Const("Nat", ()), BVar(0),
+                           False)
+
+        assert loose_bvar_range(closed_body) == 0
+
+    def test_mdata_proj(self):
+        """
+        Checks ``MData`` and ``Proj`` reports its wrapped expression's range.
+        """
+        assert loose_bvar_range(MData((("line", 1), ), BVar(0))) == 1
+        assert loose_bvar_range(Proj("Ray", 0, BVar(0))) == 1
+
+
+class TestHasMvar:
+    """
+    Tests for ``has_mvar``
+    """
+
+    def test_mvar(self):
+        """
+        Basic tests for checking if an expression contains a metavariable.
+        """
+        # checks a term with no ``MVar`` is False.
+        assert has_mvar(Const("Nat", ())) is False
+
+        # checks ``MVar`` is found when no specific id is given.
+        m = MVar(MVarId("m.0"))
+        assert has_mvar(App(Const("f", ()), m)) is True
+
+        # checks a mvar_id is found
+        m = MVar(MVarId("m.0"))
+        assert has_mvar(m, MVarId("m.0")) is True
+        assert has_mvar(m, MVarId("n.0")) is False
+
+    def test_mvar_lam_binder(self):
+        """
+        Checks both ``binder_type`` and ``body`` of a ``Lam``expression are
+        searched.
+        """
+        m = MVar(MVarId("m.0"))
+
+        assert has_mvar(Lam("n", m, Const("Nat", ()),
+                            BinderInfo.DEFAULT)) is True
+        assert has_mvar(Lam("n", Const("Nat", ()), m,
+                            BinderInfo.DEFAULT)) is True
+
+    def test_mvar_forall(self):
+        """
+        Checks ``ForallE`` is searched same as ``Lam``.
+        """
+        m = MVar(MVarId("m.0"))
+
+        assert has_mvar(ForallE("n", Const("Nat", ()), m,
+                                BinderInfo.DEFAULT)) is True
+
+    def test_mvar_lete(self):
+        """
+        Checks ``LetE`` ``type``, ``value``, and ``body`` searches for MVars.
+        """
+        m = MVar(MVarId("m.0"))
+        nat = Const("Nat", ())
+
+        assert has_mvar(LetE("n", m, nat, nat, False)) is True
+        assert has_mvar(LetE("n", nat, m, nat, False)) is True
+        assert has_mvar(LetE("n", nat, nat, m, False)) is True
+
+    def test_mvar_mdata_and_proj(self):
+        """
+        Checks the wrapped expression inside ``MData``/``Proj`` looks for
+        metavariables.
+        """
+        m = MVar(MVarId("m.0"))
+
+        assert has_mvar(MData((), m)) is True
+        assert has_mvar(Proj("Ray", 0, m)) is True
