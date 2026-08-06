@@ -268,14 +268,6 @@ where:
                 result[j] += row[j]
         return result
 
-Note
-
-The row is pulled out with ``row = H[i]`` before indexing into it, rather
-than indexing both dimensions at once as ``H[i,j]``. Both are
-mathematically identical, but a combined two-index expression here
-tripped a code-generation bug in at least one physika build -- pulling
-the row out first sidesteps it and is the version confirmed working.
-
 
 Forward Pass
 ~~~~~~~~~~~~
