@@ -1,6 +1,6 @@
-from physika.core.expr import (Expr, BVar, FVar, App, Lam, ForallE, LetE,
-                               MData, Proj)
-from typing import Tuple, List
+from physika.core.expr import (Expr, BVar, MVar, App, FVar, Lam, ForallE, LetE,
+                               MData, Proj, MVarId)
+from typing import Tuple, Optional, List
 
 
 def get_app_fn(e: Expr) -> Expr:
@@ -199,3 +199,94 @@ def abstract(e: Expr, fvar_ids: List[str], depth: int) -> Expr:
         return Proj(e.type_name, e.idx, ne) if ne is not e.expr else e
     else:  # BVar, MVar, Sort, Const, Lit
         return e
+
+
+def loose_bvar_range(e: Expr) -> int:
+    """
+    Determines the number of loose BVars in an expression.
+
+    Loose variable refers to a variable that is not bound to any binder in the  # noqa: E501
+    expression and need outer binders to be resolved.
+
+    ``BVar(0)`` would have a loose variable range of 1, while ``BVar(1)``
+    would have a loose variable range of 2. A closed expression have a
+    loose variable range of 0, which normally refers to ``FVar, MVar,
+    Sort, Const, Lit`` expressions.
+
+    Parameters
+    ----------
+    e : Expr
+        Expression to measure.
+
+    Examples
+    --------
+    >>> from physika.core.expr import BVar, Lam, Const, BinderInfo
+    >>> from physika.utils.cic_utils.expr_utils import loose_bvar_range
+    >>> loose_bvar_range(BVar(0))
+    1
+    >>> id_fn = Lam("x", Const("Nat", ()), BVar(0), BinderInfo.DEFAULT)
+    >>> loose_bvar_range(id_fn)
+    0
+    >>> open_under_one = Lam("x", Const("Nat", ()), BVar(1), BinderInfo.DEFAULT)
+    >>> loose_bvar_range(open_under_one)
+    1
+    """
+    if isinstance(e, BVar):
+        return e.idx + 1
+    elif isinstance(e, App):
+        return max(loose_bvar_range(e.func), loose_bvar_range(e.arg))
+    elif isinstance(e, (Lam, ForallE)):
+        t_range = loose_bvar_range(e.binder_type)
+        b_range = loose_bvar_range(e.body)
+        return max(t_range, max(0, b_range - 1))
+    elif isinstance(e, LetE):
+        t_range = loose_bvar_range(e.type)
+        v_range = loose_bvar_range(e.value)
+        b_range = loose_bvar_range(e.body)
+        return max(t_range, v_range, max(0, b_range - 1))
+    elif isinstance(e, MData):
+        return loose_bvar_range(e.expr)
+    elif isinstance(e, Proj):
+        return loose_bvar_range(e.expr)
+    else:  # FVar, MVar, Sort, Const, Lit
+        return 0
+
+
+def has_mvar(e: Expr, mvar_id: Optional[MVarId] = None) -> bool:
+    """
+    True if e contains any MVar, or a specific one if mvar_id is given.
+
+    Parameters
+    ----------
+    e : Expr
+        Expression to search.
+    mvar_id : Optional[MVarId], default None
+        If given, only match this specific MVarId; otherwise match any
+        MVar.
+
+    Examples
+    --------
+    >>> from physika.core.expr import MVar, MVarId, Const, App
+    >>> from physika.utils.cic_utils.expr_utils import has_mvar
+    >>> mv = MVar(MVarId("m.0"))
+    >>> has_mvar(App(Const("f", ()), mv))
+    True
+    >>> has_mvar(mv, MVarId("m.0"))
+    True
+    >>> has_mvar(mv, MVarId("n.0"))
+    False
+    """
+    if isinstance(e, MVar):
+        return mvar_id is None or e.id == mvar_id
+    elif isinstance(e, App):
+        return has_mvar(e.func, mvar_id) or has_mvar(e.arg, mvar_id)
+    elif isinstance(e, (Lam, ForallE)):
+        return has_mvar(e.binder_type, mvar_id) or has_mvar(e.body, mvar_id)
+    elif isinstance(e, LetE):
+        return (has_mvar(e.type, mvar_id) or has_mvar(e.value, mvar_id)
+                or has_mvar(e.body, mvar_id))
+    elif isinstance(e, MData):
+        return has_mvar(e.expr, mvar_id)
+    elif isinstance(e, Proj):
+        return has_mvar(e.expr, mvar_id)
+    return False

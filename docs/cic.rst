@@ -183,6 +183,26 @@ So, inspired by Lean 4, Physika during elaboration steps under a binder,
 once the binder's body is done being processed, the ``FVar``\ s created for
 it are abstracted back into ``BVar``\ s for storage.
 
+Metavariables
+-------------
+Metavariables (``MVar``) are placeholders for a term whose value isn't known yet. During elaboration,
+Physika CIC creates a ``MVar`` when an implicit argument is present, such as the dimension
+variable ``n`` in ``ℝ[n]``. Its type (``Nat``) is known immediately, but its value is
+determined at unification. Each ``MVar`` is declared within the ``LocalContext`` it was created in,
+which guides what it can be solved to.
+
+At unification step, a candidate term is assigned to each unsolved ``MVar`` and checked for a valid assignment
+before recording it. A ``MVar`` is assigned a term if it fulfills the following criteria. First, the
+candidate must be closed (no loose ``BVar``\ s). Second, it must not reference the ``MVar``
+being solved. Then, ``FVar``\'s must already exist in that ``MVar``'s own creation ``LocalContext``. Finally,
+the candidate must not reference a metavariable from a deeper scope.
+
+Once every ``MVar`` in a term has been solved, the kernel accepts it. An unresolved ``MVar`` reaching
+the kernel is rejected and an error is raised. Since the kernel never has
+to infer a ``MVar`` value, it can independently verify the elaborator's output.
+
+Universe levels have their own, parallel metavariable system (``LMVar``), solved the same way but
+tracked separately from term-level ``MVar``\ s.
 
 Physika implementation
 ----------------------
@@ -508,6 +528,53 @@ a binder. Registers a ``FVar`` for a name and type variable (used for ``Lam``/``
 
 ``mk_lambda`` and ``mk_forall``  abstract one or more ``FVar``\ s back into ``BVar``\ s and wrap the result
 in ``Lam``/``ForallE`` expressions, closing a binder once its body has been elaborated.
+
+``LMVarId``
+~~~~~~~~~~~
+
+Identifier for a universe-level metavariable. ``LMVar`` is a placeholder node inside a ``Level``
+expression (e.g. ``LSucc(LMVar("u.0"))``). Represents the same relationship ``MVarId`` has to ``MVar``. It is used
+at ``MetaVarContext.level_assignments``, a dict recording which ``Level`` each level metavariable has been solved to.
+
+
+``MetaVarKind``
+~~~~~~~~~~~~~~~
+
+``MetaVarKind`` indicates how a ``MVar`` might be solved. ``NATURAL`` (implicit args, dimension variables)
+is solved freely by the general unifier for regular programs (e.g. dependent types). ``SYNTHETIC``/``SYNTHETIC_OPAQUE``
+refers to placeholders for theorem proofs and tactics.
+
+
+``MetaVarDecl``
+~~~~~~~~~~~~~~~
+
+Declaration for one metavariable. Metavariables are declared during elaboration as placeholders for terms
+not yet known.
+
+   
+``MetaVarContextState``
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Saved state of a MetaVarContext for unification. Used when the elaborator tries to unify two terms that might
+fail and need to restore ``MetaVarContext``.
+
+``MetaVarContext``
+~~~~~~~~~~~~~~~~~~
+
+
+Mutable context class that tracks all metavariables and their solutions. ``MetaVarContext`` works within a
+``LocalContext``. When ``.mk_mvar`` creates an ``MVar``, ``MetaVarContext`` stores the caller's current ``LocalContext`` inside
+that ``MVar``'s ``MetaVarDecl`` (``decl.lctx``). Later, at unification, a candidate solution term is assingned for that
+``MVar``, ``.is_valid_assignment`` checks every ``FVar`` in the candidate against this stored ``LocalContext``.
+A solution may only reference variables that were already in scope when the metavariable was created, which
+stops a solution leaking a local variable that would not make sense outside of where the placeholder came from.
+
+Within Physika's CIC, ``MetaVarContext`` is one of the three pieces of state ( including
+``Environment`` and ``LocalContext``) that are mutable during elaboration. Expression metavars are stored in 
+``expr_assignments`` (``MVarId  → Expr``) and universe level metavars in ``level_assignments`` (``LMVarId → Level``)
+The kernel, which never sees a ``MetaVarContext``, only ever accepts terms where every placeholder has already been
+resolved.
+
 
 References
 ----------
