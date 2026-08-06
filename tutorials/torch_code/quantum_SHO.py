@@ -34,10 +34,10 @@ def adam(parameter, gradient_value, first_moment, second_moment, step, learning_
     return torch.stack([torch.as_tensor(new_parameter), torch.as_tensor(new_first_moment), torch.as_tensor(new_second_moment), torch.as_tensor((step + 1.0))])
 
 # === Program ===
-hbar_SI = 1.054571817e-34
+ℏ_SI = 1.054571817e-34
 joule_per_electronvolt = 1.602176634e-19
 atomic_mass_unit = 1.6605390666e-27
-pi = 3.141592653589793
+π = 3.141592653589793
 meter_to_angstrom = 10000000000.0
 carbon_mass_amu = 12.0
 oxygen_mass_amu = 15.99491461957
@@ -50,7 +50,7 @@ first_moment = 0.0
 second_moment = 0.0
 optimizer_step = 1.0
 learning_rate = 0.01
-epochs = 100
+epochs = 1
 energy_spacing_gradient = 0.0
 adam_result = torch.stack([torch.as_tensor(learned_energy_spacing_eV), torch.as_tensor(first_moment), torch.as_tensor(second_moment), torch.as_tensor(optimizer_step)])
 for epoch in range(int(0), int(epochs)):
@@ -60,17 +60,17 @@ for epoch in range(int(0), int(epochs)):
     first_moment = adam_result[int(1)]
     second_moment = adam_result[int(2)]
     optimizer_step = adam_result[int(3)]
-learned_angular_frequency = ((learned_energy_spacing_eV * joule_per_electronvolt) / hbar_SI)
+learned_angular_frequency = ((learned_energy_spacing_eV * joule_per_electronvolt) / ℏ_SI)
 learned_force_constant = (reduced_mass * (learned_angular_frequency ** 2))
-oscillator_length_m = torch.sqrt((hbar_SI / (reduced_mass * learned_angular_frequency)) if isinstance((hbar_SI / (reduced_mass * learned_angular_frequency)), torch.Tensor) else torch.tensor(float((hbar_SI / (reduced_mass * learned_angular_frequency)))))
+oscillator_length_m = torch.sqrt((ℏ_SI / (reduced_mass * learned_angular_frequency)) if isinstance((ℏ_SI / (reduced_mass * learned_angular_frequency)), torch.Tensor) else torch.tensor(float((ℏ_SI / (reduced_mass * learned_angular_frequency)))))
 x_max_m = (10.0 * oscillator_length_m)
 N_grid = 601
 dx_m = ((2.0 * x_max_m) / ((N_grid - 1) * 1.0))
 position_m = torch.stack([((-x_max_m) + (i * dx_m)) for _fi_i in range(int(N_grid)) for i in [torch.tensor(float(_fi_i), device=DEVICE)]])
 position_A = torch.stack([(position_m[int(i)] * meter_to_angstrom) for _fi_i in range(int(N_grid)) for i in [torch.tensor(float(_fi_i), device=DEVICE)]])
 wavefunctions = torch.stack([torch.stack([((n + i) * 0.0) for _fi_i in range(int(N_grid)) for i in [torch.tensor(float(_fi_i), device=DEVICE)]]) for _fi_n in range(int(N_levels)) for n in [torch.tensor(float(_fi_n), device=DEVICE)]])
-mass_frequency_over_hbar = ((reduced_mass * learned_angular_frequency) / hbar_SI)
-normalization_constant = ((mass_frequency_over_hbar / pi) ** 0.25)
+mass_frequency_over_hbar = ((reduced_mass * learned_angular_frequency) / ℏ_SI)
+normalization_constant = ((mass_frequency_over_hbar / π) ** 0.25)
 for i in range(int(0), int(N_grid)):
     wavefunctions[int(0), int(i)] = (normalization_constant * torch.exp((((-0.5) * mass_frequency_over_hbar) * (position_m[int(i)] ** 2)) if isinstance((((-0.5) * mass_frequency_over_hbar) * (position_m[int(i)] ** 2)), torch.Tensor) else torch.tensor(float((((-0.5) * mass_frequency_over_hbar) * (position_m[int(i)] ** 2))))))
 one_level = 1
@@ -90,7 +90,7 @@ if N_levels > two_levels:
         second_coefficient = torch.sqrt((n_real / next_n_real) if isinstance((n_real / next_n_real), torch.Tensor) else torch.tensor(float((n_real / next_n_real))))
         for i in range(int(0), int(N_grid)):
             wavefunctions[int((n + 1)), int(i)] = ((((first_coefficient * torch.sqrt(mass_frequency_over_hbar if isinstance(mass_frequency_over_hbar, torch.Tensor) else torch.tensor(float(mass_frequency_over_hbar)))) * position_m[int(i)]) * wavefunctions[int(n), int(i)]) - (second_coefficient * wavefunctions[int((n - 1)), int(i)]))
-kinetic_coefficient_J_m2 = ((hbar_SI ** 2) / (2.0 * reduced_mass))
+kinetic_coefficient_J_m2 = ((ℏ_SI ** 2) / (2.0 * reduced_mass))
 second_derivative = 0.0
 hamiltonian_wavefunctions = torch.stack([torch.stack([((n + i) * 0.0) for _fi_i in range(int(N_grid)) for i in [torch.tensor(float(_fi_i), device=DEVICE)]]) for _fi_n in range(int(N_levels)) for n in [torch.tensor(float(_fi_n), device=DEVICE)]])
 kinetic_part_J = 0.0
