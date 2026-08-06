@@ -1,4 +1,5 @@
-from physika.core.expr import (Expr, BVar, MVar, App, FVar, Lam, ForallE, LetE, MData, Proj, MVarId)  # noqa: E501
+from physika.core.expr import (Expr, BVar, MVar, App, FVar, Lam, ForallE, LetE,
+                               MData, Proj, MVarId)
 from typing import Tuple, Optional, List
 
 
