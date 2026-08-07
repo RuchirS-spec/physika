@@ -744,6 +744,10 @@ def ast_to_torch_expr(node: ASTNode,
                 return f"compute_grad(lambda {lamb_var}: {inner_call}, {arg_strs[1]})"  # noqa
             return f"compute_grad({', '.join(arg_strs)})"
 
+        elif func_name == "print":
+            # print() -> physika_print()
+            return f"physika_print({', '.join(arg_strs)})"
+
         elif func_name == "subs":
             # Substitution is used in mathematical expression which replace
             # all instances of something in expression with something else
