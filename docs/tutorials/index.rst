@@ -55,6 +55,7 @@ Tutorials
    :caption: Quantum Mechanics
 
    learn_parameter_schrodinger_equation
+   quantum_SHO
 
 .. toctree::
    :maxdepth: 1
