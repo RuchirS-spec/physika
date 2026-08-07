@@ -147,6 +147,62 @@ Inductive types allows computation through ι(iota)-reduction.  When a recursor 
 of its inductive type, the kernel identifies a major premise (input of the function) and applies
 logic defined in minor premises (specify how to compute each constructor).
 
+Before an inductive type is added to Physika's environment (``Environment``), an strict positivity check is applied.
+Strict positivity checks that an inductive type is constructed correctly before it is elaborated or the kernel sees it.
+A constructor is strictly positive for the inductive type ``T`` if ``T`` appears in positive positions in each field type.
+First, inductive type ``T`` must not appear in ``Expr``. Second, an inductive type must not be inside the
+domain of an arrow type or function application. This imples anywhere inside
+the domain, no matter how deeply nested arrows are within it. In other
+words, the domain of a constructor's field cannot contain a self referenced
+inductive type, because this can lead to logical inconsistencies. Finally, since
+a constructor is a chain of fields (one ``ForallE`` arrow per field), this
+domain check is applied separately to each field along that chain.
+
+Environment
+-----------
+An environment (``Environment``) maps names, including inductive types, to declarations. A global environment keeps track of axioms,
+definitions, and inductive types used in a Physika program. ``Environment`` is initialized
+before elaboration and type checking. During this step, constant declarations and inductive types are added, and checked for positivity, to be allowed to be used for elaborator
+and kernel. Once each CIC term verified and added, ``Environment`` serves as a lookup table for constants and inductive types.
+
+Local context
+-------------
+When working with dependent types, a binder's type can reference a
+previously bound variable. For example:
+
+.. code-block:: text
+
+   def matvec(A : ℝ[m,n], v : ℝ[n]) : ℝ[m]
+
+Here ``v``'s type references ``n``, which comes from ``A``'s type. Terms are
+stored with de Bruijn indices. Bound variables are represented as ``BVar`` by position
+rather than using a name. Indices can produce errors when working with nested binders.
+So, inspired by Lean 4, Physika during elaboration steps under a binder,
+``BVar`` are promoted to a new ``FVar`` and sotred in a
+``LocalContext``. Elaboration then proceeds with ``FVar``\ s, and
+once the binder's body is done being processed, the ``FVar``\ s created for
+it are abstracted back into ``BVar``\ s for storage.
+
+Metavariables
+-------------
+Metavariables (``MVar``) are placeholders for a term whose value isn't known yet. During elaboration,
+Physika CIC creates a ``MVar`` when an implicit argument is present, such as the dimension
+variable ``n`` in ``ℝ[n]``. Its type (``Nat``) is known immediately, but its value is
+determined at unification. Each ``MVar`` is declared within the ``LocalContext`` it was created in,
+which guides what it can be solved to.
+
+At unification step, a candidate term is assigned to each unsolved ``MVar`` and checked for a valid assignment
+before recording it. A ``MVar`` is assigned a term if it fulfills the following criteria. First, the
+candidate must be closed (no loose ``BVar``\ s). Second, it must not reference the ``MVar``
+being solved. Then, ``FVar``\'s must already exist in that ``MVar``'s own creation ``LocalContext``. Finally,
+the candidate must not reference a metavariable from a deeper scope.
+
+Once every ``MVar`` in a term has been solved, the kernel accepts it. An unresolved ``MVar`` reaching
+the kernel is rejected and an error is raised. Since the kernel never has
+to infer a ``MVar`` value, it can independently verify the elaborator's output.
+
+Universe levels have their own, parallel metavariable system (``LMVar``), solved the same way but
+tracked separately from term-level ``MVar``\ s.
 
 Physika implementation
 ----------------------
@@ -427,6 +483,97 @@ declaration records its name is ``"Nat"``, that it has two
 constructors (``Nat.zero`` and ``Nat.succ``), and that it is recursive (since ``Nat.succ`` mentions
 ``Nat`` itself).
 
+``ConstantInfo``
+~~~~~~~~~~~~~~~~
+``ConstantInfo`` stores constant declarations
+data such as it's name, universe parameters, type, and
+value and is used inside ``Environment``.
+
+``InductiveInfo``
+~~~~~~~~~~~~~~~~~
+``InductiveInfo`` is used in ``Environment`` to store data
+about an inductive type. ``InductiveInfo`` keeps track of an
+inductive type's declaration, its constructors and recursor
+as ``ConstantInfo``, and its ``Recursor``.
+   
+``Environment``
+~~~~~~~~~~~~~~~
+``Environment`` keeps track axioms, definitions, and inductive
+types used in a Physika program. `Environment`` is initialized
+before elaboration and type checking. Once each CIC term (axioms, theorems
+and declarations) is added, ``Environment`` serves as a lookup table.
+
+``LocalDeclVar``
+~~~~~~~~~~~~~~~~
+Represents a binder where a variable is introduced with a specific type
+but no assigned value. ``LocalDeclVar`` is used when opening a binder from a local context.
+
+``LocalDeclDef``
+~~~~~~~~~~~~~~~~
+Represents a local definition (let binding), which includes both a type
+and a value (``x: T = t``). ``LocalDeclDef`` is used when opening definition from a local context.
+
+``LocalContext``
+~~~~~~~~~~~~~~~~
+``LocalContext`` handles two types of declarations:
+
+- ``LocalDeclVar``: A variable introduced by a binder, with a type but no value.
+
+- ``LocalDeclDef``: a let-definition: A variable with both a type and a known value.
+
+``LocalContext`` is immutable: ``push_local`` and ``push_let`` return
+a new ``LocalContext`` rather than mutating the existing one. ``push_local`` opens
+a binder. Registers a ``FVar`` for a name and type variable (used for ``Lam``/``ForallE``).
+``push_let`` does the same for a let-value, additionally recording the bound value (used for ``LetE``).
+
+``mk_lambda`` and ``mk_forall``  abstract one or more ``FVar``\ s back into ``BVar``\ s and wrap the result
+in ``Lam``/``ForallE`` expressions, closing a binder once its body has been elaborated.
+
+``LMVarId``
+~~~~~~~~~~~
+
+Identifier for a universe-level metavariable. ``LMVar`` is a placeholder node inside a ``Level``
+expression (e.g. ``LSucc(LMVar("u.0"))``). Represents the same relationship ``MVarId`` has to ``MVar``. It is used
+at ``MetaVarContext.level_assignments``, a dict recording which ``Level`` each level metavariable has been solved to.
+
+
+``MetaVarKind``
+~~~~~~~~~~~~~~~
+
+``MetaVarKind`` indicates how a ``MVar`` might be solved. ``NATURAL`` (implicit args, dimension variables)
+is solved freely by the general unifier for regular programs (e.g. dependent types). ``SYNTHETIC``/``SYNTHETIC_OPAQUE``
+refers to placeholders for theorem proofs and tactics.
+
+
+``MetaVarDecl``
+~~~~~~~~~~~~~~~
+
+Declaration for one metavariable. Metavariables are declared during elaboration as placeholders for terms
+not yet known.
+
+   
+``MetaVarContextState``
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Saved state of a MetaVarContext for unification. Used when the elaborator tries to unify two terms that might
+fail and need to restore ``MetaVarContext``.
+
+``MetaVarContext``
+~~~~~~~~~~~~~~~~~~
+
+
+Mutable context class that tracks all metavariables and their solutions. ``MetaVarContext`` works within a
+``LocalContext``. When ``.mk_mvar`` creates an ``MVar``, ``MetaVarContext`` stores the caller's current ``LocalContext`` inside
+that ``MVar``'s ``MetaVarDecl`` (``decl.lctx``). Later, at unification, a candidate solution term is assingned for that
+``MVar``, ``.is_valid_assignment`` checks every ``FVar`` in the candidate against this stored ``LocalContext``.
+A solution may only reference variables that were already in scope when the metavariable was created, which
+stops a solution leaking a local variable that would not make sense outside of where the placeholder came from.
+
+Within Physika's CIC, ``MetaVarContext`` is one of the three pieces of state ( including
+``Environment`` and ``LocalContext``) that are mutable during elaboration. Expression metavars are stored in 
+``expr_assignments`` (``MVarId  → Expr``) and universe level metavars in ``level_assignments`` (``LMVarId → Level``)
+The kernel, which never sees a ``MetaVarContext``, only ever accepts terms where every placeholder has already been
+resolved.
 
 
 References
