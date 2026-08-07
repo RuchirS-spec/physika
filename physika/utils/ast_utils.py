@@ -744,10 +744,6 @@ def ast_to_torch_expr(node: ASTNode,
                 return f"compute_grad(lambda {lamb_var}: {inner_call}, {arg_strs[1]})"  # noqa
             return f"compute_grad({', '.join(arg_strs)})"
 
-        elif func_name == "print":
-            # print() -> physika_print()
-            return f"physika_print({', '.join(arg_strs)})"
-
         elif func_name == "subs":
             # Substitution is used in mathematical expression which replace
             # all instances of something in expression with something else
@@ -1517,7 +1513,7 @@ def generate_statement(stmt: ASTNode,
     >>> generate_statement(("decl", "t", "ℝ", ("num", 0.0), 2), {"t"})
     't = torch.tensor(0.0, requires_grad=True)'
     >>> generate_statement(("expr", ("var", "x"), 0), set())
-    'physika_print(x)'
+    'print(x)'
     """
     if not isinstance(stmt, tuple):
         return None
@@ -1576,7 +1572,7 @@ def generate_statement(stmt: ASTNode,
                       tuple) and expr[0] == "call" and expr[1] in ("simulate",
                                                                    "animate"):
             return expr_code
-        return f"physika_print({expr_code})"
+        return f"print({expr_code})"
 
     elif op == "symbol_decl":
         name = stmt[1]
