@@ -1479,7 +1479,7 @@ def generate_statement(stmt: ASTNode,
     """Generate a PyTorch code string for a program-level statement.
 
     Handles ``decl`` (variable declaration), ``assign`` (reassignment),
-    ``expr`` (bare expression — wrapped in ``physika_print`` unless it
+    ``expr`` (bare expression — wrapped in ``print`` unless it
     is a side-effect call like ``simulate``/``animate``), ``for_loop``,
     and skips ``func_def``/``class_def`` (already emitted by
     ``from_ast_to_torch``).
@@ -1567,7 +1567,7 @@ def generate_statement(stmt: ASTNode,
     elif op == "expr":
         expr = stmt[1]
         expr_code = ast_to_torch_expr(expr)
-        # Don't wrap side-effect-only calls in physika_print
+        # Don't wrap side-effect-only calls in print
         if isinstance(expr,
                       tuple) and expr[0] == "call" and expr[1] in ("simulate",
                                                                    "animate"):

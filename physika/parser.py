@@ -275,7 +275,7 @@ def p_func_body_stmt_call(p):
     """func_body_stmt : ID LPAREN func_args RPAREN NEWLINE"""
     # Standalone function call inside a function body.
     # Examples:
-    #   physika_print(x)
+    #   print(x)
     # Parameters:
     #   p[1] — function name
     #   p[3] — list of argument expressions
@@ -683,7 +683,7 @@ def p_func_loop_stmt_call(p):
     # Examples:
     #   arr: ℝ[2] = [1, 2]
     #   for i:ℕ(2):
-    #       physika_print(arr[i])
+    #       print(arr[i])
     # Parameters:
     #   p[1] — function name
     #   p[3] — list of argument expressions

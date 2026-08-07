@@ -559,7 +559,7 @@ where:
             new_b2 = cnn_object.b2 - lr * db2
             cnn_object = ConvNets(new_kernel, new_b1, new_w, new_b2)
         loss = loss / len_train_X
-        physika_print(loss)
+        print(loss)
 
 
 Testing the Model
@@ -787,7 +787,7 @@ Full Code
             new_b2 = cnn_object.b2 - lr * db2
             cnn_object = ConvNets(new_kernel, new_b1, new_w, new_b2)
         loss = loss / len_train_X
-        physika_print(loss)
+        print(loss)
 
 
     def argmax(iterable: R[m]): R:
