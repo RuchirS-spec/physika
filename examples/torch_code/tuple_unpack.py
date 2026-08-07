@@ -1,6 +1,3 @@
-  ✓ No type errors found
-
-=== Physika generated Pytorch code ===
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -236,24 +233,3 @@ print(y_complex)
 x_arr, y_arr = torch.tensor([[1, 1], [1, 1]], device=DEVICE), torch.tensor([[1, 1], [1, 1]], device=DEVICE)
 print(x_arr)
 print(y_arr)
-=== End Pytorch code ===
-
-1.0 ∈ ℝ
-2.0 ∈ ℝ
-3.0 ∈ ℝ
-5.0 ∈ ℝ
-10.0 ∈ ℝ
-20.0 ∈ ℝ
-30.0 ∈ ℝ
-5.0 ∈ ℝ
-10.0 ∈ ℝ
-1 ∈ ℝ
-2 ∈ ℝ
-3 ∈ ℝ
-4 ∈ ℝ
-7 ∈ ℝ
-8 ∈ ℝ
-1j ∈ ℂ
-2j ∈ ℂ
-[[1, 1], [1, 1]] ∈ ℝ[2,2]
-[[1, 1], [1, 1]] ∈ ℝ[2,2]
