@@ -59,7 +59,7 @@ def from_ast_to_torch(unified_ast: Dict[str, Any],
     >>> code = from_ast_to_torch(unified_ast, print_code=False)
     >>> "import torch" in code
     True
-    >>> "physika_print(42.0)" in code
+    >>> "print(42.0)" in code
     True
     >>> print(code)
     import torch
@@ -67,10 +67,10 @@ def from_ast_to_torch(unified_ast: Dict[str, Any],
     import torch.optim as optim
     from physika.runtime import DEVICE
     <BLANKLINE>
-    from physika.runtime import physika_print
+    from physika.runtime import print
     <BLANKLINE>
     # === Program ===
-    physika_print(42.0)
+    print(42.0)
     >>> # Example #2: function definition and call
     >>> unified_ast = {
     ...     "functions": {
@@ -91,14 +91,14 @@ def from_ast_to_torch(unified_ast: Dict[str, Any],
     import torch.optim as optim
     from physika.runtime import DEVICE
     <BLANKLINE>
-    from physika.runtime import physika_print
+    from physika.runtime import print
     <BLANKLINE>
     # === Functions ===
     def f(x):
         return torch.exp(x if isinstance(x, torch.Tensor) else torch.tensor(float(x)))
     <BLANKLINE>
     # === Program ===
-    physika_print(f(1.0))
+    print(f(1.0))
     """
     code_lines = []
 
@@ -162,7 +162,7 @@ def from_ast_to_torch(unified_ast: Dict[str, Any],
     code_lines.append("")
 
     # Import helpers from runtime.py
-    imports = ["from physika.runtime import physika_print"]
+    imports = ["from physika.runtime import print"]
     if needs_solve:
         imports.append("from physika.runtime import solve")
     if needs_train:
