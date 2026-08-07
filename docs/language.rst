@@ -1334,16 +1334,16 @@ are parsed, and only the requested symbols are injected into the current program
 Print statements
 ----------------
 
-Physika provides built-in ``physika_print`` to print values during program execution.
+Physika provides built-in ``print`` function to print values during program execution.
 It is primarily useful for inspecting results, debugging programs etc..
 
 .. code-block:: text
 
-   # General ``physika_print`` statement usecase
+   # General ``print`` statement usecase
    x: ℝ = 10
-   physika_print(x)
+   print(x)
 
    # Print values of array one by one
    arr: ℝ[2] = [1, 2]
    for i:ℕ(2):
-      physika_print(arr[i])
+      print(arr[i])
