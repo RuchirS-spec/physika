@@ -80,7 +80,7 @@ learning_rate: ℝ = 0.01
 epochs: ℕ = 1
 
 for i:ℕ(epochs):
-    physika_print(i)
+    print(i)
     g = grad(calculate_loss, c)
     c = c - learning_rate * g
 

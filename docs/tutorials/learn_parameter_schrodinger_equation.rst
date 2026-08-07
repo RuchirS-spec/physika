@@ -520,7 +520,7 @@ Adam recovers the true barrier height of :math:`1.8`:
     epochs: N = 40
 
     for i:ℕ(epochs):
-        physika_print(i)
+        print(i)
         g = grad(calculate_loss, new_barrier_height)
         result = adam(new_barrier_height, g, m_adam, v_adam, t_adam, lr)
         new_barrier_height  = result[0]
@@ -689,7 +689,7 @@ Full code
     epochs: ℕ = 40
 
     for i:ℕ(epochs):
-        physika_print(i)
+        print(i)
         g = grad(calculate_loss, guess_barrier_height)
         result  = adam(guess_barrier_height, g, m_adam, v_adam, t_adam, lr)
         guess_barrier_height  = result[0]

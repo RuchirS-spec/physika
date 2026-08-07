@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from physika.runtime import DEVICE
 
-from physika.runtime import physika_print
+from physika.runtime import print
 from physika.runtime import compute_grad
 
 # === Functions ===
@@ -47,4 +47,4 @@ epochs = 1
 for epoch in range(int(0), int(epochs)):
     g = compute_grad(calculate_loss, eps)
     eps = (eps - (learning_rate * g))
-    physika_print(eps)
+    print(eps)

@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from physika.runtime import DEVICE
 
-from physika.runtime import physika_print
+from physika.runtime import print
 from physika.runtime import compute_grad
 
 # === Functions ===
@@ -44,26 +44,26 @@ def elementwise_sq(x):
 
 # === Program ===
 s0 = torch.tensor(2.0, requires_grad=True)
-physika_print(sum_for_expr(s0))
-physika_print(compute_grad(lambda _ds0: sum_for_expr(_ds0), s0))
+print(sum_for_expr(s0))
+print(compute_grad(lambda _ds0: sum_for_expr(_ds0), s0))
 s1 = torch.tensor(1.0, requires_grad=True)
-physika_print(dot_with_arr(s1))
-physika_print(compute_grad(lambda _ds1: dot_with_arr(_ds1), s1))
+print(dot_with_arr(s1))
+print(compute_grad(lambda _ds1: dot_with_arr(_ds1), s1))
 s2 = torch.tensor(1.0, requires_grad=True)
-physika_print(matmul_scale(s2))
-physika_print(compute_grad(lambda _ds2: matmul_scale(_ds2), s2))
+print(matmul_scale(s2))
+print(compute_grad(lambda _ds2: matmul_scale(_ds2), s2))
 s3 = torch.tensor(1.0, requires_grad=True)
-physika_print(nested_sum(s3))
-physika_print(compute_grad(lambda _ds3: nested_sum(_ds3), s3))
+print(nested_sum(s3))
+print(compute_grad(lambda _ds3: nested_sum(_ds3), s3))
 s = torch.tensor(2.0, requires_grad=True)
-physika_print(scale_vec(s))
-physika_print(compute_grad(lambda _ds: scale_vec(_ds), s))
+print(scale_vec(s))
+print(compute_grad(lambda _ds: scale_vec(_ds), s))
 sv = torch.tensor(3.0, requires_grad=True)
-physika_print(sq_vec(sv))
-physika_print(compute_grad(lambda _dsv: sq_vec(_dsv), sv))
+print(sq_vec(sv))
+print(compute_grad(lambda _dsv: sq_vec(_dsv), sv))
 x = torch.tensor(0.5, requires_grad=True)
-physika_print(cos_freqs(x))
-physika_print(compute_grad(lambda _dx: cos_freqs(_dx), x))
+print(cos_freqs(x))
+print(compute_grad(lambda _dx: cos_freqs(_dx), x))
 ev = torch.as_tensor(torch.tensor([1.0, 2.0, 3.0], device=DEVICE)).requires_grad_(True).to(DEVICE)
-physika_print(elementwise_sq(ev))
-physika_print(compute_grad(lambda _dev: elementwise_sq(_dev), ev))
+print(elementwise_sq(ev))
+print(compute_grad(lambda _dev: elementwise_sq(_dev), ev))

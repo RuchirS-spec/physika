@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from physika.runtime import DEVICE
 
-from physika.runtime import physika_print
+from physika.runtime import print
 
 # === Functions ===
 def get_1d_array_length(x):
@@ -107,12 +107,12 @@ c0 = torch.tensor([[0.1], [0.2]], device=DEVICE)
 w1 = torch.tensor([[0.7, 0.8]], device=DEVICE)
 b1 = 0.3
 net1 = OneLayerNet(W0, c0, w1, b1)
-physika_print(net1(torch.tensor([1.0, 2.0, 3.0], device=DEVICE)))
+print(net1(torch.tensor([1.0, 2.0, 3.0], device=DEVICE)))
 W = torch.tensor([[[0.1, 0.2, 0.3], [0.4, 0.5, 0.6], [0.7, 0.8, 0.9]], [[0.2, 0.3, 0.4], [0.5, 0.6, 0.7], [0.8, 0.9, 0.1]]], device=DEVICE)
 B = torch.tensor([[[0.1], [0.2], [0.3]], [[0.1], [0.2], [0.3]]], device=DEVICE)
 w = torch.tensor([[0.5, 0.5, 0.5]], device=DEVICE)
 b = 0.1
 net2 = FullyConnectedNetwork(W, B, w, b, 2)
-physika_print(net2(torch.tensor([[1.0], [2.0], [3.0]], device=DEVICE)))
-physika_print(net2(torch.tensor([[0.0], [0.0], [0.0]], device=DEVICE)))
-physika_print(net2(torch.tensor([[1.0], [1.0], [1.0]], device=DEVICE)))
+print(net2(torch.tensor([[1.0], [2.0], [3.0]], device=DEVICE)))
+print(net2(torch.tensor([[0.0], [0.0], [0.0]], device=DEVICE)))
+print(net2(torch.tensor([[1.0], [1.0], [1.0]], device=DEVICE)))

@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from physika.runtime import DEVICE
 
-from physika.runtime import physika_print
+from physika.runtime import print
 
 # === Classes ===
 class Conv1d(nn.Module):
@@ -247,4 +247,4 @@ train_y = torch.stack([torch.stack([torch.stack([torch.distributions.Normal(0, 1
 fno_obj = FNO1d(p, conv0, conv1, conv2, conv3, mlp0, mlp1, mlp2, mlp3, w0, w1, w2, w3, q).to(DEVICE)
 epochs = 1
 loss = fno_obj.train(train_X, train_y, epochs, 0.0001)
-physika_print(loss)
+print(loss)
