@@ -1,6 +1,3 @@
-  ✓ No type errors found
-
-=== Physika generated Pytorch code ===
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -119,8 +116,3 @@ for n in range(int(0), int(N_levels)):
 print(print(learned_energy_spacing_eV))
 print(print(learned_angular_frequency))
 print(print(learned_force_constant))
-=== End Pytorch code ===
-
-0.009999996982514858 ∈ ℝ
-15192669814784.0 ∈ ℝ
-2.627854585647583 ∈ ℝ

@@ -1,6 +1,3 @@
-  ✓ No type errors found
-
-=== Physika generated Pytorch code ===
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -294,15 +291,3 @@ print(print(vibrational_energies_eV[int(1)]))
 print(print(transition_eV))
 print(print(wavenumber))
 print(print(wavelength_micrometer))
-=== End Pytorch code ===
-
-0 ∈ ℝ
-3.505000114440918 ∈ ℝ
-1.5010000467300415 ∈ ℝ
-1.349500060081482 ∈ ℝ
-1.3424205780029297 ∈ ℝ
-0.13537971675395966 ∈ ℝ
-0.4124298095703125 ∈ ℝ
-0.27705007791519165 ∈ ℝ
-2234.5595703125 ∈ ℝ
-4.475154876708984 ∈ ℝ
