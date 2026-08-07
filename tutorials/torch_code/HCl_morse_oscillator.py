@@ -1,9 +1,12 @@
+  ✓ No type errors found
+
+=== Physika generated Pytorch code ===
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from physika.runtime import DEVICE
 
-from physika.runtime import physika_print
+from physika.runtime import print
 from physika.runtime import compute_grad
 
 # === Functions ===
@@ -263,7 +266,7 @@ for row in range(int(0), int(Krylov_dimension)):
     for column in range(int(row), int(Krylov_dimension)):
         projected_hamiltonian[int(row), int(column)] = dot_product(Krylov_basis[int(row)], H_Krylov[int(column)], N_grid)
         projected_hamiltonian[int(column), int(row)] = projected_hamiltonian[int(row), int(column)]
-physika_print(jacobi_diagonalize())
+print(jacobi_diagonalize())
 vibrational_energies_eV = zero_array(N_levels)
 ψ_raw = zero_matrix(N_levels, N_grid)
 for n in range(int(0), int(N_levels)):
@@ -282,12 +285,24 @@ transition_eV = (vibrational_energies_eV[int(1)] - vibrational_energies_eV[int(0
 transition_J = (transition_eV * electron_volt)
 wavenumber = (transition_J / (planck_constant * speed_of_light_cm))
 wavelength_micrometer = (10000.0 / wavenumber)
-physika_print(physika_print(learned_dissociation_energy_eV))
-physika_print(physika_print(learned_α_inverse_angstrom))
-physika_print(physika_print(learned_equilibrium_distance_angstrom))
-physika_print(physika_print(final_learning_loss))
-physika_print(physika_print(vibrational_energies_eV[int(0)]))
-physika_print(physika_print(vibrational_energies_eV[int(1)]))
-physika_print(physika_print(transition_eV))
-physika_print(physika_print(wavenumber))
-physika_print(physika_print(wavelength_micrometer))
+print(print(learned_dissociation_energy_eV))
+print(print(learned_α_inverse_angstrom))
+print(print(learned_equilibrium_distance_angstrom))
+print(print(final_learning_loss))
+print(print(vibrational_energies_eV[int(0)]))
+print(print(vibrational_energies_eV[int(1)]))
+print(print(transition_eV))
+print(print(wavenumber))
+print(print(wavelength_micrometer))
+=== End Pytorch code ===
+
+0 ∈ ℝ
+3.505000114440918 ∈ ℝ
+1.5010000467300415 ∈ ℝ
+1.349500060081482 ∈ ℝ
+1.3424205780029297 ∈ ℝ
+0.13537971675395966 ∈ ℝ
+0.4124298095703125 ∈ ℝ
+0.27705007791519165 ∈ ℝ
+2234.5595703125 ∈ ℝ
+4.475154876708984 ∈ ℝ

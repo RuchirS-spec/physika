@@ -1,3 +1,6 @@
+  ✓ No type errors found
+
+=== Physika generated Pytorch code ===
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -220,16 +223,37 @@ a, b = v.f()
 print(a)
 print(b)
 a, b, c, d = 1, 2, 3, 4
-physika_print(a)
-physika_print(b)
-physika_print(c)
-physika_print(d)
+print(a)
+print(b)
+print(c)
+print(d)
 a, b = 7, 8
-physika_print(a)
-physika_print(b)
+print(a)
+print(b)
 x_complex, y_complex = 1j, 2j
-physika_print(x_complex)
-physika_print(y_complex)
+print(x_complex)
+print(y_complex)
 x_arr, y_arr = torch.tensor([[1, 1], [1, 1]], device=DEVICE), torch.tensor([[1, 1], [1, 1]], device=DEVICE)
-physika_print(x_arr)
-physika_print(y_arr)
+print(x_arr)
+print(y_arr)
+=== End Pytorch code ===
+
+1.0 ∈ ℝ
+2.0 ∈ ℝ
+3.0 ∈ ℝ
+5.0 ∈ ℝ
+10.0 ∈ ℝ
+20.0 ∈ ℝ
+30.0 ∈ ℝ
+5.0 ∈ ℝ
+10.0 ∈ ℝ
+1 ∈ ℝ
+2 ∈ ℝ
+3 ∈ ℝ
+4 ∈ ℝ
+7 ∈ ℝ
+8 ∈ ℝ
+1j ∈ ℂ
+2j ∈ ℂ
+[[1, 1], [1, 1]] ∈ ℝ[2,2]
+[[1, 1], [1, 1]] ∈ ℝ[2,2]
