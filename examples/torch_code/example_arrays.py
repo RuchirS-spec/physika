@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from physika.runtime import DEVICE
 
-from physika.runtime import physika_print
+from physika.runtime import print
 
 # === Functions ===
 def update_1d_array(x):
@@ -22,9 +22,9 @@ def update_2d_array(x):
 x = torch.tensor([1, 2, 3, 5, 6, 7], device=DEVICE)
 y = (x[0:3] + x[0:3])
 z = (y + torch.tensor([1, 3, 4], device=DEVICE))
-physika_print(x)
-physika_print(y)
-physika_print(z)
+print(x)
+print(y)
+print(z)
 u0 = torch.tensor([[0.0, 0.0, 0.0, 0.0], [0.0, 0.75, 0.75, 0.0], [0.0, 0.75, 0.75, 10.0], [0.0, 0.0, 0.0, 0.0]], device=DEVICE)
 u00 = u0[int(0), int(0)]
 u01 = u0[int(0), int(1)]
@@ -58,12 +58,12 @@ prog_3d = torch.tensor([[[1.0, 1.0], [1.0, 1.0]], [[1.0, 1.0], [1.0, 1.0]]], dev
 prog_1d[int(1)] = 2
 prog_2d[int(1), int(1)] = 2
 prog_3d[int(1), int(1), int(1)] = 2
-physika_print(prog_1d)
-physika_print(prog_2d)
-physika_print(prog_3d)
+print(prog_1d)
+print(prog_2d)
+print(prog_3d)
 func_1d = torch.tensor([1.0, 1.0], device=DEVICE)
 func_2d = torch.tensor([[1.0, 1.0], [1.0, 1.0]], device=DEVICE)
 func_3d = torch.tensor([[[1.0, 1.0], [1.0, 1.0]], [[1.0, 1.0], [1.0, 1.0]]], device=DEVICE)
-physika_print(update_1d_array(func_1d))
-physika_print(update_2d_array(func_2d))
-physika_print(update_3d_array(func_3d))
+print(update_1d_array(func_1d))
+print(update_2d_array(func_2d))
+print(update_3d_array(func_3d))

@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from physika.runtime import DEVICE
 
-from physika.runtime import physika_print
+from physika.runtime import print
 
 # === Functions ===
 def get_1d_array_length(x):
@@ -125,14 +125,14 @@ w = torch.tensor([[0.5, 0.5, 0.5]], device=DEVICE)
 b = 0.1
 net = FullyConnectedNetwork(W, B, w, b)
 loss_before = net.evaluate(X, y)
-physika_print(loss_before)
+print(loss_before)
 epochs = 1000
 lr = 0.1
 net_trained = net.train(X, y, epochs, lr)
-physika_print(net_trained)
+print(net_trained)
 loss_after = net.evaluate(X, y)
-physika_print(loss_after)
-physika_print(net(torch.tensor([1.0, 0.0, 0.0], device=DEVICE)))
-physika_print(net(torch.tensor([0.0, 1.0, 0.0], device=DEVICE)))
-physika_print(net(torch.tensor([0.0, 0.0, 1.0], device=DEVICE)))
-physika_print(net(torch.tensor([1.0, 1.0, 1.0], device=DEVICE)))
+print(loss_after)
+print(net(torch.tensor([1.0, 0.0, 0.0], device=DEVICE)))
+print(net(torch.tensor([0.0, 1.0, 0.0], device=DEVICE)))
+print(net(torch.tensor([0.0, 0.0, 1.0], device=DEVICE)))
+print(net(torch.tensor([1.0, 1.0, 1.0], device=DEVICE)))

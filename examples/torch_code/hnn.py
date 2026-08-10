@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from physika.runtime import DEVICE
 
-from physika.runtime import physika_print
+from physika.runtime import print
 from physika.runtime import train
 from physika.runtime import evaluate
 
@@ -56,9 +56,9 @@ w2 = torch.tensor([[0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 
 b2 = 0.0
 H_net = HamiltonianNet(W1, b1, w2, b2)
 loss_before = evaluate(H_net, X, y)
-physika_print(loss_before)
+print(loss_before)
 epochs = 500
 lr = 0.01
 H_trained = train(H_net, X, y, epochs, lr)
 loss_after = evaluate(H_trained, X, y)
-physika_print(loss_after)
+print(loss_after)

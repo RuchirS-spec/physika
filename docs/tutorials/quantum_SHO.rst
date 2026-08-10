@@ -457,9 +457,9 @@ mass, the learned force constant is
 .. code-block:: python
 
    # Print results
-   physika_print(learned_energy_spacing_eV)
-   physika_print(learned_angular_frequency)
-   physika_print(learned_force_constant)
+   print(learned_energy_spacing_eV)
+   print(learned_angular_frequency)
+   print(learned_force_constant)
 
 .. admonition:: Expected results
 
@@ -696,9 +696,9 @@ The complete Physika implementation is provided in
        numerical_energies_eV[n] = energy_numerator / normalization_integral
 
    # Print results
-   physika_print(learned_energy_spacing_eV)
-   physika_print(learned_angular_frequency)
-   physika_print(learned_force_constant)
+   print(learned_energy_spacing_eV)
+   print(learned_angular_frequency)
+   print(learned_force_constant)
 
    # Use the function below to plot the wavefunctions and energies
    physika_plot(position_A, wavefunctions, numerical_energies_eV, N_levels, potential_eV)

@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from physika.runtime import DEVICE
 
-from physika.runtime import physika_print
+from physika.runtime import print
 
 # === Classes ===
 class Simple(nn.Module):
@@ -206,30 +206,30 @@ class Vec2(nn.Module):
 p = Point(1.0, 2.0).to(DEVICE)
 a, b = p.get()
 result = (a + b)
-physika_print(a)
-physika_print(b)
-physika_print(result)
+print(a)
+print(b)
+print(result)
 v = Vec4(0.5, 1.0, 2.0, 3.0).to(DEVICE)
 a, b, c, d = v.f()
-physika_print(a)
-physika_print(b)
-physika_print(c)
-physika_print(d)
+print(a)
+print(b)
+print(c)
+print(d)
 v = Vec2(0.5, 1.0).to(DEVICE)
 a, b = v.f()
-physika_print(a)
-physika_print(b)
+print(a)
+print(b)
 a, b, c, d = 1, 2, 3, 4
-physika_print(a)
-physika_print(b)
-physika_print(c)
-physika_print(d)
+print(a)
+print(b)
+print(c)
+print(d)
 a, b = 7, 8
-physika_print(a)
-physika_print(b)
+print(a)
+print(b)
 x_complex, y_complex = 1j, 2j
-physika_print(x_complex)
-physika_print(y_complex)
+print(x_complex)
+print(y_complex)
 x_arr, y_arr = torch.tensor([[1, 1], [1, 1]], device=DEVICE), torch.tensor([[1, 1], [1, 1]], device=DEVICE)
-physika_print(x_arr)
-physika_print(y_arr)
+print(x_arr)
+print(y_arr)

@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from physika.runtime import DEVICE
 
-from physika.runtime import physika_print
+from physika.runtime import print
 from physika.runtime import compute_grad
 
 # === Functions ===
@@ -209,10 +209,10 @@ pybamm_validation_ε_s_p = 0.6471111178398132
 pybamm_validation_voltage = torch.tensor([4.142996394, 4.067772943, 4.057471567, 4.027229404, 3.981657244, 3.937880704, 3.895608468, 3.838549294, 3.788632364, 3.81322811, 3.833002643, 3.833640604, 3.833695039, 3.833696392, 3.833696305, 3.833696268, 3.833696266, 3.833696264, 3.827385441, 3.811877071, 3.800818412, 3.789583321, 3.778002657, 3.766121504, 3.754073902, 3.742039259, 3.730207631], device=DEVICE)
 validation_voltage = validation_protocol_solver(ε_s_p, Δt)
 validation_rmse = rmse(validation_voltage, pybamm_validation_voltage)
-physika_print(physika_print(ε_s_p))
-physika_print(physika_print(initial_train_rmse))
-physika_print(physika_print(fitted_train_rmse))
-physika_print(physika_print(validation_rmse))
-physika_print(physika_print(fitted_train_voltage))
-physika_print(physika_print(validation_voltage))
-physika_print(physika_print(loss_history))
+print(print(ε_s_p))
+print(print(initial_train_rmse))
+print(print(fitted_train_rmse))
+print(print(validation_rmse))
+print(print(fitted_train_voltage))
+print(print(validation_voltage))
+print(print(loss_history))

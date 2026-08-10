@@ -146,7 +146,7 @@ lr: ℝ = 0.1
 epochs: ℕ = 1
 
 for i:ℕ(epochs):
-    physika_print(i)
+    print(i)
     g = grad(calculate_loss, guess_barrier_height)
     result  = adam(guess_barrier_height, g, m_adam, v_adam, t_adam, lr)
     guess_barrier_height  = result[0]

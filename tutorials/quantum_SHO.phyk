@@ -141,9 +141,9 @@ for n: ℕ(N_levels):
     numerical_energies_eV[n] = energy_numerator / normalization_integral
 
 # Print results
-physika_print(learned_energy_spacing_eV)
-physika_print(learned_angular_frequency)
-physika_print(learned_force_constant)
+print(learned_energy_spacing_eV)
+print(learned_angular_frequency)
+print(learned_force_constant)
 
 # Use the function below to plot the wavefunctions and energies
 # physika_plot(position_A, wavefunctions, numerical_energies_eV, N_levels, potential_eV)

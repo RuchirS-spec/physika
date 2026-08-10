@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from physika.runtime import DEVICE
 
-from physika.runtime import physika_print
+from physika.runtime import print
 from physika.runtime import compute_grad
 
 # === Functions ===
@@ -28,25 +28,25 @@ def f(x):
 
 # === Program ===
 x = 1.0
-physika_print(torch_funcs_with_scalar_R(x))
-physika_print(check_diff_torch_funcs(5.0))
+print(torch_funcs_with_scalar_R(x))
+print(check_diff_torch_funcs(5.0))
 x_matrix = torch.tensor([[1, (-1), 0], [(-1), 0, 0], [0, 0, 0]], device=DEVICE)
 rolled_neg = torch.roll(x_matrix, (-1))
 rolled_pos = torch.roll(x_matrix, 1)
-physika_print(rolled_neg)
-physika_print(rolled_pos)
+print(rolled_neg)
+print(rolled_pos)
 x0 = torch.tensor((-1.5), requires_grad=True)
-physika_print(f(x0))
-physika_print(compute_grad(lambda _dx0: f(_dx0), x0))
+print(f(x0))
+print(compute_grad(lambda _dx0: f(_dx0), x0))
 x1 = torch.tensor((-0.5), requires_grad=True)
-physika_print(f(x1))
-physika_print(compute_grad(lambda _dx1: f(_dx1), x1))
+print(f(x1))
+print(compute_grad(lambda _dx1: f(_dx1), x1))
 x2 = torch.tensor(0.5, requires_grad=True)
-physika_print(f(x2))
-physika_print(compute_grad(lambda _dx2: f(_dx2), x2))
+print(f(x2))
+print(compute_grad(lambda _dx2: f(_dx2), x2))
 x3 = torch.tensor(1.5, requires_grad=True)
-physika_print(f(x3))
-physika_print(compute_grad(lambda _dx3: f(_dx3), x3))
+print(f(x3))
+print(compute_grad(lambda _dx3: f(_dx3), x3))
 x4 = torch.tensor(3.14, requires_grad=True)
-physika_print(f(x4))
-physika_print(compute_grad(lambda _dx4: f(_dx4), x4))
+print(f(x4))
+print(compute_grad(lambda _dx4: f(_dx4), x4))

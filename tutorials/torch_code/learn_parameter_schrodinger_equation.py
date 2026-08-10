@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from physika.runtime import DEVICE
 
-from physika.runtime import physika_print
+from physika.runtime import print
 from physika.runtime import compute_grad
 
 # === Functions ===
@@ -128,7 +128,7 @@ t_adam = 1.0
 lr = 0.1
 epochs = 1
 for i in range(int(0), int(epochs)):
-    physika_print(i)
+    print(i)
     g = compute_grad(calculate_loss, guess_barrier_height)
     result = adam(guess_barrier_height, g, m_adam, v_adam, t_adam, lr)
     guess_barrier_height = result[int(0)]

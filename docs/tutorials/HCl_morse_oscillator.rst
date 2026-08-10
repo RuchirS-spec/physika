@@ -908,15 +908,15 @@ reciprocal wavenumber in centimetres into micrometres.
 .. code-block:: python
 
    # Print the eigen-solver and parameter-learning results
-   physika_print(learned_dissociation_energy_eV)
-   physika_print(learned_α_inverse_angstrom)
-   physika_print(learned_equilibrium_distance_angstrom)
-   physika_print(final_learning_loss)
-   physika_print(vibrational_energies_eV[0])
-   physika_print(vibrational_energies_eV[1])
-   physika_print(transition_eV)
-   physika_print(wavenumber)
-   physika_print(wavelength_micrometer)
+   print(learned_dissociation_energy_eV)
+   print(learned_α_inverse_angstrom)
+   print(learned_equilibrium_distance_angstrom)
+   print(final_learning_loss)
+   print(vibrational_energies_eV[0])
+   print(vibrational_energies_eV[1])
+   print(transition_eV)
+   print(wavenumber)
+   print(wavelength_micrometer)
                                     
 .. admonition:: Expected results
 
@@ -1396,15 +1396,15 @@ The complete Physika implementation is also provided in
    wavelength_micrometer: ℝ = (10000.0 / wavenumber)
    
    # Print the eigen-solver and parameter-learning results
-   physika_print(learned_dissociation_energy_eV)
-   physika_print(learned_α_inverse_angstrom)
-   physika_print(learned_equilibrium_distance_angstrom)
-   physika_print(final_learning_loss)
-   physika_print(vibrational_energies_eV[0])
-   physika_print(vibrational_energies_eV[1])
-   physika_print(transition_eV)
-   physika_print(wavenumber)
-   physika_print(wavelength_micrometer)
+   print(learned_dissociation_energy_eV)
+   print(learned_α_inverse_angstrom)
+   print(learned_equilibrium_distance_angstrom)
+   print(final_learning_loss)
+   print(vibrational_energies_eV[0])
+   print(vibrational_energies_eV[1])
+   print(transition_eV)
+   print(wavenumber)
+   print(wavelength_micrometer)
    
    # Convert the plotting arrays to angstrom units
    bond_distance_angstrom: ℝ[N_grid] = (bond_distance / 1.0e-10)

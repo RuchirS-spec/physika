@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from physika.runtime import DEVICE
 
-from physika.runtime import physika_print
+from physika.runtime import print
 from physika.runtime import compute_grad
 
 # === Functions ===
@@ -113,6 +113,6 @@ for n in range(int(0), int(N_levels)):
         energy_numerator = (energy_numerator + ((wavefunctions[int(n), int(i)] * hamiltonian_wavefunctions[int(n), int(i)]) * dx_m))
         normalization_integral = (normalization_integral + ((wavefunctions[int(n), int(i)] * wavefunctions[int(n), int(i)]) * dx_m))
     numerical_energies_eV[int(n)] = (energy_numerator / normalization_integral)
-physika_print(physika_print(learned_energy_spacing_eV))
-physika_print(physika_print(learned_angular_frequency))
-physika_print(physika_print(learned_force_constant))
+print(print(learned_energy_spacing_eV))
+print(print(learned_angular_frequency))
+print(print(learned_force_constant))

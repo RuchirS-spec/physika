@@ -271,6 +271,19 @@ def p_func_body_stmt_empty(p):
     p[0] = None
 
 
+def p_func_body_stmt_call(p):
+    """func_body_stmt : ID LPAREN func_args RPAREN NEWLINE"""
+    # Standalone function call inside a function body.
+    # Examples:
+    #   print(x)
+    # Parameters:
+    #   p[1] — function name
+    #   p[3] — list of argument expressions
+    # Returns:
+    #   ("body_call", function_name, arguments)
+    p[0] = ("body_call", p[1], p[3])
+
+
 def p_func_body_stmt_if_return(p):
     """func_body_stmt : IF condition COLON NEWLINE INDENT RETURN func_expr NEWLINE DEDENT"""  # noqa: E501
     # Early-return, no else branch.
@@ -662,6 +675,21 @@ def p_func_loop_stmt_for_range(p):
 def p_func_loop_stmt_empty(p):
     """func_loop_stmt : NEWLINE"""
     p[0] = None
+
+
+def p_func_loop_stmt_call(p):
+    """func_loop_stmt : ID LPAREN func_args RPAREN NEWLINE"""
+    # Standalone function call inside a loop body.
+    # Examples:
+    #   arr: ℝ[2] = [1, 2]
+    #   for i:ℕ(2):
+    #       print(arr[i])
+    # Parameters:
+    #   p[1] — function name
+    #   p[3] — list of argument expressions
+    # Returns:
+    #   ("loop_call", function_name, arguments)
+    p[0] = ("loop_call", p[1], p[3])
 
 
 def p_statement_decl(p):

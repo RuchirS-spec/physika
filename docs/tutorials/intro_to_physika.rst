@@ -91,19 +91,19 @@ Output::
    import torch.nn as nn
    import torch.optim as optim
 
-   from physika.runtime import physika_print
+   from physika.runtime import print
 
    # === Program ===
    m = 3.0
    v = torch.tensor([1.0, 2.0, 3.0])
    E = (((0.5 * m) * v) * v)
-   physika_print(E)
+   print(E)
    === End Pytorch code ===
 
 This is the heart of Physika. A ``.phyk`` file is not interpreted; it is
 translated into an ordinary PyTorch program and then run. The array ``v`` became
 a ``torch.tensor``, which is why the multiplication applied to every element,
-and ``physika_print`` is the runtime helper that prints a value with its type.
+and ``print`` is the runtime helper that prints a value with its type.
 Everything you write compiles to readable PyTorch like this, which is what makes
 Physika programs differentiable and easy to inspect.
 
@@ -372,7 +372,7 @@ Run the program with ``--print-code`` to see the PyTorch it compiles to:
    import torch.nn as nn
    import torch.optim as optim
 
-   from physika.runtime import physika_print
+   from physika.runtime import print
    from physika.runtime import compute_grad
 
    # === Functions ===
@@ -383,7 +383,7 @@ Run the program with ``--print-code`` to see the PyTorch it compiles to:
    x = torch.tensor(0.0, requires_grad=True)
    for i in range(int(0), int(60)):
        x = (x - (0.05 * compute_grad(lambda _dx: U(_dx), x)))
-   physika_print(x)
+   print(x)
    === End Pytorch code ===
 
 
