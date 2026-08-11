@@ -58,6 +58,10 @@ In physika we define this matrices such as:
 Gaussian elimination method
 ------------------------------
 
+Gaussian elimination is a method for solving a system of linear equations :math:`Ax = b` by
+eliminating variables, row by row, until the system (matrix) is reduced to a form that can be solved directly which is defined as
+Upper triangular matrix :math:`U`.
+
 This section will get divided into 3 subsections:
 
 * Build the augmented matrix
@@ -78,7 +82,7 @@ Before starting lets create a function as:
 Step 1 - Augmented matrix
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-In this step we will merge matrix :math:`A` and :math:`b` in single matrix called as Augmented matrix, so that 
+In this step we will merge matrix :math:`A` and :math:`b` into single matrix called as Augmented matrix, so that 
 every row operations (follow up steps) gets applied to both the matrices at the same time.
 
 
@@ -111,7 +115,7 @@ After that augmented matrix looks like this:
 Step 2 - Forward elimination
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-This section will get further divied into 3 sub-section, which are
+This section will get further divided into 3 sub-section, which are
 
 - Partial pivoting
 - swap rows using buffer
