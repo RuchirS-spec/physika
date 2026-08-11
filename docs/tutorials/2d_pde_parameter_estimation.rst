@@ -940,6 +940,12 @@ a steady-state, the field properties are not functions of time and the equation 
 Problem setup
 ^^^^^^^^^^^^^^^
 
+We are solving incompressible Navier Stokes equations in a lid-driven cavity scenario using Finite Differences,
+explicit timestepping and Chorin's Projection.
+Particularly, We are simulating fluid flow inside a square box, where the top wall slides sideways at a fixed velocity and
+drags the fluid along with it which is called as lid-driven cavity problem. The fluid density :math:`ρ` is a parameter
+we don't tell the solver directly, instead we are trying to recover it by learning how the flow behaves:
+
 .. code-block:: text
 
     n_points: ℝ = 21
