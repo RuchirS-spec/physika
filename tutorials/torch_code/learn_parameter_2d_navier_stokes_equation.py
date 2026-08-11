@@ -37,54 +37,50 @@ def laplace(f):
     diff[1:(n_points - 1), 1:(n_points - 1)] = (((((f[1:(n_points - 1), 0:(n_points - 2)] + f[0:(n_points - 2), 1:(n_points - 1)]) + f[1:(n_points - 1), 2:n_points]) + f[2:n_points, 1:(n_points - 1)]) - (4 * f[1:(n_points - 1), 1:(n_points - 1)])) / (element_length ** 2))
     return diff
 
+def apply_u_bc(u):
+    u[int(0), :] = 0.0
+    u[int((-1)), :] = horizontal_velocity_top
+    u[:, int(0)] = 0.0
+    u[:, int((-1))] = 0.0
+    return u
+
+def apply_v_bc(v):
+    v[int(0), :] = 0.0
+    v[int((-1)), :] = 0.0
+    v[:, int(0)] = 0.0
+    v[:, int((-1))] = 0.0
+    return v
+
+def apply_p_bc(p):
+    p[:, int((-1))] = p[:, int((-2))]
+    p[int(0), :] = p[int(1), :]
+    p[:, int(0)] = p[:, int(1)]
+    p[int((-1)), :] = 0.0
+    return p
+
+def advect_diffuse(f, u, v):
+    return ((-((u * central_difference_x(f)) + (v * central_difference_y(f)))) + (ν * laplace(f)))
+
+def solve_pressure(p_init, rhs):
+    p_prev = p_init
+    for k in range(int(0), int(n_pressure_poisson_iterations)):
+        p_next = zero_2d_array(n_points, n_points)
+        p_next[1:(-1), 1:(-1)] = (0.25 * ((((p_prev[1:(-1), :(-2)] + p_prev[:(-2), 1:(-1)]) + p_prev[1:(-1), 2:]) + p_prev[2:, 1:(-1)]) - ((element_length ** 2) * rhs[1:(-1), 1:(-1)])))
+        p_prev = apply_p_bc(p_next)
+    return p_prev
+
 def solver(ρ):
-    u_prev = zero_2d_array(n_points, n_points)
-    v_prev = zero_2d_array(n_points, n_points)
-    p_prev = zero_2d_array(n_points, n_points)
+    u = zero_2d_array(n_points, n_points)
+    v = zero_2d_array(n_points, n_points)
+    p = zero_2d_array(n_points, n_points)
     for i in range(int(0), int(n_iterations)):
-        d_u_prev__d_x = central_difference_x(u_prev)
-        d_u_prev__d_y = central_difference_y(u_prev)
-        d_v_prev__d_x = central_difference_x(v_prev)
-        d_v_prev__d_y = central_difference_y(v_prev)
-        laplace__u_prev = laplace(u_prev)
-        laplace__v_prev = laplace(v_prev)
-        u_tent = (u_prev + (time_step_length * ((-((u_prev * d_u_prev__d_x) + (v_prev * d_u_prev__d_y))) + (ν * laplace__u_prev))))
-        v_tent = (v_prev + (time_step_length * ((-((u_prev * d_v_prev__d_x) + (v_prev * d_v_prev__d_y))) + (ν * laplace__v_prev))))
-        u_tent[int(0), :] = 0.0
-        u_tent[int((-1)), :] = horizontal_velocity_top
-        u_tent[:, int(0)] = 0.0
-        u_tent[:, int((-1))] = 0.0
-        v_tent[int(0), :] = 0.0
-        v_tent[int((-1)), :] = 0.0
-        v_tent[:, int(0)] = 0.0
-        v_tent[:, int((-1))] = 0.0
-        d_u_tent__d_x = central_difference_x(u_tent)
-        d_v_tent__d_y = central_difference_y(v_tent)
-        rhs = ((ρ / time_step_length) * (d_u_tent__d_x + d_v_tent__d_y))
-        for k in range(int(0), int(n_pressure_poisson_iterations)):
-            p_next = zero_2d_array(n_points, n_points)
-            p_next[1:(-1), 1:(-1)] = (0.25 * ((((p_prev[1:(-1), :(-2)] + p_prev[:(-2), 1:(-1)]) + p_prev[1:(-1), 2:]) + p_prev[2:, 1:(-1)]) - ((element_length ** 2) * rhs[1:(-1), 1:(-1)])))
-            p_next[:, int((-1))] = p_next[:, int((-2))]
-            p_next[int(0), :] = p_next[int(1), :]
-            p_next[:, int(0)] = p_next[:, int(1)]
-            p_next[int((-1)), :] = 0.0
-            p_prev = p_next
-        d_p_next__d_x = central_difference_x(p_next)
-        d_p_next__d_y = central_difference_y(p_next)
-        u_next = (u_tent - ((time_step_length / ρ) * d_p_next__d_x))
-        v_next = (v_tent - ((time_step_length / ρ) * d_p_next__d_y))
-        u_next[int(0), :] = 0.0
-        u_next[:, int(0)] = 0.0
-        u_next[:, int((-1))] = 0.0
-        u_next[int((-1)), :] = horizontal_velocity_top
-        v_next[int(0), :] = 0.0
-        v_next[:, int(0)] = 0.0
-        v_next[:, int((-1))] = 0.0
-        v_next[int((-1)), :] = 0.0
-        u_prev = u_next
-        v_prev = v_next
-        p_prev = p_next
-    return torch.stack([torch.as_tensor(u_prev), torch.as_tensor(v_prev), torch.as_tensor(p_prev)])
+        u_tent = apply_u_bc((u + (time_step_length * advect_diffuse(u, u, v))))
+        v_tent = apply_v_bc((v + (time_step_length * advect_diffuse(v, u, v))))
+        rhs = ((ρ / time_step_length) * (central_difference_x(u_tent) + central_difference_y(v_tent)))
+        p = solve_pressure(p, rhs)
+        u = apply_u_bc((u_tent - ((time_step_length / ρ) * central_difference_x(p))))
+        v = apply_v_bc((v_tent - ((time_step_length / ρ) * central_difference_y(p))))
+    return torch.stack([torch.as_tensor(u), torch.as_tensor(v), torch.as_tensor(p)])
 
 def calculate_loss(ρ):
     predictions = solver(ρ)

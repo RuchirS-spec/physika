@@ -76,7 +76,6 @@ def laplace(f: ℝ[m, n]): ℝ[m, n]:
     return diff
 
 
-
 f: ℝ[n_points, n_points] = zero_2d_array(n_points, n_points)
 
 for i:ℕ(n_points):
@@ -90,81 +89,60 @@ for i:ℕ(n_points):
 # Build the solver
 # --------------------------------------------------
 
+def apply_u_bc(u: ℝ[n_points, n_points]): ℝ[n_points, n_points]:
+    u[0, :] = 0.0
+    u[-1, :] = horizontal_velocity_top
+    u[:, 0] = 0.0
+    u[:, -1] = 0.0
+    return u
+
+
+def apply_v_bc(v: ℝ[n_points, n_points]): ℝ[n_points, n_points]:
+    v[0, :] = 0.0
+    v[-1, :] = 0.0
+    v[:, 0] = 0.0
+    v[:, -1] = 0.0
+    return v
+
+
+def apply_p_bc(p: ℝ[n_points, n_points]): ℝ[n_points, n_points]:
+    p[:, -1] = p[:, -2]
+    p[0, :] = p[1, :]
+    p[:, 0] = p[:, 1]
+    p[-1, :] = 0.0
+    return p
+
+
+def advect_diffuse(f: ℝ[n_points, n_points], u: ℝ[n_points, n_points], v: ℝ[n_points, n_points]): ℝ[n_points, n_points]:
+    return -(u * central_difference_x(f) + v * central_difference_y(f)) + ν * laplace(f)
+
+def solve_pressure(p_init: ℝ[n_points, n_points], rhs: ℝ[n_points, n_points]): ℝ[n_points, n_points]:
+    p_prev = p_init
+    for k:ℕ(n_pressure_poisson_iterations):
+        p_next = zero_2d_array(n_points, n_points)
+        p_next[1:-1, 1:-1] = 0.25 * (
+            p_prev[1:-1, :-2] + p_prev[:-2, 1:-1] +
+            p_prev[1:-1, 2:]  + p_prev[2:, 1:-1] -
+            element_length**2 * rhs[1:-1, 1:-1]
+        )
+        p_prev = apply_p_bc(p_next)
+    return p_prev
+
 
 n_iterations: ℝ = 5
 
-
-def solver(ρ: ℝ): ℝ[3, m, n]:
-    u_prev: ℝ[n_points, n_points] = zero_2d_array(n_points, n_points)
-    v_prev: ℝ[n_points, n_points] = zero_2d_array(n_points, n_points)
-    p_prev: ℝ[n_points, n_points] = zero_2d_array(n_points, n_points)
+def solver(ρ: ℝ): ℝ[3, n_points, n_points]:
+    u: ℝ[n_points, n_points] = zero_2d_array(n_points, n_points)
+    v: ℝ[n_points, n_points] = zero_2d_array(n_points, n_points)
+    p: ℝ[n_points, n_points] = zero_2d_array(n_points, n_points)
     for i:ℕ(n_iterations):
-        d_u_prev__d_x = central_difference_x(u_prev)
-        d_u_prev__d_y = central_difference_y(u_prev)
-        d_v_prev__d_x = central_difference_x(v_prev)
-        d_v_prev__d_y = central_difference_y(v_prev)
-        laplace__u_prev = laplace(u_prev)
-        laplace__v_prev = laplace(v_prev)
-        u_tent = u_prev + time_step_length * (
-            - (
-                u_prev * d_u_prev__d_x + v_prev * d_u_prev__d_y
-            ) + ν * laplace__u_prev
-        )
-        v_tent = v_prev + time_step_length * (
-            - (
-                u_prev * d_v_prev__d_x + v_prev * d_v_prev__d_y
-            ) + ν * laplace__v_prev
-        )
-        u_tent[0, :] = 0.0
-        u_tent[-1, :] = horizontal_velocity_top
-        u_tent[:, 0] = 0.0
-        u_tent[:, -1] = 0.0
-        v_tent[0, :] = 0.0
-        v_tent[-1, :] = 0.0
-        v_tent[:, 0] = 0.0
-        v_tent[:, -1] = 0.0
-        d_u_tent__d_x = central_difference_x(u_tent)
-        d_v_tent__d_y = central_difference_y(v_tent)
-        rhs = (ρ / time_step_length * (d_u_tent__d_x + d_v_tent__d_y))
-        for k:ℕ(n_pressure_poisson_iterations):
-            p_next = zero_2d_array(n_points, n_points)
-            p_next[1:-1, 1:-1] = 0.25 * (
-                p_prev[1:-1, :-2] +
-                p_prev[:-2, 1:-1] +
-                p_prev[1:-1, 2:] +
-                p_prev[2:, 1:-1] -
-                element_length**2 * rhs[1:-1, 1:-1]
-            )
-            p_next[:, -1] = p_next[:, -2]
-            p_next[0, :] = p_next[1, :]
-            p_next[:, 0] = p_next[:, 1]
-            p_next[-1, :] = 0.0
-            p_prev = p_next
-        d_p_next__d_x = central_difference_x(p_next)
-        d_p_next__d_y = central_difference_y(p_next)
-        u_next = (
-            u_tent -
-            time_step_length / ρ *
-            d_p_next__d_x
-        )
-        v_next = (
-            v_tent -
-            time_step_length / ρ *
-            d_p_next__d_y
-        )
-        u_next[0, :] = 0.0
-        u_next[:, 0] = 0.0
-        u_next[:, -1] = 0.0
-        u_next[-1, :] = horizontal_velocity_top
-        v_next[0, :] = 0.0
-        v_next[:, 0] = 0.0
-        v_next[:, -1] = 0.0
-        v_next[-1, :] = 0.0
-        u_prev = u_next
-        v_prev = v_next
-        p_prev = p_next
-    return [u_prev, v_prev, p_prev]
-
+        u_tent = apply_u_bc(u + time_step_length * advect_diffuse(u, u, v))
+        v_tent = apply_v_bc(v + time_step_length * advect_diffuse(v, u, v))
+        rhs = ρ / time_step_length * (central_difference_x(u_tent) + central_difference_y(v_tent))
+        p = solve_pressure(p, rhs)
+        u = apply_u_bc(u_tent - time_step_length / ρ * central_difference_x(p))
+        v = apply_v_bc(v_tent - time_step_length / ρ * central_difference_y(p))
+    return [u, v, p]
 
 
 
@@ -175,11 +153,9 @@ true_v: ℝ[n_points, n_points] = true_solution[1]
 true_p: ℝ[n_points, n_points] = true_solution[2]
 
 
-
 # --------------------------------------------------
 # Define loss function and optimizer
 # --------------------------------------------------
-
 
 def calculate_loss(ρ: ℝ): ℝ:
     predictions: ℝ[3, n_points, n_points] = solver(ρ)
@@ -204,11 +180,9 @@ def adam(ρ: ℝ, g: ℝ, m: ℝ, v: ℝ, t: ℝ, lr: ℝ) : ℝ[4]:
     return [ρ_new, m_new, v_new, t + 1.0]
 
 
-
 # --------------------------------------------------
 # Training loop
 # --------------------------------------------------
-
 
 ρ: ℝ = 3.0
 
@@ -255,4 +229,3 @@ for i:ℕ(n_points):
 
 
 #plot_navier_stokes_comparison(X, Y, true_u, true_v, true_p, pred_u, pred_v, pred_p)
-
