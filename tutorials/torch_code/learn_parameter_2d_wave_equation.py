@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from physika.runtime import DEVICE
 
-from physika.runtime import physika_print
+from physika.runtime import print
 from physika.runtime import compute_grad
 
 # === Functions ===
@@ -56,22 +56,18 @@ def calculate_loss(c):
     return loss
 
 def adam(c, g, m, v, t, lr):
-    beta1 = 0.9
-    beta2 = 0.999
-    eps = 1e-08
-    m_new = ((beta1 * m) + ((1.0 - beta1) * g))
-    v_new = ((beta2 * v) + ((1.0 - beta2) * (g ** 2)))
-    m_hat = (m_new / (1.0 - (beta1 ** t)))
-    v_hat = (v_new / (1.0 - (beta2 ** t)))
-    c_new = (c - ((lr * m_hat) / (torch.sqrt(v_hat if isinstance(v_hat, torch.Tensor) else torch.tensor(float(v_hat))) + eps)))
+    β1 = 0.9
+    β2 = 0.999
+    ε = 1e-08
+    m_new = ((β1 * m) + ((1.0 - β1) * g))
+    v_new = ((β2 * v) + ((1.0 - β2) * (g ** 2)))
+    m_hat = (m_new / (1.0 - (β1 ** t)))
+    v_hat = (v_new / (1.0 - (β2 ** t)))
+    c_new = (c - ((lr * m_hat) / (torch.sqrt(v_hat if isinstance(v_hat, torch.Tensor) else torch.tensor(float(v_hat))) + ε)))
     return torch.stack([torch.as_tensor(c_new), torch.as_tensor(m_new), torch.as_tensor(v_new), torch.as_tensor((t + 1.0))])
 
 # === Program ===
-Lx = 1.0
-Ly = 1.0
-nx = 40
-ny = 40
-tf = 2.0
+Lx, Ly, nx, ny, tf = 1.0, 1.0, 40, 40, 2.0
 Δx = (Lx / (nx - 1))
 Δy = (Ly / (ny - 1))
 true_c = 1.0
@@ -80,26 +76,23 @@ cfl = 0.4
 nt = 50
 x = linspace(0, Lx, nx)
 y = linspace(0, Ly, ny)
-pi = 3.14
+π = 3.14
 u0 = zero_2d_array(nx, ny)
 for i in range(int(0), int(nx)):
     for j in range(int(0), int(ny)):
-        u0[int(i), int(j)] = (torch.sin(((2 * pi) * x[int(i)]) if isinstance(((2 * pi) * x[int(i)]), torch.Tensor) else torch.tensor(float(((2 * pi) * x[int(i)])))) * torch.sin((pi * y[int(j)]) if isinstance((pi * y[int(j)]), torch.Tensor) else torch.tensor(float((pi * y[int(j)])))))
+        u0[int(i), int(j)] = (torch.sin(((2 * π) * x[int(i)]) if isinstance(((2 * π) * x[int(i)]), torch.Tensor) else torch.tensor(float(((2 * π) * x[int(i)])))) * torch.sin((π * y[int(j)]) if isinstance((π * y[int(j)]), torch.Tensor) else torch.tensor(float((π * y[int(j)])))))
 v0 = zero_2d_array(nx, ny)
 true_solution = solver(true_c, u0, v0, Δx, Δy, Δt, nt)
 c = torch.tensor(3.0, requires_grad=True)
-m_adam = 0.0
-v_adam = 0.0
-t_adam = 1.0
-lr = 0.01
+m_adam, v_adam, t_adam, lr = 0.0, 0.0, 1.0, 0.01
 epochs = 1
 for i in range(int(0), int(epochs)):
-    physika_print(i)
+    print(i)
     g = compute_grad(calculate_loss, c)
     result = adam(c, g, m_adam, v_adam, t_adam, lr)
     c = result[int(0)]
     m_adam = result[int(1)]
     v_adam = result[int(2)]
     t_adam = result[int(3)]
-    physika_print(c)
+    print(c)
 pred_solution = solver(c, u0, v0, Δx, Δy, Δt, nt)

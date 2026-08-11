@@ -52,12 +52,7 @@ Set Up the Domain
 .. code-block::
 
     true_α: ℝ = 2.0
-    Lx: ℝ = 1.0
-    Ly: ℝ = 1.0
-
-    nx: ℝ = 40
-    ny: ℝ = 40
-    tf: ℝ = 10
+    Lx, Ly, nx, ny, tf: ℝ = 1.0, 1.0, 40, 40, 10
 
     Δx: ℝ = Lx / (nx - 1)
     Δy: ℝ = Ly / (ny - 1)
@@ -222,14 +217,14 @@ We are using Adam optimizer here [KingmaBa2014]_ :
 
 
     def adam(α: ℝ, g: ℝ, m: ℝ, v: ℝ, t: ℝ, lr: ℝ) : ℝ[4]:
-        beta1: ℝ = 0.9
-        beta2: ℝ = 0.999
-        eps: ℝ = 1e-8
-        m_new: ℝ = beta1 * m + (1.0 - beta1) * g
-        v_new: ℝ = beta2 * v + (1.0 - beta2) * g**2
-        m_hat: ℝ = m_new / (1.0 - beta1**t)
-        v_hat: ℝ = v_new / (1.0 - beta2**t)
-        α_new: ℝ = α - lr * m_hat / (sqrt(v_hat) + eps)
+        β1: ℝ = 0.9
+        β2: ℝ = 0.999
+        ε: ℝ = 1e-8
+        m_new: ℝ = β1 * m + (1.0 - β1) * g
+        v_new: ℝ = β2 * v + (1.0 - β2) * g**2
+        m_hat: ℝ = m_new / (1.0 - β1**t)
+        v_hat: ℝ = v_new / (1.0 - β2**t)
+        α_new: ℝ = α - lr * m_hat / (sqrt(v_hat) + ε)
         return [α_new, m_new, v_new, t + 1.0]
 
 
@@ -243,22 +238,19 @@ Once the training is finished, the :math:`\alpha` should be close to 2.0.
 
     α: ℝ = 4.0
 
-    m_adam: ℝ = 0.0
-    v_adam: ℝ = 0.0
-    t_adam: ℝ = 1.0
-    lr: ℝ = 0.01
+    m_adam, v_adam, t_adam, lr: ℝ = 0.0, 0.0, 1.0, 0.01
 
     epochs: ℕ = 200
 
     for i:ℕ(epochs):
-        physika_print(i)
+        print(i)
         g = grad(calculate_loss, α)
         result = adam(α, g, m_adam, v_adam, t_adam, lr)
         α = result[0]
         m_adam = result[1]
         v_adam = result[2]
         t_adam = result[3]
-        physika_print(α)
+        print(α)
 
 
 Visualize results
@@ -353,12 +345,7 @@ Full code (2D heat equation)
     # -------------------------------------
 
     true_α: ℝ = 2.0
-    Lx: ℝ = 1.0
-    Ly: ℝ = 1.0
-
-    nx: ℝ = 40
-    ny: ℝ = 40
-    tf: ℝ = 10
+    Lx, Ly, nx, ny, tf: ℝ = 1.0, 1.0, 40, 40, 10
 
     Δx: ℝ = Lx / (nx - 1)
     Δy: ℝ = Ly / (ny - 1)
@@ -432,14 +419,14 @@ Full code (2D heat equation)
     # -------------------------------------
 
     def adam(α: ℝ, g: ℝ, m: ℝ, v: ℝ, t: ℝ, lr: ℝ) : ℝ[4]:
-        beta1: ℝ = 0.9
-        beta2: ℝ = 0.999
-        eps: ℝ = 1e-8
-        m_new: ℝ = beta1 * m + (1.0 - beta1) * g
-        v_new: ℝ = beta2 * v + (1.0 - beta2) * g**2
-        m_hat: ℝ = m_new / (1.0 - beta1**t)
-        v_hat: ℝ = v_new / (1.0 - beta2**t)
-        α_new: ℝ = α - lr * m_hat / (sqrt(v_hat) + eps)
+        β1: ℝ = 0.9
+        β2: ℝ = 0.999
+        ε: ℝ = 1e-8
+        m_new: ℝ = β1 * m + (1.0 - β1) * g
+        v_new: ℝ = β2 * v + (1.0 - β2) * g**2
+        m_hat: ℝ = m_new / (1.0 - β1**t)
+        v_hat: ℝ = v_new / (1.0 - β2**t)
+        α_new: ℝ = α - lr * m_hat / (sqrt(v_hat) + ε)
         return [α_new, m_new, v_new, t + 1.0]
 
 
@@ -453,22 +440,19 @@ Full code (2D heat equation)
     guess_solution: ℝ[nx, ny] = solver(α, T0, Δx, Δy, Δt, nt)
     #visualize_trajectory_heat(true_solution, guess_solution, x, y)
 
-    m_adam: ℝ = 0.0
-    v_adam: ℝ = 0.0
-    t_adam: ℝ = 1.0
-    lr: ℝ = 0.01
+    m_adam, v_adam, t_adam, lr: ℝ = 0.0, 0.0, 1.0, 0.01
 
     epochs: ℕ = 200
 
     for i:ℕ(epochs):
-        physika_print(i)
+        print(i)
         g = grad(calculate_loss, α)
         result = adam(α, g, m_adam, v_adam, t_adam, lr)
         α = result[0]
         m_adam = result[1]
         v_adam = result[2]
         t_adam = result[3]
-        physika_print(α)
+        print(α)
 
     # α should be closer to 2.0
     α
@@ -506,11 +490,7 @@ Set Up the Domain
 
 .. code-block:: text
 
-    Lx: ℝ = 1.0
-    Ly: ℝ = 1.0
-    nx: ℝ = 40
-    ny: ℝ = 40
-    tf: ℝ = 2.0
+    Lx, Ly, nx, ny, tf: ℝ = 1.0, 1.0, 40, 40, 2.0
 
     Δx: ℝ = Lx / (nx - 1)
     Δy: ℝ = Ly / (ny - 1)
@@ -556,12 +536,12 @@ Grid and initial condition
     x: ℝ[nx] = linspace(0, Lx, nx)
     y: ℝ[ny] = linspace(0, Ly, ny)
 
-    pi: ℝ = 3.14
+    π: ℝ = 3.14
     u0: ℝ[nx,ny] = zero_2d_array(nx, ny)
 
     for i:ℕ(0, nx):
         for j:ℕ(0, ny):
-            u0[i,j] = sin(2 * pi * x[i]) * sin(pi * y[j])
+            u0[i,j] = sin(2 * π * x[i]) * sin(π * y[j])
 
     v0: ℝ[nx,ny] = zero_2d_array(nx, ny)
 
@@ -688,14 +668,14 @@ We are using Adam optimizer here [KingmaBa2014]_ :
 .. code-block:: text
 
     def adam(c: ℝ, g: ℝ, m: ℝ, v: ℝ, t: ℝ, lr: ℝ) : ℝ[4]:
-        beta1: ℝ = 0.9
-        beta2: ℝ = 0.999
-        eps: ℝ = 1e-8
-        m_new: ℝ = beta1 * m + (1.0 - beta1) * g
-        v_new: ℝ = beta2 * v + (1.0 - beta2) * g**2
-        m_hat: ℝ = m_new / (1.0 - beta1**t)
-        v_hat: ℝ = v_new / (1.0 - beta2**t)
-        c_new: ℝ = c - lr * m_hat / (sqrt(v_hat) + eps)
+        β1: ℝ = 0.9
+        β2: ℝ = 0.999
+        ε: ℝ = 1e-8
+        m_new: ℝ = β1 * m + (1.0 - β1) * g
+        v_new: ℝ = β2 * v + (1.0 - β2) * g**2
+        m_hat: ℝ = m_new / (1.0 - β1**t)
+        v_hat: ℝ = v_new / (1.0 - β2**t)
+        c_new: ℝ = c - lr * m_hat / (sqrt(v_hat) + ε)
         return [c_new, m_new, v_new, t + 1.0]
 
 
@@ -706,24 +686,21 @@ We start with an initial guess of :math:`c = 2.0` and train for 10 epochs:
 
 .. code-block:: text
 
-    c: R = 2.0
+    c: ℝ = 2.0
 
-    m_adam: ℝ = 0.0
-    v_adam: ℝ = 0.0
-    t_adam: ℝ = 1.0
-    lr: ℝ = 0.1
+    m_adam, v_adam, t_adam, lr: ℝ = 0.0, 0.0, 1.0, 0.01
 
     epochs: ℕ = 10
 
     for i:N(epochs):
-        physika_print(i)
+        print(i)
         g = grad(calculate_loss, c)
         result = adam(c, g, m_adam, v_adam, t_adam, lr)
         c = result[0]
         m_adam = result[1]
         v_adam = result[2]
         t_adam = result[3]
-        physika_print(c)
+        print(c)
 
 
 Visualize results
@@ -815,11 +792,7 @@ Full code (2D wave equation)
     # Set up the domain
     # -------------------------------------
 
-    Lx: ℝ = 1.0
-    Ly: ℝ = 1.0
-    nx: ℝ = 40
-    ny: ℝ = 40
-    tf: ℝ = 2.0
+    Lx, Ly, nx, ny, tf: ℝ = 1.0, 1.0, 40, 40, 2.0
 
     Δx: ℝ = Lx / (nx - 1)
     Δy: ℝ = Ly / (ny - 1)
@@ -841,12 +814,12 @@ Full code (2D wave equation)
     x: ℝ[nx] = linspace(0, Lx, nx)
     y: ℝ[ny] = linspace(0, Ly, ny)
 
-    pi: ℝ = 3.14
+    π: ℝ = 3.14
     u0: ℝ[nx,ny] = zero_2d_array(nx, ny)
 
     for i:ℕ(0, nx):
         for j:ℕ(0, ny):
-            u0[i,j] = sin(2 * pi * x[i]) * sin(pi * y[j])
+            u0[i,j] = sin(2 * π * x[i]) * sin(π * y[j])
 
     v0: ℝ[nx,ny] = zero_2d_array(nx, ny)
 
@@ -899,14 +872,14 @@ Full code (2D wave equation)
     # -------------------------------------
 
     def adam(c: ℝ, g: ℝ, m: ℝ, v: ℝ, t: ℝ, lr: ℝ) : ℝ[4]:
-        beta1: ℝ = 0.9
-        beta2: ℝ = 0.999
-        eps: ℝ = 1e-8
-        m_new: ℝ = beta1 * m + (1.0 - beta1) * g
-        v_new: ℝ = beta2 * v + (1.0 - beta2) * g**2
-        m_hat: ℝ = m_new / (1.0 - beta1**t)
-        v_hat: ℝ = v_new / (1.0 - beta2**t)
-        c_new: ℝ = c - lr * m_hat / (sqrt(v_hat) + eps)
+        β1: ℝ = 0.9
+        β2: ℝ = 0.999
+        ε: ℝ = 1e-8
+        m_new: ℝ = β1 * m + (1.0 - β1) * g
+        v_new: ℝ = β2 * v + (1.0 - β2) * g**2
+        m_hat: ℝ = m_new / (1.0 - β1**t)
+        v_hat: ℝ = v_new / (1.0 - β2**t)
+        c_new: ℝ = c - lr * m_hat / (sqrt(v_hat) + ε)
         return [c_new, m_new, v_new, t + 1.0]
 
     # -------------------------------------
@@ -915,24 +888,20 @@ Full code (2D wave equation)
 
     c: ℝ = 3.0
 
-
-    m_adam: ℝ = 0.0
-    v_adam: ℝ = 0.0
-    t_adam: ℝ = 1.0
-    lr: ℝ = 0.01
+    m_adam, v_adam, t_adam, lr: ℝ = 0.0, 0.0, 1.0, 0.01
 
     epochs: ℕ = 400
 
 
     for i:ℕ(epochs):
-        physika_print(i)
+        print(i)
         g = grad(calculate_loss, c)
         result = adam(c, g, m_adam, v_adam, t_adam, lr)
         c = result[0]
         m_adam = result[1]
         v_adam = result[2]
         t_adam = result[3]
-        physika_print(c)
+        print(c)
 
     pred_solution: ℝ[nx, ny] = solver(c, u0, v0, Δx, Δy, Δt, nt)
     visualize_trajectory_wave(true_solution, pred_solution, x, y)
@@ -1322,34 +1291,31 @@ the loss with respect to the density at step :math:`t`.
 .. code-block:: text
 
     def adam(density: ℝ, g: ℝ, m: ℝ, v: ℝ, t: ℝ, lr: ℝ) : ℝ[4]:
-        beta1: ℝ = 0.9
-        beta2: ℝ = 0.999
-        eps: ℝ = 1e-8
-        m_new: ℝ = beta1 * m + (1.0 - beta1) * g
-        v_new: ℝ = beta2 * v + (1.0 - beta2) * g**2
-        m_hat: ℝ = m_new / (1.0 - beta1**t)
-        v_hat: ℝ = v_new / (1.0 - beta2**t)
-        density_new: ℝ = density - lr * m_hat / (sqrt(v_hat) + eps)
+        β1: ℝ = 0.9
+        β2: ℝ = 0.999
+        ε: ℝ = 1e-8
+        m_new: ℝ = β1 * m + (1.0 - β1) * g
+        v_new: ℝ = β2 * v + (1.0 - β2) * g**2
+        m_hat: ℝ = m_new / (1.0 - β1**t)
+        v_hat: ℝ = v_new / (1.0 - β2**t)
+        density_new: ℝ = density - lr * m_hat / (sqrt(v_hat) + ε)
         return [density_new, m_new, v_new, t + 1.0]
 
     ρ: ℝ = 3.0
 
-    m_adam: ℝ = 0.0
-    v_adam: ℝ = 0.0
-    t_adam: ℝ = 1.0
-    lr: ℝ = 0.01
+    m_adam, v_adam, t_adam, lr: ℝ = 0.0, 0.0, 1.0, 0.01
 
     epochs: ℕ = 1
 
     for i:N(epochs):
-        physika_print(i)
+        print(i)
         g = grad(calculate_loss, ρ)
         result = adam(ρ, g, m_adam, v_adam, t_adam, lr)
         ρ = result[0]
         m_adam = result[1]
         v_adam = result[2]
         t_adam = result[3]
-        physika_print(ρ)
+        print(ρ)
 
 At each epoch, we compute the gradient of the loss with ``grad``, update
 the viscosity estimate with Adam, and print its progress toward the true
@@ -1624,14 +1590,14 @@ Full code (2D Navier stokes equation)
         return loss
 
     def adam(ρ: ℝ, g: ℝ, m: ℝ, v: ℝ, t: ℝ, lr: ℝ) : ℝ[4]:
-        beta1: ℝ = 0.9
-        beta2: ℝ = 0.999
-        eps: ℝ = 1e-8
-        m_new: ℝ = beta1 * m + (1.0 - beta1) * g
-        v_new: ℝ = beta2 * v + (1.0 - beta2) * g**2
-        m_hat: ℝ = m_new / (1.0 - beta1**t)
-        v_hat: ℝ = v_new / (1.0 - beta2**t)
-        ρ_new: ℝ = ρ - lr * m_hat / (sqrt(v_hat) + eps)
+        β1: ℝ = 0.9
+        β2: ℝ = 0.999
+        ε: ℝ = 1e-8
+        m_new: ℝ = β1 * m + (1.0 - β1) * g
+        v_new: ℝ = β2 * v + (1.0 - β2) * g**2
+        m_hat: ℝ = m_new / (1.0 - β1**t)
+        v_hat: ℝ = v_new / (1.0 - β2**t)
+        ρ_new: ℝ = ρ - lr * m_hat / (sqrt(v_hat) + ε)
         return [ρ_new, m_new, v_new, t + 1.0]
 
 
@@ -1644,22 +1610,19 @@ Full code (2D Navier stokes equation)
     ρ: ℝ = 3.0
     #guess_solution = solver(ρ)
 
-    m_adam: ℝ = 0.0
-    v_adam: ℝ = 0.0
-    t_adam: ℝ = 1.0
-    lr: ℝ = 0.01
+    m_adam, v_adam, t_adam, lr: ℝ = 0.0, 0.0, 1.0, 0.01
 
     epochs: ℕ = 400
 
     for i:ℕ(epochs):
-        physika_print(i)
+        print(i)
         g = grad(calculate_loss, ρ)
         result = adam(ρ, g, m_adam, v_adam, t_adam, lr)
         ρ = result[0]
         m_adam = result[1]
         v_adam = result[2]
         t_adam = result[3]
-        physika_print(ρ)
+        print(ρ)
 
     # value of `ρ` should be close to 1.0
     ρ

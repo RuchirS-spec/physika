@@ -193,14 +193,14 @@ def calculate_loss(ρ: ℝ): ℝ:
     return loss
 
 def adam(ρ: ℝ, g: ℝ, m: ℝ, v: ℝ, t: ℝ, lr: ℝ) : ℝ[4]:
-    beta1: ℝ = 0.9
-    beta2: ℝ = 0.999
-    eps: ℝ = 1e-8
-    m_new: ℝ = beta1 * m + (1.0 - beta1) * g
-    v_new: ℝ = beta2 * v + (1.0 - beta2) * g**2
-    m_hat: ℝ = m_new / (1.0 - beta1**t)
-    v_hat: ℝ = v_new / (1.0 - beta2**t)
-    ρ_new: ℝ = ρ - lr * m_hat / (sqrt(v_hat) + eps)
+    β1: ℝ = 0.9
+    β2: ℝ = 0.999
+    ε: ℝ = 1e-8
+    m_new: ℝ = β1 * m + (1.0 - β1) * g
+    v_new: ℝ = β2 * v + (1.0 - β2) * g**2
+    m_hat: ℝ = m_new / (1.0 - β1**t)
+    v_hat: ℝ = v_new / (1.0 - β2**t)
+    ρ_new: ℝ = ρ - lr * m_hat / (sqrt(v_hat) + ε)
     return [ρ_new, m_new, v_new, t + 1.0]
 
 
@@ -212,10 +212,7 @@ def adam(ρ: ℝ, g: ℝ, m: ℝ, v: ℝ, t: ℝ, lr: ℝ) : ℝ[4]:
 
 ρ: ℝ = 3.0
 
-m_adam: ℝ = 0.0
-v_adam: ℝ = 0.0
-t_adam: ℝ = 1.0
-lr: ℝ = 0.01
+m_adam, v_adam, t_adam, lr: ℝ = 0.0, 0.0, 1.0, 0.01
 
 # -----------------------------------------------------------
 # Set epochs to 400, here it is 1 so the tutorial 
@@ -225,14 +222,14 @@ lr: ℝ = 0.01
 epochs: ℕ = 1
 
 for i:ℕ(epochs):
-    physika_print(i)
+    print(i)
     g = grad(calculate_loss, ρ)
     result = adam(ρ, g, m_adam, v_adam, t_adam, lr)
     ρ = result[0]
     m_adam = result[1]
     v_adam = result[2]
     t_adam = result[3]
-    physika_print(ρ)
+    print(ρ)
 
 # value of `ρ` should be close to 1.0
 ρ

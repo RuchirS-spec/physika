@@ -25,12 +25,7 @@ def linspace(start: ℝ, end: ℝ, n: ℕ): ℝ[n]:
 # -------------------------------------
 
 true_α: ℝ = 2.0
-Lx: ℝ = 1.0
-Ly: ℝ = 1.0
-
-nx: ℝ = 40
-ny: ℝ = 40
-tf: ℝ = 10
+Lx, Ly, nx, ny, tf: ℝ = 1.0, 1.0, 40, 40, 10
 
 Δx: ℝ = Lx / (nx - 1)
 Δy: ℝ = Ly / (ny - 1)
@@ -113,14 +108,14 @@ def calculate_loss(α: ℝ): ℝ:
 # -------------------------------------
 
 def adam(α: ℝ, g: ℝ, m: ℝ, v: ℝ, t: ℝ, lr: ℝ) : ℝ[4]:
-    beta1: ℝ = 0.9
-    beta2: ℝ = 0.999
-    eps: ℝ = 1e-8
-    m_new: ℝ = beta1 * m + (1.0 - beta1) * g
-    v_new: ℝ = beta2 * v + (1.0 - beta2) * g**2
-    m_hat: ℝ = m_new / (1.0 - beta1**t)
-    v_hat: ℝ = v_new / (1.0 - beta2**t)
-    α_new: ℝ = α - lr * m_hat / (sqrt(v_hat) + eps)
+    β1: ℝ = 0.9
+    β2: ℝ = 0.999
+    ε: ℝ = 1e-8
+    m_new: ℝ = β1 * m + (1.0 - β1) * g
+    v_new: ℝ = β2 * v + (1.0 - β2) * g**2
+    m_hat: ℝ = m_new / (1.0 - β1**t)
+    v_hat: ℝ = v_new / (1.0 - β2**t)
+    α_new: ℝ = α - lr * m_hat / (sqrt(v_hat) + ε)
     return [α_new, m_new, v_new, t + 1.0]
 
 
@@ -134,10 +129,7 @@ def adam(α: ℝ, g: ℝ, m: ℝ, v: ℝ, t: ℝ, lr: ℝ) : ℝ[4]:
 guess_solution: ℝ[nx, ny] = solver(α, T0, Δx, Δy, Δt, nt)
 #visualize_trajectory_heat(true_solution, guess_solution, x, y)
 
-m_adam: ℝ = 0.0
-v_adam: ℝ = 0.0
-t_adam: ℝ = 1.0
-lr: ℝ = 0.01
+m_adam, v_adam, t_adam, lr: ℝ = 0.0, 0.0, 1.0, 0.01
 
 # -----------------------------------------------------------
 # Set epochs to 200, here it is 1 so the tutorial 
@@ -147,14 +139,14 @@ lr: ℝ = 0.01
 epochs: ℕ = 1
 
 for i:ℕ(epochs):
-    physika_print(i)
+    print(i)
     g = grad(calculate_loss, α)
     result = adam(α, g, m_adam, v_adam, t_adam, lr)
     α = result[0]
     m_adam = result[1]
     v_adam = result[2]
     t_adam = result[3]
-    physika_print(α)
+    print(α)
 
 # α should be closer to 2.0
 α

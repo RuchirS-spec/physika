@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from physika.runtime import DEVICE
 
-from physika.runtime import physika_print
+from physika.runtime import print
 from physika.runtime import compute_grad
 
 # === Functions ===
@@ -98,14 +98,14 @@ def calculate_loss(ρ):
     return loss
 
 def adam(ρ, g, m, v, t, lr):
-    beta1 = 0.9
-    beta2 = 0.999
-    eps = 1e-08
-    m_new = ((beta1 * m) + ((1.0 - beta1) * g))
-    v_new = ((beta2 * v) + ((1.0 - beta2) * (g ** 2)))
-    m_hat = (m_new / (1.0 - (beta1 ** t)))
-    v_hat = (v_new / (1.0 - (beta2 ** t)))
-    ρ_new = (ρ - ((lr * m_hat) / (torch.sqrt(v_hat if isinstance(v_hat, torch.Tensor) else torch.tensor(float(v_hat))) + eps)))
+    β1 = 0.9
+    β2 = 0.999
+    ε = 1e-08
+    m_new = ((β1 * m) + ((1.0 - β1) * g))
+    v_new = ((β2 * v) + ((1.0 - β2) * (g ** 2)))
+    m_hat = (m_new / (1.0 - (β1 ** t)))
+    v_hat = (v_new / (1.0 - (β2 ** t)))
+    ρ_new = (ρ - ((lr * m_hat) / (torch.sqrt(v_hat if isinstance(v_hat, torch.Tensor) else torch.tensor(float(v_hat))) + ε)))
     return torch.stack([torch.as_tensor(ρ_new), torch.as_tensor(m_new), torch.as_tensor(v_new), torch.as_tensor((t + 1.0))])
 
 # === Program ===
@@ -133,21 +133,18 @@ true_u = true_solution[int(0)]
 true_v = true_solution[int(1)]
 true_p = true_solution[int(2)]
 ρ = torch.tensor(3.0, requires_grad=True)
-m_adam = 0.0
-v_adam = 0.0
-t_adam = 1.0
-lr = 0.01
+m_adam, v_adam, t_adam, lr = 0.0, 0.0, 1.0, 0.01
 epochs = 1
 for i in range(int(0), int(epochs)):
-    physika_print(i)
+    print(i)
     g = compute_grad(calculate_loss, ρ)
     result = adam(ρ, g, m_adam, v_adam, t_adam, lr)
     ρ = result[int(0)]
     m_adam = result[int(1)]
     v_adam = result[int(2)]
     t_adam = result[int(3)]
-    physika_print(ρ)
-physika_print(ρ)
+    print(ρ)
+print(ρ)
 pred_solution = solver(ρ)
 pred_u = pred_solution[int(0)]
 pred_v = pred_solution[int(1)]
