@@ -90,3 +90,4 @@ Tutorials
    cnn_tutorial
    fft_tutorial
    fourier_neural_operator
+   2d_pde_parameter_estimation
