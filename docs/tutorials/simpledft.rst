@@ -1380,10 +1380,6 @@ References
    *Physical Review*, 81(3):385-390, 1951. doi:
    `10.1103/PhysRev.81.385 <https://doi.org/10.1103/PhysRev.81.385>`_.
 
-.. [eminus] Schulze, W. T., Lehtola, S. and Sharma, S. eminus: Pythonic
-   electronic structure theory. *arXiv*, 2410.19438, 2024.
-   `<https://arxiv.org/abs/2410.19438>`_.
-
 .. [Lowdin1950] Löwdin, P.-O. On the non-orthogonality problem connected
    with the use of atomic wave functions in the theory of molecules and
    crystals. *The Journal of Chemical Physics*, 18(3):365-375, 1950. doi:
