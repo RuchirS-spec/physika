@@ -8,11 +8,12 @@ import torch.nn as nn
 import torch.optim as optim
 
 from physika.utils.print_utils import _from_torch, _infer_type
+import builtins
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
-def physika_print(value: Any) -> None:
+def print(value: Any) -> None:
     """Pretty-print a Physika value with its inferred type annotation.
 
     Converts PyTorch tensors, complex numbers, and Python scalars into a
@@ -28,11 +29,11 @@ def physika_print(value: Any) -> None:
 
     Examples
     --------
-    >>> physika_print(3.0)
+    >>> print(3.0)
     3.0 ∈ ℝ
-    >>> physika_print(torch.tensor([1.0, 2.0, 3.0]))
+    >>> print(torch.tensor([1.0, 2.0, 3.0]))
     [1.0, 2.0, 3.0] ∈ ℝ[3]
-    >>> physika_print(torch.tensor([[1.0, 2.0], [3.0, 4.0]]))
+    >>> print(torch.tensor([[1.0, 2.0], [3.0, 4.0]]))
     [[1.0, 2.0], [3.0, 4.0]] ∈ ℝ[2,2]
     """
     # avoid printing NoneType in terminal when value is None
@@ -41,7 +42,7 @@ def physika_print(value: Any) -> None:
         return
     display = _from_torch(value)
     type_str = _infer_type(value)
-    print(f"{display} ∈ {type_str}")
+    builtins.print(f"{display} ∈ {type_str}")
 
 
 def solve(*equations: str, **known_vars: float) -> tuple[torch.Tensor, ...]:

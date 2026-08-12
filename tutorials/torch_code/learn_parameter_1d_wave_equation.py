@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from physika.runtime import DEVICE
 
-from physika.runtime import physika_print
+from physika.runtime import print
 from physika.runtime import compute_grad
 
 # === Functions ===
@@ -74,7 +74,7 @@ c = torch.tensor(0.1, requires_grad=True)
 learning_rate = 0.01
 epochs = 1
 for i in range(int(0), int(epochs)):
-    physika_print(i)
+    print(i)
     g = compute_grad(calculate_loss, c)
     c = (c - (learning_rate * g))
 pred_values = solver(c, u0, dx, dt, nt)

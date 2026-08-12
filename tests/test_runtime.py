@@ -1,5 +1,6 @@
 import torch
 from physika.runtime import random_complex, compl_mul1d
+from tests.conftest import type_errors, capture_output
 
 
 class TestRandomComplex:
@@ -46,3 +47,62 @@ class TestComplMul1d:
         weights1 = torch.zeros(3, 5, 6, dtype=torch.cfloat)
         out = compl_mul1d(x_ft, weights1)
         assert torch.allclose(out, torch.zeros_like(out))
+
+
+class TestPhysikaPrint:
+    """Tests for ``print()`` function"""
+
+    def test_print_program_level(self):
+        # Test ``print()`` at program level.
+        src = ("x: ℝ = 1\n"
+               "print(x)\n")
+        assert type_errors(src) == []
+        out = capture_output(src)
+        assert "1" in out
+
+    def test_print_function_level(self):
+        # Test ``print()`` in function level.
+        src = ("def test_f(x: ℝ): ℝ:\n"
+               "    print(x)\n"
+               "    return 1\n"
+               "test_f(10)\n")
+        assert type_errors(src) == []
+        out = capture_output(src)
+        assert "10" in out
+
+    def test_print_inside_class(self):
+        # Test ``print()`` inside class.
+        src = ("class Temp:\n"
+               "    def f(x: ℝ): ℝ:\n"
+               "        print(x)\n"
+               "        return 1\n"
+               "obj: Temp = Temp()\n"
+               "obj.f(10)\n")
+        assert type_errors(src) == []
+        out = capture_output(src)
+        assert "10" in out
+
+    def test_print_inside_loop(self):
+        # Test ``print()`` inside loops.
+        src = ("arr: ℝ[2] = [1, 2]\n"
+               "for i: ℕ(2):\n"
+               "    print(arr[i])\n")
+        assert type_errors(src) == []
+        out = capture_output(src)
+        assert "1" in out
+        assert "2" in out
+
+    def test_print_inside_function_loop(self):
+        # Test ``print()`` inside function loops.
+        src = ("def test_f(x: ℝ[m]): ℝ:\n"
+               "    for k:ℕ(2):\n"
+               "        print(x[k])\n"
+               "    return 1\n"
+               "arr: ℝ[2] = [10, 20]\n"
+               "test_f(arr)")
+        assert type_errors(src) == []
+        out = capture_output(src) == []
+        out = capture_output(src)
+        assert "10" in out
+        assert "20" in out
+        assert "1" in out

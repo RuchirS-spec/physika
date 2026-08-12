@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from physika.runtime import DEVICE
 
-from physika.runtime import physika_print
+from physika.runtime import print
 
 # === Functions ===
 def tanh(z):
@@ -100,9 +100,9 @@ logit_init = 0.0
 lr = 0.05
 ising = MeanFieldIsing(logit_init).to(DEVICE)
 p_before = (1.0 / (1.0 + torch.exp((0.0 - ising.logit_p) if isinstance((0.0 - ising.logit_p), torch.Tensor) else torch.tensor(float((0.0 - ising.logit_p))))))
-physika_print(ising.train(n, steps, batch, lr, J, h, β, n))
+print(ising.train(n, steps, batch, lr, J, h, β, n))
 p_after = (1.0 / (1.0 + torch.exp((0.0 - ising.logit_p) if isinstance((0.0 - ising.logit_p), torch.Tensor) else torch.tensor(float((0.0 - ising.logit_p))))))
 p_ref = mean_field_reference(J, h, β, 200)
-physika_print(p_before)
-physika_print(p_after)
-physika_print(p_ref)
+print(p_before)
+print(p_after)
+print(p_ref)

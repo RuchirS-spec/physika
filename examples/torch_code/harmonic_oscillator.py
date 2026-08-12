@@ -4,7 +4,7 @@ import torch.optim as optim
 from physika.runtime import DEVICE
 import re
 
-from physika.runtime import physika_print
+from physika.runtime import print
 from physika.runtime import solve
 from physika.runtime import compute_grad
 from physika.runtime import animate
@@ -61,18 +61,18 @@ k = 1.0
 m = 1.0
 x0 = 1.0
 v0 = 0.0
-physika_print(U(k, m, 0.0, x0, v0))
-physika_print(U(k, m, 1.5708, x0, v0))
-physika_print(U(k, m, 3.1416, x0, v0))
-physika_print(U(k, m, 4.7124, x0, v0))
-physika_print(U(k, m, 6.2832, x0, v0))
-physika_print(U(k, m, 0.0, 0.0, 1.0))
-physika_print(U(k, m, 1.5708, 0.0, 1.0))
-physika_print(U(k, m, 3.1416, 0.0, 1.0))
+print(U(k, m, 0.0, x0, v0))
+print(U(k, m, 1.5708, x0, v0))
+print(U(k, m, 3.1416, x0, v0))
+print(U(k, m, 4.7124, x0, v0))
+print(U(k, m, 6.2832, x0, v0))
+print(U(k, m, 0.0, 0.0, 1.0))
+print(U(k, m, 1.5708, 0.0, 1.0))
+print(U(k, m, 3.1416, 0.0, 1.0))
 animate(U, k, m, x0, v0, 0.0, 31.1416)
 t0 = torch.tensor(0.0, requires_grad=True)
-physika_print(compute_grad(lambda _dt0: U(k, m, _dt0, x0, v0), t0))
+print(compute_grad(lambda _dt0: U(k, m, _dt0, x0, v0), t0))
 t1 = torch.tensor(1.5708, requires_grad=True)
-physika_print(compute_grad(lambda _dt1: U(k, m, _dt1, x0, v0), t1))
+print(compute_grad(lambda _dt1: U(k, m, _dt1, x0, v0), t1))
 t2 = torch.tensor(3.1416, requires_grad=True)
-physika_print(compute_grad(lambda _dt2: U(k, m, _dt2, x0, v0), t2))
+print(compute_grad(lambda _dt2: U(k, m, _dt2, x0, v0), t2))

@@ -66,4 +66,4 @@ epochs: ℕ = 1
 for epoch:ℕ(0, epochs):
     g = grad(calculate_loss, eps)
     eps = eps - learning_rate * g
-    physika_print(eps)
+    print(eps)

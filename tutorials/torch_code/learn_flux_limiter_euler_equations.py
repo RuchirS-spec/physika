@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from physika.runtime import DEVICE
 
-from physika.runtime import physika_print
+from physika.runtime import print
 
 # === Functions ===
 def zero_1d_array(len):
@@ -171,25 +171,25 @@ for i in range(int(1), int(99)):
 minmod_limiter = NeuralFluxLimiter(θ_zero, (-20.0), θ_zero, θ_zero, 0.0, 0.0, 0.0)
 superbee_limiter = NeuralFluxLimiter(θ_zero, 20.0, θ_zero, θ_zero, 0.0, 0.0, 0.0)
 minmod_loss = minmod_limiter.evaluate(initial_states, true_rho)
-physika_print(minmod_loss)
+print(minmod_loss)
 superbee_loss = superbee_limiter.evaluate(initial_states, true_rho)
-physika_print(superbee_loss)
+print(superbee_loss)
 θ_0 = torch.tensor([[0.5, (-0.5), 0.3, (-0.3), 0.8, (-0.8), 0.2, (-0.2)], [0.1, (-0.1), 0.4, (-0.4), 0.2, (-0.2), (-0.3), 0.3], [0.3, (-0.2), 0.25, (-0.3), 0.2, 0.15, (-0.25), 0.2]], device=DEVICE)
 b2_0 = (-3.0)
 adam_m0 = torch.tensor([[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]], device=DEVICE)
 adam_v0 = torch.tensor([[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]], device=DEVICE)
 net = NeuralFluxLimiter(θ_0, b2_0, adam_m0, adam_v0, 0.0, 0.0, 0.0)
 loss_before = net.evaluate(initial_states, true_rho)
-physika_print(loss_before)
+print(loss_before)
 epochs = 16
 lr = 0.1
 final_loss = net.train(initial_states, true_rho, epochs, lr)
 loss_after = net.evaluate(initial_states, true_rho)
-physika_print(loss_after)
+print(loss_after)
 r_sample = torch.tensor([(-2.0), (-1.0), (-0.5), 0.0, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 4.0, 8.0], device=DEVICE)
 learned_phi = net(r_sample)
-physika_print(learned_phi)
+print(learned_phi)
 minmod_phi = minmod(r_sample)
-physika_print(minmod_phi)
+print(minmod_phi)
 superbee_phi = superbee(r_sample)
-physika_print(superbee_phi)
+print(superbee_phi)

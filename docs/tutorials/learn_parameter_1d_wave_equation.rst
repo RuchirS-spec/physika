@@ -228,7 +228,7 @@ We start with an initial guess of ``c = 0.1`` and run 200 epochs of gradient des
     epochs: ℕ = 200
 
     for i:ℕ(epochs):
-        physika_print(i)
+        print(i)
         g = grad(calculate_loss, c)
         c = c - learning_rate * g
 
@@ -353,7 +353,7 @@ Full Code
     epochs: ℕ = 200
 
     for i:ℕ(epochs):
-        physika_print(i)
+        print(i)
         g = grad(calculate_loss, c)
         c = c - learning_rate * g
 

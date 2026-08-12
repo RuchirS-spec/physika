@@ -1,39 +1,8 @@
 import pytest
 from physika.features.tuple_unpack import TupleUnpackFeature
-from physika.utils.ast_utils import ast_to_torch_expr, build_unified_ast
-from physika.codegen import from_ast_to_torch
+from physika.utils.ast_utils import ast_to_torch_expr
 from tests.test_features.test_classes import parse_physika
-
-
-def type_errors(src: str) -> list:
-    """
-    Parse Physika source string, run the type checker and return the list of
-    error strings if any.
-    """
-    import physika.parser as pm
-    from physika.lexer import lexer
-    from physika.type_checker import TypeChecker
-    pm.symbol_table.clear()
-    lexer.lexer.lineno = 1
-    ast = build_unified_ast(pm.parser.parse(src, lexer=lexer), pm.symbol_table)
-    return TypeChecker(ast).run()
-
-
-def run_phyk(src: str) -> dict:
-    """
-    Helper function to parse, emits codegen, and exec a Physika source
-    string.
-    """
-    import physika.parser as pm
-    from physika.lexer import lexer
-    pm.symbol_table.clear()
-    lexer.lexer.lineno = 1
-    ast = build_unified_ast(pm.parser.parse(src, lexer=lexer), pm.symbol_table)
-    code = from_ast_to_torch(ast, print_code=False)
-    ns: dict = {}
-    exec(code, ns)
-    return ns
-
+from tests.conftest import type_errors, run_phyk
 
 simple_src = """
 class Simple(v: ℝ):

@@ -696,6 +696,7 @@ def ast_to_torch_expr(node: ASTNode,
             "real": "torch.real",
         }
         multi_arg_funcs = {
+            "atan2": "torch.atan2",
             "roll": "torch.roll",
             "fft": "torch.fft.fft",
             "ifft": "torch.fft.ifft",
@@ -963,6 +964,10 @@ def emit_func_loop_body(
             lines.append(
                 f"{prefix}{var_name} = {ast_to_torch_expr(expr, current_loop_var=active)}"  # noqa: E501
             )
+        elif tag == "loop_call":
+            _, func_name, args = loop_stmt
+            arg_strs = [ast_to_torch_expr(a) for a in args]
+            lines.append(f"{prefix}{func_name}({', '.join(arg_strs)})")
         elif tag == "loop_pluseq":
             _, var_name, expr = loop_stmt
             lines.append(
@@ -1082,6 +1087,10 @@ def emit_body_stmts(
             expr_code = generate_solve_call(expr)
             lines.append(f"{prefix}{var_name} = {expr_code}")
             known_vars.append(var_name)
+        elif stmt_op == "body_call":
+            _, func_name, args = stmt
+            arg_strs = [ast_to_torch_expr(a) for a in args]
+            lines.append(f"{prefix}{func_name}({', '.join(arg_strs)})")
         elif stmt_op == "body_assign":
             _, var_name, expr = stmt
             expr_code = generate_solve_call(expr)
@@ -1470,7 +1479,7 @@ def generate_statement(stmt: ASTNode,
     """Generate a PyTorch code string for a program-level statement.
 
     Handles ``decl`` (variable declaration), ``assign`` (reassignment),
-    ``expr`` (bare expression — wrapped in ``physika_print`` unless it
+    ``expr`` (bare expression — wrapped in ``print`` unless it
     is a side-effect call like ``simulate``/``animate``), ``for_loop``,
     and skips ``func_def``/``class_def`` (already emitted by
     ``from_ast_to_torch``).
@@ -1504,7 +1513,7 @@ def generate_statement(stmt: ASTNode,
     >>> generate_statement(("decl", "t", "ℝ", ("num", 0.0), 2), {"t"})
     't = torch.tensor(0.0, requires_grad=True)'
     >>> generate_statement(("expr", ("var", "x"), 0), set())
-    'physika_print(x)'
+    'print(x)'
     """
     if not isinstance(stmt, tuple):
         return None
@@ -1558,12 +1567,12 @@ def generate_statement(stmt: ASTNode,
     elif op == "expr":
         expr = stmt[1]
         expr_code = ast_to_torch_expr(expr)
-        # Don't wrap side-effect-only calls in physika_print
+        # Don't wrap side-effect-only calls in print
         if isinstance(expr,
                       tuple) and expr[0] == "call" and expr[1] in ("simulate",
                                                                    "animate"):
             return expr_code
-        return f"physika_print({expr_code})"
+        return f"print({expr_code})"
 
     elif op == "symbol_decl":
         name = stmt[1]
