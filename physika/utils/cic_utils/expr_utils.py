@@ -1,5 +1,18 @@
-from physika.core.expr import (Expr, BVar, FVar, MVar, Sort, Const, App, Lam,
-                               ForallE, LetE, MData, Proj, MVarId,)
+from physika.core.expr import (
+    Expr,
+    BVar,
+    FVar,
+    MVar,
+    Sort,
+    Const,
+    App,
+    Lam,
+    ForallE,
+    LetE,
+    MData,
+    Proj,
+    MVarId,
+)
 from typing import Tuple, Optional, List
 from physika.core.level import Level
 from physika.utils.cic_utils.level_utils import instantiate_level_params
@@ -515,10 +528,10 @@ def instantiate_level_params_in_expr(e: Expr, params: List[str],
     if isinstance(e, Sort):
         return Sort(instantiate_level_params(e.level, params, levels))
     elif isinstance(e, Const):
-        return Const(
-            e.name,
-            tuple(
-                instantiate_level_params(lvl, params, levels) for lvl in e.levels))  # noqa: E501
+        return Const(e.name,
+                     tuple(
+                         instantiate_level_params(lvl, params, levels)
+                         for lvl in e.levels))  # noqa: E501
     elif isinstance(e, App):
         nf = instantiate_level_params_in_expr(e.func, params, levels)
         na = instantiate_level_params_in_expr(e.arg, params, levels)
