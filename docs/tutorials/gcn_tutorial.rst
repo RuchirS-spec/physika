@@ -39,10 +39,16 @@ Dataset
 
 We trained the GCN model on the FreeSolv dataset to predict hydration free
 energy (kcal/mol) for small molecules.
+max_atoms: N = 44 (the largest molecule in the dataset has 44 atoms
+for padding purposes.)
 
 .. code-block:: text
 
-    dataset = create_dataset(80, 642, 44)
+    train_test_split: N = 80
+    total_dataset_size: N = 642
+    max_atoms: N = 44
+
+    dataset = create_dataset(train_test_split, total_dataset_size, max_atoms)
     train_dataset = dataset[0]
     test_dataset = dataset[1]
 
@@ -570,10 +576,13 @@ Full Code
     W1: ℝ[30, 4] = for i:ℕ(30) -> row: ℝ[4] ~ Normal(μ, σ, 4)
     W2: ℝ[4] ~ Normal(μ, σ, 4)
 
-
     gcn_object: GCNModel = GCNModel(W1, W2)
 
-    dataset = create_dataset(80, 642, 44)
+    train_test_split: N = 80
+    total_dataset_size: N = 642
+    max_atoms: N = 44
+
+    dataset = create_dataset(train_test_split, total_dataset_size, max_atoms)
     train_dataset = dataset[0]
     test_dataset = dataset[1]
 
