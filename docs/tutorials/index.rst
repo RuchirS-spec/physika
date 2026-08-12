@@ -55,6 +55,7 @@ Tutorials
    :caption: Quantum Mechanics
 
    learn_parameter_schrodinger_equation
+   simpledft
 
 .. toctree::
    :maxdepth: 1
