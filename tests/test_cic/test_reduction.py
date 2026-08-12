@@ -532,7 +532,7 @@ class TestTryIota:
         # a Lit major premise is treated as Nat.succ equivalent constructor
         # form
         result = try_iota(fn2, Lit(6), env2, LocalContext(), MetaVarContext())
-        assert result == Lit(5)
+        assert result == Lit(NatLit(5))
 
         # application arguments beyond the recursor's own arity are
         # reapplied to the reduced result

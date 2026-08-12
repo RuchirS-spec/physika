@@ -204,6 +204,68 @@ to infer a ``MVar`` value, it can independently verify the elaborator's output.
 Universe levels have their own, parallel metavariable system (``LMVar``), solved the same way but
 tracked separately from term-level ``MVar``\ s.
 
+Reduction
+---------
+
+While a Physika program is being elaborated to a CIC term, it may still contain
+unresolved ``MVar`` placeholders. Even once every placeholder is
+solved, two terms can still denote the same object while being written
+differently. For example, an inferred return type may need unfolding
+before it can be checked against a function's declared one.  Lean 4 implements
+``Lean.Meta.whnf`` and ``Lean.Meta.isDefEq`` for solvinf this problem. ``whnf``,
+reduces a term to weak-head normal form, and ``is_def_eq``,
+decides whether two terms are definitionally equal.
+
+These two functions are used at four points in Physika CIC. During elaboration,
+to solve metavariables while a term is being constructed. At
+kernel check (``infer_type``), as the final trusted
+verification step and at dimensional analysis, to compare and annotate
+inferred array/vector shapes.
+
+``whnf`` unfolds only the outermost, head constructor of a term, leaving a
+``Lam``'s body, a ``ForallE``'s codomain, and an ``App``'s argument
+untouched. ``whnf`` applies the following rules depending the head:
+
+.. code-block:: text
+
+   β (beta)   App(Lam(x, A, b), a)
+   δ (delta)  Const("f")
+   ζ (zeta)   LetE(x, A, v, b)
+   ι (iota)   Recursor(..., ctor args, ...) # rule.rhs[fields, motive, minors]
+   Proj       Proj(S, i, S.mk(args))
+
+``whnf`` supports ``Nat.add``/``Nat.mul``/``Nat.sub`` applied to two ``Lit`` operands,
+computing the result directly with native arithmetic instead of unfolding
+through unary ``Nat.succ`` recursion. This fast path was implemented followin Lean 4's
+fast arbitrary-precision arithmetic library.
+
+``is_def_eq(t1, t2, ..., allow_assign)`` instantiates any already
+solved ``MVar``\ s on both sides, then checks for plain syntactic equality
+before going for reduction. If this fails, both sides are
+reduced to ``whnf``. When ``allow_assign=True`` and one side have unassigned ``MVar`` (``?m x1 ... xk``) 
+a metavariable applied only to distinct local variables (the Miller pattern)
+it's solved directly:
+
+.. code-block:: text
+
+   ?m := λx1 ... xk. t.
+   
+Miller pattern unification has one possible solution, so it's safe to solve.
+Because ``x1 ... xk`` are distinct local variables rather than arbitrary
+terms, each one can only correspond to itself inside ``t``. This differs from metavariable's
+arguments, which can repeat or be compound terms and different solutions can fit.
+If unsolved, a bare unassigned, metavariable on either side is assigned to the other, subject to the same
+validity checks described under Metavariables above. A ``Lit`` Nat is paired with an equivalent ``Nat.succ`` chain.
+Finally, reduced heads are compared structurally. ``Sort`` levels through
+``is_level_def_eq``, ``Const`` by name and level arguments, ``FVar``/``BVar``
+by id, ``App`` by parameters on both sides, ``Lam``/``ForallE``
+by comparing domains and then bodies opened under a shared new ``FVar``,
+and ``Proj`` by ``type_name``/``idx`` plus the inner expression. If exactly
+one side is a ``Lam``, the other is applied to a fresh
+``FVar`` ( η-expanded) before their bodies are compared. Anything left mismatched is
+unequal.
+
+
 Physika implementation
 ----------------------
 
@@ -575,6 +637,36 @@ Within Physika's CIC, ``MetaVarContext`` is one of the three pieces of state ( i
 The kernel, which never sees a ``MetaVarContext``, only ever accepts terms where every placeholder has already been
 resolved.
 
+``Weak-head Normal Form (whnf)``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Reduces a CIC ``expr: Expr`` to weak-head normal form (WHNF). ``whnf`` applies
+β, δ, ζ, ι, and Proj reduction rules for checking types at elaboration
+time.
+
+Apply reduction rules to an `expr:Expr` until the head is irreducible
+(``Sort``, ``Lam``, ``ForallE``, ``Const``, ``FVar``, ``MVar``, or ``BVar``
+). First, by  unfolding a let-binding or a let-bound local (ζ(zeta)-
+reduction). Then, reducing a defined constant (δ(delta)-reduction). Third
+, reducing a lambda application (β(beta)-reduction) and firing a recursor's
+ι-rule against a constructor (iota reduction).
+
+``Definitional Equality (is_def_eq)``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Checks if two CIC terms ``t1: Expr`` and ``t2: Expr`` are definitionally equal, solving
+expression metavariables as needed. ``is_def_eq`` returns
+``(True, mctx)`` if equal, ``(False, mctx)`` otherwise.
+
+Instantiates solved MVars, and compare ``t1`` and ``t2`` node by node
+checking if they are literally equal, and reduces both sides to WHNF.
+If either side is a metavariable applied only to distinct local variables
+(Miller pattern), solve it directly. Otherwise falls through ``MVar``
+assignment, checking if a ``Nat`` literal resolves to a ``Nat.succ`` chain,
+and structural comparison (``App``, binder-opening on ``Lam``/``ForallE``,
+one side is a ``Lam`` and the other isn't).
+
+Returns ``mctx: MetaVarContext``, mutated in place if any MVar got assigned
+during the call.
 
 References
 ----------
