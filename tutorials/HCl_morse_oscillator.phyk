@@ -1,0 +1,342 @@
+# Helper functions for Part 1: Parameter learning
+def zero_array(length: ℕ): ℝ[m]:
+    values: ℝ[length] = for index: ℕ(length) -> index * 0.0
+    return values
+
+def morse_model_potential(dissociation_eV: ℝ, α_inverse_angstrom: ℝ, equilibrium_angstrom: ℝ): ℝ[m]:
+    model_potential: ℝ[N_reference_points] = zero_array(N_reference_points)
+    for reference_index: ℕ(0, N_reference_points):
+        model_potential[reference_index] = dissociation_eV * (1.0 - exp(-α_inverse_angstrom * (reference_bond_distance_angstrom[reference_index] - equilibrium_angstrom)))**2
+    return model_potential
+
+def morse_parameter_loss(dissociation_eV: ℝ, α_inverse_angstrom: ℝ, equilibrium_angstrom: ℝ): ℝ:
+    predicted: ℝ[N_reference_points] = morse_model_potential(dissociation_eV, α_inverse_angstrom, equilibrium_angstrom)
+    total_loss: ℝ = 0.0
+    error: ℝ = 0.0
+    for reference_index: ℕ(0, N_reference_points):
+        error = predicted[reference_index] - reference_potential_eV[reference_index]
+        total_loss = total_loss + error**2
+    return total_loss / (N_reference_points * 1.0)
+
+def loss_with_respect_to_dissociation(dissociation_eV: ℝ): ℝ:
+    return morse_parameter_loss(dissociation_eV, learned_α_inverse_angstrom, learned_equilibrium_distance_angstrom)
+
+def loss_with_respect_to_α(α_inverse_angstrom: ℝ): ℝ:
+    return morse_parameter_loss(learned_dissociation_energy_eV, α_inverse_angstrom, learned_equilibrium_distance_angstrom)
+
+def loss_with_respect_to_equilibrium(equilibrium_angstrom: ℝ): ℝ:
+    return morse_parameter_loss(learned_dissociation_energy_eV, learned_α_inverse_angstrom, equilibrium_angstrom)
+
+def adam(parameter: ℝ, gradient_value: ℝ, first_moment: ℝ, second_moment: ℝ, step: ℝ, learning_rate: ℝ): ℝ[4]:
+    β_1: ℝ = 0.9
+    β_2: ℝ = 0.999
+    ε: ℝ = 1.0e-8
+    new_first_moment: ℝ = β_1 * first_moment + (1.0 - β_1) * gradient_value
+    new_second_moment: ℝ = β_2 * second_moment + (1.0 - β_2) * gradient_value**2
+    corrected_first_moment: ℝ = new_first_moment / (1.0 - β_1**step)
+    corrected_second_moment: ℝ = new_second_moment / (1.0 - β_2**step)
+    new_parameter: ℝ = parameter - learning_rate * corrected_first_moment / (sqrt(corrected_second_moment) + ε)
+    return [new_parameter, new_first_moment, new_second_moment, step + 1.0]
+
+# Define physical constants and HCl reduced mass
+atomic_mass_unit: ℝ = 1.66053906660e-27
+ℏ: ℝ = 1.054571817e-34
+planck_constant: ℝ = 6.62607015e-34
+speed_of_light_cm: ℝ = 2.99792458e10
+electron_volt: ℝ = 1.602176634e-19
+inverse_angstrom_to_inverse_meter: ℝ = 1.0e10
+mass_H_u: ℝ = 1.00784
+mass_Cl_u: ℝ = 35.45
+mass_H: ℝ = mass_H_u * atomic_mass_unit
+mass_Cl: ℝ = mass_Cl_u * atomic_mass_unit
+μ_HCl: ℝ = ((mass_H * mass_Cl) / (mass_H + mass_Cl))
+
+# Load the published HCl potential-energy curve in angstrom and eV relative to the minimum
+N_reference_points: ℕ = 13
+
+reference_bond_distance_angstrom: ℝ[N_reference_points] = [1.1000, 1.2746, 1.6000, 2.1500, 2.6500, 3.2000, 3.7500, 3.9500, 4.2500, 4.5500, 4.8000, 5.0000, 5.3000]
+reference_potential_eV: ℝ[N_reference_points] = [0.68888, 0.00000, 0.97847, 3.22469, 4.23970, 4.54743, 4.60134, 4.60678, 4.61086, 4.61274, 4.61355, 4.61396, 4.61434]
+
+# Initialize the learnable Morse parameters
+learned_dissociation_energy_eV: ℝ = 3.5
+learned_α_inverse_angstrom: ℝ = 1.5
+learned_equilibrium_distance_angstrom: ℝ = 1.35
+dissociation_first_moment: ℝ = 0.0
+dissociation_second_moment: ℝ = 0.0
+α_first_moment: ℝ = 0.0
+α_second_moment: ℝ = 0.0
+equilibrium_first_moment: ℝ = 0.0
+equilibrium_second_moment: ℝ = 0.0
+optimizer_step: ℝ = 1.0
+
+# Set the parameter-specific learning rates
+learning_rate_dissociation: ℝ = 0.005
+learning_rate_α: ℝ = 0.001
+learning_rate_equilibrium: ℝ = 0.0005
+
+# Initialize the training state and loss history
+# Set epochs to ~800 to fully recover the learned parameters; here it is 1 so the
+# tutorial runs quickly through tests/test_tutorials.py.
+
+learning_epochs: ℕ = 1   #800
+dissociation_gradient: ℝ = 0.0
+α_gradient: ℝ = 0.0
+equilibrium_gradient: ℝ = 0.0
+dissociation_adam_result: ℝ[4] = [learned_dissociation_energy_eV, 0.0, 0.0, optimizer_step]
+α_adam_result: ℝ[4] = [learned_α_inverse_angstrom, 0.0, 0.0, optimizer_step]
+equilibrium_adam_result: ℝ[4] = [learned_equilibrium_distance_angstrom, 0.0, 0.0, optimizer_step]
+loss_history: ℝ[learning_epochs] = zero_array(learning_epochs)
+
+# Learn the Morse parameters with Adam optimization
+for epoch: ℕ(0, learning_epochs):
+    dissociation_gradient = grad(loss_with_respect_to_dissociation, learned_dissociation_energy_eV)
+    α_gradient = grad(loss_with_respect_to_α, learned_α_inverse_angstrom)
+    equilibrium_gradient = grad(loss_with_respect_to_equilibrium, learned_equilibrium_distance_angstrom)
+    dissociation_adam_result = adam(learned_dissociation_energy_eV, dissociation_gradient, dissociation_first_moment, dissociation_second_moment, optimizer_step, learning_rate_dissociation)
+    α_adam_result = adam(learned_α_inverse_angstrom, α_gradient, α_first_moment, α_second_moment, optimizer_step, learning_rate_α)
+    equilibrium_adam_result = adam(learned_equilibrium_distance_angstrom, equilibrium_gradient, equilibrium_first_moment, equilibrium_second_moment, optimizer_step, learning_rate_equilibrium)
+    learned_dissociation_energy_eV = dissociation_adam_result[0]
+    dissociation_first_moment = dissociation_adam_result[1]
+    dissociation_second_moment = dissociation_adam_result[2]
+    learned_α_inverse_angstrom = α_adam_result[0]
+    α_first_moment = α_adam_result[1]
+    α_second_moment = α_adam_result[2]
+    learned_equilibrium_distance_angstrom = equilibrium_adam_result[0]
+    equilibrium_first_moment = equilibrium_adam_result[1]
+    equilibrium_second_moment = equilibrium_adam_result[2]
+    loss_history[epoch] = morse_parameter_loss(learned_dissociation_energy_eV, learned_α_inverse_angstrom, learned_equilibrium_distance_angstrom)
+    optimizer_step = optimizer_step + 1.0
+
+# Evaluate the final parameter-learning results
+final_learning_loss: ℝ = morse_parameter_loss(learned_dissociation_energy_eV, learned_α_inverse_angstrom, learned_equilibrium_distance_angstrom)
+learned_reference_potential_eV: ℝ[N_reference_points] = morse_model_potential(learned_dissociation_energy_eV, learned_α_inverse_angstrom, learned_equilibrium_distance_angstrom)
+
+# Helper functions for Part 2: Eigen solver
+
+def zero_matrix(rows: ℕ, columns: ℕ): ℝ[m,n]:
+    values: ℝ[rows,columns] = for index: ℕ(rows) -> for column_index: ℕ(columns) -> (index + column_index) * 0.0
+    return values
+
+def linspace(start: ℝ, end: ℝ, number: ℕ): ℝ[m]:
+    values: ℝ[number] = zero_array(number)
+    spacing: ℝ = (end - start) / (number - 1)
+    for index: ℕ(0, number):
+        values[index] = start + index * spacing
+    return values
+
+def integrate(values: ℝ[m], grid_spacing: ℝ, number: ℕ): ℝ:
+    integral: ℝ = 0.0
+    for index: ℕ(0, number):
+        integral = integral + values[index] * grid_spacing
+    return integral
+
+def dot_product(first: ℝ[m], second: ℝ[n], number: ℕ): ℝ:
+    value: ℝ = 0.0
+    for index: ℕ(0, number):
+        value = value + first[index] * second[index]
+    return value
+
+def normalize_vector(values: ℝ[m], number: ℕ): ℝ[m]:
+    result: ℝ[number] = zero_array(number)
+    norm: ℝ = sqrt(dot_product(values, values, number))
+    for index: ℕ(0, number):
+        result[index] = values[index] / norm
+    return result
+
+def apply_hamiltonian(wavefunction: ℝ[m], potential: ℝ[n], kinetic_coefficient: ℝ, number: ℕ): ℝ[m]:
+    result: ℝ[number] = zero_array(number)
+    result[0] = ((2.0 * kinetic_coefficient + potential[0]) * wavefunction[0] - kinetic_coefficient * wavefunction[1])
+    for index: ℕ(1, number - 1):
+        result[index] = (-kinetic_coefficient * wavefunction[index - 1] + (2.0 * kinetic_coefficient + potential[index]) * wavefunction[index] - kinetic_coefficient * wavefunction[index + 1])
+    result[number - 1] = (-kinetic_coefficient * wavefunction[number - 2] + (2.0 * kinetic_coefficient + potential[number - 1]) * wavefunction[number - 1])
+    return result
+
+def jacobi_diagonalize(): ℕ:
+    jacobi_not_converged: ℕ = 0
+    jacobi_converged: ℕ = 1
+    jacobi_converged_local: ℕ = jacobi_not_converged
+    for index: ℕ(0, Krylov_dimension):
+        Ritz_vectors[index,index] = 1.0
+        for column_index: ℕ(0, Krylov_dimension):
+            projected_work_matrix[index,column_index] = projected_hamiltonian[index,column_index]
+    for rotation: ℕ(0, jacobi_maximum_rotations):
+        jacobi_p = 0
+        jacobi_q = 1
+        jacobi_largest = abs(projected_work_matrix[0,1])
+        for index: ℕ(0, Krylov_dimension):
+            for column_index: ℕ(index + 1, Krylov_dimension):
+                if abs(projected_work_matrix[index,column_index]) > jacobi_largest:
+                    jacobi_largest = abs(projected_work_matrix[index,column_index])
+                    jacobi_p = index
+                    jacobi_q = column_index
+        if jacobi_converged_local == jacobi_not_converged:
+            if jacobi_largest <= jacobi_tolerance:
+                jacobi_converged_local = jacobi_converged
+        if jacobi_largest > jacobi_tolerance:
+            jacobi_angle = 0.5 * atan2(2.0 * projected_work_matrix[jacobi_p,jacobi_q], projected_work_matrix[jacobi_q,jacobi_q] - projected_work_matrix[jacobi_p,jacobi_p])
+            jacobi_cosine = cos(jacobi_angle)
+            jacobi_sine = sin(jacobi_angle)
+            jacobi_app = (projected_work_matrix[jacobi_p,jacobi_p] + 0.0)
+            jacobi_aqq = (projected_work_matrix[jacobi_q,jacobi_q] + 0.0)
+            jacobi_apq = (projected_work_matrix[jacobi_p,jacobi_q] + 0.0)
+            for basis_index: ℕ(0, Krylov_dimension):
+                if basis_index != jacobi_p:
+                    if basis_index != jacobi_q:
+                        jacobi_akp = (projected_work_matrix[basis_index,jacobi_p] + 0.0)
+                        jacobi_akq = (projected_work_matrix[basis_index,jacobi_q] + 0.0)
+                        projected_work_matrix[basis_index,jacobi_p] = (jacobi_cosine * jacobi_akp - jacobi_sine * jacobi_akq)
+                        projected_work_matrix[jacobi_p,basis_index] = (projected_work_matrix[basis_index,jacobi_p])
+                        projected_work_matrix[basis_index,jacobi_q] = (jacobi_sine * jacobi_akp + jacobi_cosine * jacobi_akq)
+                        projected_work_matrix[jacobi_q,basis_index] = (projected_work_matrix[basis_index,jacobi_q])
+            projected_work_matrix[jacobi_p,jacobi_p] = (jacobi_cosine * jacobi_cosine * jacobi_app - 2.0 * jacobi_sine * jacobi_cosine * jacobi_apq + jacobi_sine * jacobi_sine * jacobi_aqq)
+            projected_work_matrix[jacobi_q,jacobi_q] = (jacobi_sine * jacobi_sine * jacobi_app + 2.0 * jacobi_sine * jacobi_cosine * jacobi_apq + jacobi_cosine * jacobi_cosine * jacobi_aqq)
+            projected_work_matrix[jacobi_p,jacobi_q] = 0.0
+            projected_work_matrix[jacobi_q,jacobi_p] = 0.0
+            for basis_index: ℕ(0, Krylov_dimension):
+                jacobi_vkp = Ritz_vectors[basis_index,jacobi_p] + 0.0
+                jacobi_vkq = Ritz_vectors[basis_index,jacobi_q] + 0.0
+                Ritz_vectors[basis_index,jacobi_p] = (jacobi_cosine * jacobi_vkp - jacobi_sine * jacobi_vkq)
+                Ritz_vectors[basis_index,jacobi_q] = (jacobi_sine * jacobi_vkp + jacobi_cosine * jacobi_vkq)
+    for index: ℕ(0, Krylov_dimension):
+        Ritz_values[index] = projected_work_matrix[index,index]
+    for index: ℕ(0, Krylov_dimension - 1):
+        jacobi_minimum = index
+        for column_index: ℕ(index + 1, Krylov_dimension):
+            if Ritz_values[column_index] < Ritz_values[jacobi_minimum]:
+                jacobi_minimum = column_index
+        if jacobi_minimum != index:
+            jacobi_temporary_value = Ritz_values[index] + 0.0
+            Ritz_values[index] = Ritz_values[jacobi_minimum]
+            Ritz_values[jacobi_minimum] = jacobi_temporary_value
+            for basis_index: ℕ(0, Krylov_dimension):
+                jacobi_temporary_vector = Ritz_vectors[basis_index,index] + 0.0
+                Ritz_vectors[basis_index,index] = Ritz_vectors[basis_index,jacobi_minimum]
+                Ritz_vectors[basis_index,jacobi_minimum] = jacobi_temporary_vector
+    return jacobi_converged_local
+
+
+# Convert the learned Morse parameters to SI units
+dissociation_energy_eV: ℝ = learned_dissociation_energy_eV
+dissociation_energy_J: ℝ = (dissociation_energy_eV * electron_volt)
+equilibrium_distance: ℝ = learned_equilibrium_distance_angstrom * 1.0e-10
+morse_α: ℝ = learned_α_inverse_angstrom * inverse_angstrom_to_inverse_meter
+
+# Define the spatial grid and eigensolver dimensions
+N_grid: ℕ = 100
+N_levels: ℕ = 2
+block_size: ℕ = 2
+Krylov_dimension: ℕ = 40
+r_min: ℝ = 0.50e-10
+r_max: ℝ = 2.00e-10
+grid_spacing: ℝ = ((r_max - r_min) / (N_grid + 1))
+r_start: ℝ = r_min + grid_spacing
+r_end: ℝ = r_max - grid_spacing
+bond_distance: ℝ[N_grid] = linspace(r_start, r_end, N_grid)
+
+# Construct the Morse potential and finite-difference kinetic coefficient
+distance_from_equilibrium: ℝ[N_grid] = (bond_distance - equilibrium_distance)
+morse_exponential: ℝ[N_grid] = exp(-morse_α * distance_from_equilibrium)
+morse_difference: ℝ[N_grid] = (1.0 - morse_exponential)
+potential_J: ℝ[N_grid] = (dissociation_energy_J * morse_difference * morse_difference)
+potential_eV: ℝ[N_grid] = (potential_J / electron_volt)
+kinetic_coefficient_J: ℝ = ((ℏ / grid_spacing) * (ℏ / (2.0 * μ_HCl * grid_spacing)))
+kinetic_coefficient_eV: ℝ = (kinetic_coefficient_J / electron_volt)
+
+# Construct the Gaussian trial state
+trial_width: ℝ = 0.20e-10
+gaussian_argument: ℝ[N_grid] = (distance_from_equilibrium / trial_width)
+gaussian_envelope: ℝ[N_grid] = exp(-gaussian_argument * gaussian_argument)
+
+# Initialize the Krylov and projected eigensolver arrays
+Krylov_basis: ℝ[Krylov_dimension,N_grid] = zero_matrix(Krylov_dimension, N_grid)
+H_Krylov: ℝ[Krylov_dimension,N_grid] = zero_matrix(Krylov_dimension, N_grid)
+projected_hamiltonian: ℝ[Krylov_dimension,Krylov_dimension] = zero_matrix(Krylov_dimension, Krylov_dimension)
+projected_work_matrix: ℝ[Krylov_dimension,Krylov_dimension] = zero_matrix(Krylov_dimension, Krylov_dimension)
+Ritz_vectors: ℝ[Krylov_dimension,Krylov_dimension] = zero_matrix(Krylov_dimension, Krylov_dimension)
+Ritz_values: ℝ[Krylov_dimension] = zero_array(Krylov_dimension)
+jacobi_tolerance: ℝ = 1.0e-7
+
+# Set jacobi_maximum_rotations to ~2500 to fully converge; here it is 1 so the
+# tutorial runs quickly through tests/test_tutorials.py.
+jacobi_maximum_rotations: ℕ = 1  #2500
+jacobi_p: ℕ = 0
+jacobi_q: ℕ = 1
+candidate: ℝ[N_grid] = zero_array(N_grid)
+overlap: ℝ = 0.0
+candidate_norm: ℝ = 0.0
+
+# Initialize and normalize the first Krylov basis vector
+for index: ℕ(0, N_grid):
+    Krylov_basis[0,index] = gaussian_envelope[index]
+Krylov_basis[0] = normalize_vector(Krylov_basis[0], N_grid)
+
+# Build and orthogonalize the Krylov basis
+for q_index: ℕ(1, Krylov_dimension):
+    if q_index < block_size:
+        for index: ℕ(0, N_grid):
+            candidate[index] = (gaussian_argument[index] * Krylov_basis[q_index - 1,index])
+    else:
+        candidate = apply_hamiltonian(Krylov_basis[q_index - block_size], potential_eV, kinetic_coefficient_eV, N_grid)
+    for orthogonalization_pass: ℕ(0, 2):
+        for lower: ℕ(0, q_index):
+            overlap = dot_product(Krylov_basis[lower], candidate, N_grid)
+            for index: ℕ(0, N_grid):
+                candidate[index] = (candidate[index] - overlap * Krylov_basis[lower,index])
+    candidate_norm = sqrt(dot_product(candidate, candidate, N_grid))
+    for index: ℕ(0, N_grid):
+        Krylov_basis[q_index,index] = (candidate[index] / candidate_norm)
+
+# Apply the Hamiltonian to each Krylov basis vector
+for q_index: ℕ(0, Krylov_dimension):
+    H_Krylov[q_index] = apply_hamiltonian(Krylov_basis[q_index], potential_eV, kinetic_coefficient_eV, N_grid)
+
+# Project the Hamiltonian into the Krylov subspace
+for row: ℕ(0, Krylov_dimension):
+    for column: ℕ(row, Krylov_dimension):
+        projected_hamiltonian[row,column] = dot_product(Krylov_basis[row], H_Krylov[column], N_grid)
+        projected_hamiltonian[column,row] = projected_hamiltonian[row,column]
+
+# Diagonalize the projected Hamiltonian
+jacobi_diagonalize()
+vibrational_energies_eV: ℝ[N_levels] = zero_array(N_levels)
+ψ_raw: ℝ[N_levels,N_grid] = zero_matrix(N_levels, N_grid)
+
+# Reconstruct the vibrational eigenstates on the spatial grid
+for n: ℕ(0, N_levels):
+    vibrational_energies_eV[n] = Ritz_values[n]
+    for index: ℕ(0, N_grid):
+        for q_index: ℕ(0, Krylov_dimension):
+            ψ_raw[n,index] = (ψ_raw[n,index] + Krylov_basis[q_index,index] * Ritz_vectors[q_index,n])
+    ψ_raw[n] = normalize_vector(ψ_raw[n], N_grid)
+
+normalization_factor: ℝ[N_levels] = zero_array(N_levels)
+ψ: ℝ[N_levels,N_grid] = zero_matrix(N_levels, N_grid)
+
+# Normalize the eigenstates with the grid spacing
+for n: ℕ(0, N_levels):
+    normalization_factor[n] = sqrt(integrate(ψ_raw[n] * ψ_raw[n], grid_spacing, N_grid))
+    for index: ℕ(0, N_grid):
+        ψ[n,index] = (ψ_raw[n,index] / normalization_factor[n])
+
+# Calculate the fundamental transition energy, wavenumber, and wavelength
+transition_eV: ℝ = (vibrational_energies_eV[1] - vibrational_energies_eV[0])
+transition_J: ℝ = transition_eV * electron_volt
+wavenumber: ℝ = (transition_J / (planck_constant * speed_of_light_cm))
+wavelength_micrometer: ℝ = (10000.0 / wavenumber)
+
+# Print the eigen-solver and parameter-learning results
+print(learned_dissociation_energy_eV)
+print(learned_α_inverse_angstrom)
+print(learned_equilibrium_distance_angstrom)
+print(final_learning_loss)
+print(vibrational_energies_eV[0])
+print(vibrational_energies_eV[1])
+print(transition_eV)
+print(wavenumber)
+print(wavelength_micrometer)
+# Convert the plotting arrays to angstrom units
+# bond_distance_angstrom: ℝ[N_grid] = (bond_distance / 1.0e-10)
+# equilibrium_distance_angstrom: ℝ = (equilibrium_distance / 1.0e-10)
+# ψ_angstrom: ℝ[N_levels,N_grid] = (sqrt(1.0e-10) * ψ)
+# Plot
+# physika_plot(bond_distance_angstrom, potential_eV, ψ_angstrom, vibrational_energies_eV, dissociation_energy_eV, equilibrium_distance_angstrom, N_levels, N_levels)

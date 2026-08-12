@@ -3,19 +3,19 @@ import torch.nn as nn
 import torch.optim as optim
 from physika.runtime import DEVICE
 
-from physika.runtime import physika_print
+from physika.runtime import print
 
 # === Program ===
 v = torch.tensor([1.0, 2.0, 3.0], device=DEVICE)
-physika_print(v)
+print(v)
 omega = torch.tensor([1.0, 2.0, 3.0], device=DEVICE)
-physika_print(omega)
+print(omega)
 T = torch.tensor([[2.0, 0.0, 0.0], [0.0, 3.0, 0.0], [0.0, 0.0, 4.0]], device=DEVICE)
 v = torch.tensor([[1.0], [2.0], [3.0]], device=DEVICE)
 w = (T @ v)
-physika_print(w)
+print(w)
 T = torch.tensor([[2.0, 0.0, 0.0], [0.0, 3.0, 0.0], [0.0, 0.0, 4.0]], device=DEVICE)
 v = torch.tensor([[1.0], [2.0], [3.0]], device=DEVICE)
 w = (T @ v)
-physika_print(w)
-physika_print(T)
+print(w)
+print(T)

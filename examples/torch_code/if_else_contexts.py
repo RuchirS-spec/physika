@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from physika.runtime import DEVICE
 
-from physika.runtime import physika_print
+from physika.runtime import print
 from physika.runtime import compute_grad
 
 # === Functions ===
@@ -69,26 +69,26 @@ class PiecewiseNet(nn.Module):
 # === Program ===
 a = torch.tensor(2.0, requires_grad=True)
 b = torch.tensor((-1.5), requires_grad=True)
-physika_print(f(a))
-physika_print(compute_grad(lambda _da: f(_da), a))
-physika_print(f(b))
-physika_print(compute_grad(lambda _db: f(_db), b))
-physika_print(clamp(3))
-physika_print(clamp(0.5))
-physika_print(clamp((-5)))
-physika_print(classify(2))
-physika_print(classify(0))
-physika_print(classify((-1)))
+print(f(a))
+print(compute_grad(lambda _da: f(_da), a))
+print(f(b))
+print(compute_grad(lambda _db: f(_db), b))
+print(clamp(3))
+print(clamp(0.5))
+print(clamp((-5)))
+print(classify(2))
+print(classify(0))
+print(classify((-1)))
 net = PiecewiseNet(0.0)
 a = torch.tensor(2.0, requires_grad=True)
-physika_print(net(a))
-physika_print(compute_grad(lambda _da: net(_da), a))
+print(net(a))
+print(compute_grad(lambda _da: net(_da), a))
 b = torch.tensor((-1.5), requires_grad=True)
-physika_print(net(b))
-physika_print(compute_grad(lambda _db: net(_db), b))
+print(net(b))
+print(compute_grad(lambda _db: net(_db), b))
 x = 0.3
 if x > 0.5:
     y = (3 * ((x - 0.75) ** 2))
 else:
     y = ((x ** 2) + 2)
-physika_print(y)
+print(y)

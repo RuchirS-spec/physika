@@ -795,13 +795,13 @@ Full Source
     validation_voltage: ℝ[m] = validation_protocol_solver(ε_s_p, Δt)
     validation_rmse: ℝ = rmse(validation_voltage, pybamm_validation_voltage)
 
-    physika_print(ε_s_p)
-    physika_print(initial_train_rmse)
-    physika_print(fitted_train_rmse)
-    physika_print(validation_rmse)
-    physika_print(fitted_train_voltage)
-    physika_print(validation_voltage)
-    physika_print(loss_history)
+    print(ε_s_p)
+    print(initial_train_rmse)
+    print(fitted_train_rmse)
+    print(validation_rmse)
+    print(fitted_train_voltage)
+    print(validation_voltage)
+    print(loss_history)
 
 
 References

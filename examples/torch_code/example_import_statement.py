@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from physika.runtime import DEVICE
 
-from physika.runtime import physika_print
+from physika.runtime import print
 
 # === Functions ===
 def fact(n):
@@ -30,8 +30,8 @@ def torch_funcs_with_scalar_R(x):
 # === Program ===
 x = 1.0
 fact_results = fact(x)
-physika_print(fact_results)
+print(fact_results)
 torch_funcs_results = torch_funcs_with_scalar_R(x)
-physika_print(torch_funcs_results)
+print(torch_funcs_results)
 f_results = f(x)
-physika_print(f_results)
+print(f_results)

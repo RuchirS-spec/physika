@@ -55,6 +55,8 @@ Tutorials
    :caption: Quantum Mechanics
 
    learn_parameter_schrodinger_equation
+   quantum_SHO
+   HCl_morse_oscillator
    simpledft
 
 .. toctree::
@@ -89,3 +91,4 @@ Tutorials
    cnn_tutorial
    fft_tutorial
    fourier_neural_operator
+   2d_pde_parameter_estimation

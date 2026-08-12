@@ -312,7 +312,7 @@ time step and every Jacobi sweep — to obtain :math:`d\mathcal{L}/d\varepsilon`
     for epoch:ℕ(0, epochs):
         g = grad(calculate_loss, eps)
         eps = eps - learning_rate * g
-        physika_print(eps)
+        print(eps)
 
 Within about ten epochs the estimate converges to the true value
 :math:`\varepsilon = 0.03` and the loss drops to zero:
@@ -376,7 +376,7 @@ Full Code
     for epoch:ℕ(0, epochs):
         g = grad(calculate_loss, eps)
         eps = eps - learning_rate * g
-        physika_print(eps)
+        print(eps)
 
 
 References
