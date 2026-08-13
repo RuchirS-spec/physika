@@ -39,8 +39,6 @@ Dataset
 
 We trained the GCN model on the FreeSolv dataset to predict hydration free
 energy (kcal/mol) for small molecules.
-max_atoms: N = 44 (the largest molecule in the dataset has 44 atoms
-for padding purposes.)
 
 .. code-block:: text
 
@@ -287,12 +285,13 @@ The Physika implementation is:
 
 .. code-block:: text
 
-    def λ(A: ℝ[n,n], H: ℝ[n,30], sz: ℝ) -> ℝ:
-        A_hat: ℝ[n,n] = normalize_adj(A)
-        H1: ℝ[n,4] = sigma(A_hat @ (H @ this.W1))
-        pooled: ℝ[4] = masked_graph_sum_pool(H1, sz)
-        pred: ℝ = pooled @ this.W2
-        return pred
+    class GCNModel(W1: ℝ[30, 4], W2: ℝ[4]):
+        def λ(A: ℝ[n,n], H: ℝ[n,30], sz: ℝ) -> ℝ:
+            A_hat: ℝ[n,n] = normalize_adj(A)
+            H1: ℝ[n,4] = sigma(A_hat @ (H @ W1))
+            pooled: ℝ[4] = masked_graph_sum_pool(H1, sz)
+            pred: ℝ = pooled @ W2
+            return pred
 
 For a molecule with :math:`n` atoms:
 
@@ -331,10 +330,12 @@ Initializing GCNModel object
 .. code-block:: text
 
     μ : ℝ = 0.0
-    σ : ℝ = 1
+    σ : ℝ = 1.0
 
     W1: ℝ[30, 4] = for i:ℕ(30) -> row: ℝ[4] ~ Normal(μ, σ, 4)
     W2: ℝ[4] ~ Normal(μ, σ, 4)
+
+    gcn_object: GCNModel = GCNModel(W1, W2)
 
 
 Define loss
@@ -530,14 +531,12 @@ Full Code
         else:
             return 0.0
 
-    class GCNModel:
-        W1: ℝ[30, 4]
-        W2: ℝ[4]
+    class GCNModel(W1: ℝ[30, 4], W2: ℝ[4]):
         def λ(A: ℝ[n,n], H: ℝ[n,30], sz: ℝ) -> ℝ:
             A_hat: ℝ[n,n] = normalize_adj(A)
-            H1: ℝ[n,4] = sigma(A_hat @ (H @ this.W1))
+            H1: ℝ[n,4] = sigma(A_hat @ (H @ W1))
             pooled: ℝ[4] = masked_graph_sum_pool(H1, sz)
-            pred: ℝ = pooled @ this.W2
+            pred: ℝ = pooled @ W2
             return pred
         def train(epochs: ℕ, lr: ℝ) -> ℝ:
             len_train_X: ℝ = get_1d_array_length(train_sizes)
@@ -571,7 +570,7 @@ Full Code
             this.W2 = this.W2 - lr * learnable_grads[1]
 
     μ : ℝ = 0.0
-    σ : ℝ = 1
+    σ : ℝ = 1.0
 
     W1: ℝ[30, 4] = for i:ℕ(30) -> row: ℝ[4] ~ Normal(μ, σ, 4)
     W2: ℝ[4] ~ Normal(μ, σ, 4)
