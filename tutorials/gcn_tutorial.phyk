@@ -71,14 +71,12 @@ def within_tolerance(pred: ℝ, target: ℝ, tol: ℝ): ℝ:
     else:
         return 0.0
 
-class GCNModel:
-    W1: ℝ[30, 4]
-    W2: ℝ[4]
+class GCNModel(W1: ℝ[30, 4], W2: ℝ[4]):
     def λ(A: ℝ[n,n], H: ℝ[n,30], sz: ℝ) -> ℝ:
         A_hat: ℝ[n,n] = normalize_adj(A)
-        H1: ℝ[n,4] = sigma(A_hat @ (H @ this.W1))
+        H1: ℝ[n,4] = sigma(A_hat @ (H @ W1))
         pooled: ℝ[4] = masked_graph_sum_pool(H1, sz)
-        pred: ℝ = pooled @ this.W2
+        pred: ℝ = pooled @ W2
         return pred
     def train(epochs: ℕ, lr: ℝ) -> ℝ:
         len_train_X: ℝ = get_1d_array_length(train_sizes)
@@ -138,10 +136,10 @@ test_sizes: R[65] = test_dataset[2]
 test_y: R[65] = test_dataset[3]
 
 lr: ℝ = 0.0005
-# ----------------------------------------------------------------
+# ------------------------------------------------------------------
 # set epoch value to 100, here we have set it to 1 to just test 
 # physika code through tests/test_tutorials.py
-# ----------------------------------------------------------------
+# ------------------------------------------------------------------
 epochs: ℕ = 1
 final_loss = gcn_object.train(epochs, lr)
 physika_print(final_loss)
