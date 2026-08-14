@@ -1305,6 +1305,103 @@ These differences come from the approximations and numerical settings used
 in the calculation. The agreement with SimpleDFT.jl shows that the Physika
 implementation reproduces the same calculation.
 
+Finding the H2 equilibrium bond length
+--------------------------------------
+
+We can use the same total-energy calculation to find the equilibrium H-H
+bond length. We calculate the total energy for several bond lengths and
+identify the distance at which the energy is lowest.
+
+The cell, cutoff, grid, and SCF settings are the same as in ``dft_run``.
+Only the H-H distance changes between calculations. The complete calculation
+is shown below.
+
+.. code-block:: text
+
+   from dft_atoms import Atoms
+   from dft_operators import op_O, op_L, op_Linv, op_J, op_I, op_Jdag
+   from dft_density import orth, get_n_total, get_phi, mask_embed
+   from dft_potentials import coulomb
+   from dft_xc import lda_x, lda_c_chachiyo
+   from dft_energies import get_Ekin, get_Ecoul, get_Exc, get_Een, get_Eewald, axis_index, vec_size
+   from dft_scf import SCF, init_W, energy_of_W, sd, runSCF
+
+   π: ℝ = 3.141592653589793
+
+   a: ℝ = 16.0             # cubic cell side (Bohr)
+   ecut: ℝ = 16.0          # plane-wave cutoff (Hartree)
+   s: ℕ = 60               # grid points per axis
+
+   gcut: ℝ = 2.0           # Ewald reciprocal-space cutoff
+   gamma: ℝ = 1.0e-8       # Ewald screening tolerance
+
+   Nit: ℕ = 1001           # maximum steepest-descent iterations
+   β: ℝ = 1.0e-5           # step size
+   etol: ℝ = 1.0e-6        # convergence tolerance (Hartree)
+   seed: ℕ = 1234           # RNG seed for the initial orbital
+
+   Natoms2: ℕ = 2
+   Nstate2: ℕ = 1
+
+   Z_H2: ℝ[2] = [1.0, 1.0]
+   f_H2: ℝ[1] = [2.0]
+
+   def energy_at_d(d: ℝ): ℝ:
+       px: ℝ[2] = [0.0, d]
+       py: ℝ[2] = [0.0, 0.0]
+       pz: ℝ[2] = [0.0, 0.0]
+
+       H2: Atoms = Atoms(
+           a, ecut, s, s, s,
+           Natoms2, px, py, pz,
+           Nstate2, Z_H2, f_H2
+       )
+
+       Eewald: ℝ = get_Eewald(H2, gcut, gamma)
+       return runSCF(H2, Eewald, Nit, β, etol, seed)
+
+   ds: ℝ[9] = [1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9]
+   Es: ℝ[9] = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
+   for i:
+       Es[i] = energy_at_d(ds[i])
+
+   Es
+
+The resulting energies are:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 50 50
+
+   * - H-H distance (Bohr)
+     - Total energy (Hartree)
+   * - 1.1
+     - -1.078134
+   * - 1.2
+     - -1.097013
+   * - 1.3
+     - -1.108265
+   * - 1.4
+     - -1.113968
+   * - 1.5
+     - **-1.115552**
+   * - 1.6
+     - -1.114033
+   * - 1.7
+     - -1.110198
+   * - 1.8
+     - -1.104660
+   * - 1.9
+     - -1.097922
+
+The 1.4 Bohr point reproduces the H2 energy from the ``dft_run`` calculation,
+since the numerical settings are unchanged. The energy decreases as the bond
+length increases from 1.1 to 1.5 Bohr and then increases again. The lowest
+energy in the scan occurs at 1.5 Bohr, so within the 0.1 Bohr spacing used
+here, the equilibrium bond length is 1.5 Bohr.
+
+
 Summary
 -------
 
@@ -1331,7 +1428,9 @@ We went from the many-electron problem to a working DFT calculation:
 
 - The results reproduce SimpleDFT.jl for hydrogen, helium, and the hydrogen
   molecule.
-
+  
+- For H2, varying the bond length and comparing the total energies gives the
+  equilibrium bond length.
 
 References
 ----------
