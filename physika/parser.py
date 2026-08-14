@@ -54,6 +54,8 @@ def p_type_scalar(p):
         p[0] = "ℕ"
     elif p[1] == "ℂ":
         p[0] = "ℂ"
+    elif p[1] == "list":
+        p[0] = "list"
     else:
         p[0] = "ℝ"
 
@@ -692,6 +694,15 @@ def p_func_loop_stmt_call(p):
     p[0] = ("loop_call", p[1], p[3])
 
 
+def _convert_list_ast(node):
+    if isinstance(node, tuple) and node[0] == "array":
+        return (
+            "list",
+            [_convert_list_ast(e) for e in node[1]]
+        )
+
+    return node
+
 def p_statement_decl(p):
     """statement : ID COLON type_spec EQUALS expr NEWLINE"""
     # NEWLINE forces to parse the full expression on one line before reducing
@@ -699,6 +710,9 @@ def p_statement_decl(p):
     name = p[1]
     type_spec = p[3]
     expr_ast = p[5]  # This is now an AST, not an evaluated value
+
+    if type_spec == "list":
+        expr_ast = _convert_list_ast(expr_ast)
 
     # Return AST node for declaration (evaluation happens later)
     # Include line number for error reporting

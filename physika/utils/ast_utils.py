@@ -510,6 +510,39 @@ def _has_complex(node: ASTNode) -> bool:
     return False
 
 
+def _list_expr(node):
+    """
+    Recursively convert an array AST subtree into a list expression.
+
+    Parameters
+    ----------
+    node : ASTNode
+        AST subtree
+    
+    Returns
+    -------
+    str
+        list expression
+    
+    
+    """
+    #print("node -> ", node)
+    
+    # nested list
+    if isinstance(node, tuple) and node[0] == "array":
+        elements = [
+            _list_expr(e)
+            for e in node[1]
+        ]
+        return f"[{', '.join(elements)}]"
+    
+    # existing variable
+    if isinstance(node, tuple) and node[0] == "var":
+        return node[1]
+
+    return ast_to_torch_expr(node)
+
+
 def ast_to_torch_expr(node: ASTNode,
                       indent: int = 0,
                       current_loop_var: str | set[str] | None = None) -> str:
@@ -659,6 +692,43 @@ def ast_to_torch_expr(node: ASTNode,
                     # use torch.stack
                     wrapped = [f"torch.as_tensor({s})" for s in elem_strs]
                     return f"torch.stack([{', '.join(wrapped)}])"
+    
+    elif op == "list":
+        elements = node[1]
+
+        # Generate each element recursively.
+        elem_strs = [
+            ast_to_torch_expr(
+                e,
+                indent,
+                current_loop_var
+            )
+            for e in elements
+        ]
+        # Only a flat list of numeric literals becomes a tensor.
+        all_numeric = all(
+            isinstance(e, tuple) and (
+                e[0] == "num" or
+                e[0] == "complex" or
+                (
+                    e[0] == "neg"
+                    and isinstance(e[1], tuple)
+                    and e[1][0] == "num"
+                )
+            )
+            for e in elements
+        )
+        if all_numeric:
+            return (
+                f"torch.tensor([{', '.join(elem_strs)}], "
+                f"device=DEVICE)"
+            )
+        # Anything else remains a Python list.
+        return f"[{', '.join(elem_strs)}]"
+    
+
+
+
 
     elif op == "slice":
         var_name = node[1]
@@ -1549,6 +1619,10 @@ def generate_statement(stmt: ASTNode,
             if dtype == "ℝ":
                 return (f"{name} = "
                         f"torch.as_tensor({expr_code}, dtype=torch.float32)")
+        
+        # List value
+        if type_spec == "list":
+            return f"{name} = {_list_expr(expr)}"
 
         # Scalar value
         if type_spec == "\u2124":
