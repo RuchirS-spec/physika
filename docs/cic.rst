@@ -265,6 +265,18 @@ one side is a ``Lam``, the other is applied to a fresh
 ``FVar`` ( η-expanded) before their bodies are compared. Anything left mismatched is
 unequal.
 
+Kernel
+------
+
+Following Lean 4's reference, once a Physika program is parsed, then is transformed into
+CIC terms, also know as elaboration step. During this step, universe levels, inductive types
+with recursors and elimination rules, bound variables (``BVar``), placeholder variables (``MVar``), function types
+(``ForallE``), and so on are created. Elaboration is untrusted, since it may produce incorrect ``MVar`` assignments
+or unsound inferred types. Physika's trusted kernel re-infers the
+program's types and checks them against the declared ones in the elaborated CIC term.
+Physika kernel makes CIC terms verifiable with its type inference and type checker
+rules, independent from elaboration.
+
 
 Physika implementation
 ----------------------
@@ -667,6 +679,26 @@ one side is a ``Lam`` and the other isn't).
 
 Returns ``mctx: MetaVarContext``, mutated in place if any MVar got assigned
 during the call.
+
+``Kernel infer_type``
+~~~~~~~~~~~~~~~~~~~~~
+One typing rule per ``Expr`` constructor is defined:
+* ``Sort u : Sort(u+1)``.
+* ``FVar``/``Const`` looked up in ``lctx``/``env``.
+* ``App`` checking the argument against the function's.
+``ForallE`` domain via ``is_def_eq`` before substituting.
+* ``Lam``/``ForallE`` opening their body/codomain under a fresh ``FVar``.
+* ``Proj`` delegating to ``proj_field_type``.
+
+Infer typer calls ``whnf``/``is_def_eq`` from ``reduction.py`` with ``allow_assign=False``
+so the kernel never assign values for metavariables.
+
+``Kernel check``
+~~~~~~~~~~~~~~~~~~~~~
+Infers an expression type (``expr: Expr``) and checks if it is equal in defintion to ``expected``, raising
+``KernelException`` otherwise. It is the analog of Lean 4's ``Environment.addDecl``, the call an
+elaborator makes to verify a declaration's body has its declared type before trusting it.
+
 
 References
 ----------
