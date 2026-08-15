@@ -6,7 +6,6 @@ from physika.core.expr import (
     Expr,
     FloatLit,
     ForallE,
-    FVar,
     Lam,
     LetE,
     Lit,
@@ -21,7 +20,7 @@ from physika.core.local_context import LocalContext
 from physika.core.metavar import MetaVarContext
 from physika.core.environment import ConstantInfo, Environment, InductiveInfo
 from physika.core.inductive import Constructor, InductiveDecl
-from physika.core.kernel import KernelException, check, infer_type, proj_field_type
+from physika.core.kernel import KernelException, check, infer_type, proj_field_type  # noqa: E501
 
 NAT = Const("Nat", ())
 
@@ -46,7 +45,7 @@ class TestProjFieldType:
         env.add_constant(ConstantInfo("Nat", (), TYPE_0, None))
 
         # independent fields have num_params=0
-        # Box: 
+        # Box:
         #   n: ℕ
         #   m: ℕ
         # b = Box(3, 5)
@@ -54,15 +53,19 @@ class TestProjFieldType:
         # b.m
         box_ctor = ForallE("n", NAT, ForallE("m", NAT, Const("Box", ())))
         box_decl = InductiveDecl(
-            name="Box", level_params=(), num_params=0, type=TYPE_0,
-            constructors=(Constructor("Box.mk", box_ctor),),
+            name="Box",
+            level_params=(),
+            num_params=0,
+            type=TYPE_0,
+            constructors=(Constructor("Box.mk", box_ctor), ),
             is_recursive=False,
         )
-        env.add_inductive(InductiveInfo(
-            decl=box_decl,
-            ctors={"Box.mk": ConstantInfo("Box.mk", (), box_ctor, None)},
-            recursor=ConstantInfo("Box.rec", (), TYPE_0, None),
-        ))
+        env.add_inductive(
+            InductiveInfo(
+                decl=box_decl,
+                ctors={"Box.mk": ConstantInfo("Box.mk", (), box_ctor, None)},
+                recursor=ConstantInfo("Box.rec", (), TYPE_0, None),
+            ))
         b = App(App(Const("Box.mk", ()), Lit(NatLit(3))), Lit(NatLit(5)))
         assert proj_field_type("Box", 0, b, env, lctx, mctx) == NAT  # b.n
         assert proj_field_type("Box", 1, b, env, lctx, mctx) == NAT  # b.m
@@ -88,18 +91,23 @@ class TestProjFieldType:
         env, lctx, mctx = Environment(), LocalContext(), MetaVarContext()
         box_ctor = ForallE("n", NAT, ForallE("m", NAT, Const("Box", ())))
         box_decl = InductiveDecl(
-            name="Box", level_params=(), num_params=0, type=TYPE_0,
-            constructors=(Constructor("Box.mk", box_ctor),),
+            name="Box",
+            level_params=(),
+            num_params=0,
+            type=TYPE_0,
+            constructors=(Constructor("Box.mk", box_ctor), ),
             is_recursive=False,
         )
-        env.add_inductive(InductiveInfo(
-            decl=box_decl,
-            ctors={"Box.mk": ConstantInfo("Box.mk", (), box_ctor, None)},
-            recursor=ConstantInfo("Box.rec", (), TYPE_0, None),
-        ))
+        env.add_inductive(
+            InductiveInfo(
+                decl=box_decl,
+                ctors={"Box.mk": ConstantInfo("Box.mk", (), box_ctor, None)},
+                recursor=ConstantInfo("Box.rec", (), TYPE_0, None),
+            ))
         b = App(App(Const("Box.mk", ()), Lit(NatLit(3))), Lit(NatLit(5)))
         try:
-            proj_field_type("Box", 5, b, env, lctx, mctx) # Box just have 2 fields
+            proj_field_type("Box", 5, b, env, lctx,
+                            mctx)  # Box just have 2 fields
             assert False, "expected KernelException"
         except KernelException:
             pass
@@ -111,24 +119,32 @@ class TestProjFieldType:
         env, lctx, mctx = Environment(), LocalContext(), MetaVarContext()
         real = Const("Real", ())
         vec3_ctor = ForallE(
-            "n", NAT, ForallE("data", vec_t(real, BVar(0)), Const("Vec3", ())),
+            "n",
+            NAT,
+            ForallE("data", vec_t(real, BVar(0)), Const("Vec3", ())),
         )
         vec3_decl = InductiveDecl(
-            name="Vec3", level_params=(), num_params=0, type=TYPE_0,
-            constructors=(Constructor("Vec3.mk", vec3_ctor),),
+            name="Vec3",
+            level_params=(),
+            num_params=0,
+            type=TYPE_0,
+            constructors=(Constructor("Vec3.mk", vec3_ctor), ),
             is_recursive=False,
         )
-        env.add_inductive(InductiveInfo(
-            decl=vec3_decl,
-            ctors={"Vec3.mk": ConstantInfo("Vec3.mk", (), vec3_ctor, None)},
-            recursor=ConstantInfo("Vec3.rec", (), TYPE_0, None),
-        ))
+        env.add_inductive(
+            InductiveInfo(
+                decl=vec3_decl,
+                ctors={
+                    "Vec3.mk": ConstantInfo("Vec3.mk", (), vec3_ctor, None)
+                },
+                recursor=ConstantInfo("Vec3.rec", (), TYPE_0, None),
+            ))
         lctx3, data_fv = lctx.push_local("data", vec_t(real, Lit(NatLit(3))))
         v = App(App(Const("Vec3.mk", ()), Lit(NatLit(3))), data_fv)
         result = proj_field_type("Vec3", 1, v, env, lctx3, mctx)
         assert result == vec_t(real, Proj("Vec3", 0, v))
 
-    
+
 class TestInferType:
     """
     Tests for ``infer_type``
@@ -139,7 +155,7 @@ class TestInferType:
         MData infers to the wrapped exprssion.
         """
         env, lctx, mctx = Environment(), LocalContext(), MetaVarContext()
-        wrapped = MData((("line", 1),), Lit(NatLit(5)))
+        wrapped = MData((("line", 1), ), Lit(NatLit(5)))
         assert infer_type(wrapped, env, lctx, mctx) == NAT
 
     def test_sort(self):
@@ -147,11 +163,13 @@ class TestInferType:
         Sort u : Sort(u+1).
         """
         env, lctx, mctx = Environment(), LocalContext(), MetaVarContext()
-        assert infer_type(Sort(LZero()), env, lctx, mctx) == Sort(LSucc(LZero()))
+        assert infer_type(Sort(LZero()), env, lctx,
+                          mctx) == Sort(LSucc(LZero()))
 
     def test_bvar(self):
         """
-        Inferring BVar type inferrence tests for errors and proper type checking.
+        Inferring BVar type inferrence tests for errors and proper type
+        checking.
         """
         # Kernel infering a loose BVar should return error
         env, lctx, mctx = Environment(), LocalContext(), MetaVarContext()
@@ -160,18 +178,18 @@ class TestInferType:
             assert False, "expected KernelException"
         except KernelException:
             pass
-        
+
         # An MVar not declared in mctx raises an error
         env, lctx, mctx = Environment(), LocalContext(), MetaVarContext()
         try:
-            infer_type(mctx.mk_mvar("ghost", lctx, NAT), env, lctx, MetaVarContext())
+            infer_type(mctx.mk_mvar("ghost", lctx, NAT), env, lctx,
+                       MetaVarContext())
             assert False, "expected KernelException"
         except KernelException:
             pass
 
-    
         # assigned MVar infers type
-       
+
         env, lctx = Environment(), LocalContext()
         mctx1 = MetaVarContext()
         mv = mctx1.mk_mvar("m", lctx, NAT)
@@ -223,13 +241,13 @@ class TestInferType:
         # level arguments raises.
         lctx, mctx = LocalContext(), MetaVarContext()
         env2 = Environment()
-        env2.add_constant(ConstantInfo("id", ("u",), Sort(LParam("u")), None))
+        env2.add_constant(ConstantInfo("id", ("u", ), Sort(LParam("u")), None))
         try:
-            infer_type(Const("id", ()), env2, lctx, mctx)  # expects 1 level, got 0
+            infer_type(Const("id", ()), env2, lctx,
+                       mctx)  # expects 1 level, got 0
             assert False, "expected KernelException"
         except KernelException:
             pass
-
 
     def test_app(self):
         """
@@ -249,8 +267,7 @@ class TestInferType:
         lctx, mctx = LocalContext(), MetaVarContext()
         env4 = Environment()
         real = Const("Real", ())
-        env4.add_constant(ConstantInfo(
-            "f", (), ForallE("x", NAT, real), None))
+        env4.add_constant(ConstantInfo("f", (), ForallE("x", NAT, real), None))
         try:
             infer_type(App(Const("f", ()), Lit(1.0)), env4, lctx, mctx)
             assert False, "expected KernelException"
@@ -261,10 +278,12 @@ class TestInferType:
         lctx, mctx = LocalContext(), MetaVarContext()
         real = Const("Real", ())
         env5 = Environment()
-        env5.add_constant(ConstantInfo(
-            "vecOf", (), ForallE("n", NAT, vec_t(real, BVar(0))), None))
+        env5.add_constant(
+            ConstantInfo("vecOf", (), ForallE("n", NAT, vec_t(real, BVar(0))),
+                         None))
         applied = App(Const("vecOf", ()), Lit(NatLit(3)))
-        assert infer_type(applied, env5, lctx, mctx) == vec_t(real, Lit(NatLit(3)))
+        assert infer_type(applied, env5, lctx,
+                          mctx) == vec_t(real, Lit(NatLit(3)))
 
     def test_lam(self):
         """
@@ -273,8 +292,8 @@ class TestInferType:
         """
         env, lctx, mctx = Environment(), LocalContext(), MetaVarContext()
         identity = Lam("x", NAT, BVar(0), BinderInfo.DEFAULT)
-        assert infer_type(identity, env, lctx, mctx) == ForallE(
-            "x", NAT, NAT, BinderInfo.DEFAULT)
+        assert infer_type(identity, env, lctx,
+                          mctx) == ForallE("x", NAT, NAT, BinderInfo.DEFAULT)
 
     def test_forallE(self):
         """
@@ -283,9 +302,9 @@ class TestInferType:
         """
         # non dependent case
         env, lctx, mctx = Environment(), LocalContext(), MetaVarContext()
-        non_dep = ForallE("_", Sort(LZero()), Sort(LZero()), BinderInfo.DEFAULT)
+        non_dep = ForallE("_", Sort(LZero()), Sort(LZero()),
+                          BinderInfo.DEFAULT)
         assert infer_type(non_dep, env, lctx, mctx) == Sort(LSucc(LZero()))
-
 
         # dependent codomain (Pi (A:Type), A))
         env, lctx, mctx = Environment(), LocalContext(), MetaVarContext()
@@ -319,16 +338,20 @@ class TestInferType:
         lctx, mctx = LocalContext(), MetaVarContext()
         box_ctor = ForallE("n", NAT, ForallE("m", NAT, Const("Box", ())))
         box_decl = InductiveDecl(
-            name="Box", level_params=(), num_params=0, type=TYPE_0,
-            constructors=(Constructor("Box.mk", box_ctor),),
+            name="Box",
+            level_params=(),
+            num_params=0,
+            type=TYPE_0,
+            constructors=(Constructor("Box.mk", box_ctor), ),
             is_recursive=False,
         )
         env6 = Environment()
-        env6.add_inductive(InductiveInfo(
-            decl=box_decl,
-            ctors={"Box.mk": ConstantInfo("Box.mk", (), box_ctor, None)},
-            recursor=ConstantInfo("Box.rec", (), TYPE_0, None),
-        ))
+        env6.add_inductive(
+            InductiveInfo(
+                decl=box_decl,
+                ctors={"Box.mk": ConstantInfo("Box.mk", (), box_ctor, None)},
+                recursor=ConstantInfo("Box.rec", (), TYPE_0, None),
+            ))
         b = App(App(Const("Box.mk", ()), Lit(NatLit(3))), Lit(NatLit(5)))
         assert infer_type(Proj("Box", 1, b), env6, lctx, mctx) == NAT
 

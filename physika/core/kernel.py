@@ -1,15 +1,31 @@
 from physika.core.expr import (
-    App, BVar, Const, Expr, FVar, FloatLit, ForallE, Lam, LetE,
-    Lit, MData, MVar, NatLit, Proj, Sort,
+    App,
+    BVar,
+    Const,
+    Expr,
+    FVar,
+    FloatLit,
+    ForallE,
+    Lam,
+    LetE,
+    Lit,
+    MData,
+    MVar,
+    NatLit,
+    Proj,
+    Sort,
 )
 from physika.utils.cic_utils.expr_utils import (
-    abstract_fvars, get_app_fn_args, instantiate1,
+    abstract_fvars,
+    get_app_fn_args,
+    instantiate1,
     instantiate_level_params_in_expr,
 )
 from physika.core.level import (
-    LZero, LSucc,
+    LZero,
+    LSucc,
 )
-from physika.utils.cic_utils.level_utils import  mk_level_imax
+from physika.utils.cic_utils.level_utils import mk_level_imax
 from physika.core.reduction import whnf, is_def_eq
 from physika.core.local_context import LocalContext
 from physika.core.metavar import MetaVarContext
@@ -21,11 +37,11 @@ class KernelException(Exception):
 
 
 def proj_field_type(type_name: str, idx: int, struct_expr: Expr,
-                     env: Environment, lctx: LocalContext,
-                     mctx: MetaVarContext) -> Expr:
+                    env: Environment, lctx: LocalContext,
+                    mctx: MetaVarContext) -> Expr:
     """
     Get the type of a Proj expression. This means, that for a give physika
-    class (``struct_expr``) retrurn the CIC type of its ``idx``'th field. 
+    class (``struct_expr``) retrurn the CIC type of its ``idx``'th field.
 
     Look for ``type_name`` single-constructor inductive and infer the type of
     ``struct_expr`` type arguments (the parameters applied to the inductive
@@ -46,7 +62,7 @@ def proj_field_type(type_name: str, idx: int, struct_expr: Expr,
         Local scope for free variables ``struct_expr`` references.
     mctx: MetaVarContext
         Metavariable assignment table.
-    
+
     Example
     -------
     >>> from physika.core.environment import Environment, ConstantInfo, InductiveInfo  # noqa: E501
@@ -75,27 +91,23 @@ def proj_field_type(type_name: str, idx: int, struct_expr: Expr,
     ii = env.inductives.get(type_name)
     if ii is None:
         raise KernelException(
-            f"kernel Proj: inductive '{type_name}' not in environment"
-        )
+            f"kernel Proj: inductive '{type_name}' not in environment")
     if len(ii.decl.constructors) != 1:
         raise KernelException(
             f"kernel Proj: '{type_name}' is not a structure "
-            f"(expected 1 constructor, got {len(ii.decl.constructors)})"
-        )
- 
+            f"(expected 1 constructor, got {len(ii.decl.constructors)})")
+
     ctor_name = ii.decl.constructors[0].name
     ctor_ci = env.constants.get(ctor_name)
 
     if ctor_ci is None:
         raise KernelException(
-            f"kernel Proj: constructor '{ctor_name}' not found"
-        )
+            f"kernel Proj: constructor '{ctor_name}' not found")
 
     # Infer class type and extract type arguments
     struct_type = infer_type(struct_expr, env, lctx, mctx)
     struct_whnf = whnf(struct_type, env, lctx, mctx)
     _, type_args = get_app_fn_args(struct_whnf)
-
 
     # Constructor type for universe polymorphic constructors
     ctor_type: Expr = ctor_ci.type
@@ -103,8 +115,7 @@ def proj_field_type(type_name: str, idx: int, struct_expr: Expr,
         # Use level zero params
         zero_levels = tuple(LZero() for _ in ctor_ci.level_params)
         ctor_type = instantiate_level_params_in_expr(
-            ctor_type, list(ctor_ci.level_params), list(zero_levels)
-        )
+            ctor_type, list(ctor_ci.level_params), list(zero_levels))
 
     # Skip num_params implicit Pi-binders by instantiating with type_args
     tp = ctor_type
@@ -113,18 +124,21 @@ def proj_field_type(type_name: str, idx: int, struct_expr: Expr,
         tp_w = whnf(tp, env, lctx, mctx)
         if not isinstance(tp_w, ForallE):
             raise KernelException(
-                f"kernel Proj: constructor type too short at param {i}"
+                f"kernel Proj: constructor type too short at param {i}")
+        if i >= len(type_args):
+            raise KernelException(
+                f"kernel Proj: struct_expr's inferred type supplies only "
+                f"{len(type_args)} type argument(s), expected {num_params}"
             )
-        arg = type_args[i] if i < len(type_args) else MVar(type(None))  # fallback
-        tp = instantiate1(tp_w.body, arg)
+        tp = instantiate1(tp_w.body, type_args[i])
 
-    # Skip idx-1 field binders by instantiating with Proj(type_name, j, struct_expr)
+    # Skip idx-1 field binders by instantiating with
+    # Proj(type_name, j, struct_expr)
     for j in range(idx):
         tp_w = whnf(tp, env, lctx, mctx)
         if not isinstance(tp_w, ForallE):
             raise KernelException(
-                f"kernel Proj: constructor type too short at field {j}"
-            )
+                f"kernel Proj: constructor type too short at field {j}")
         field_j = Proj(type_name, j, struct_expr)
         tp = instantiate1(tp_w.body, field_j)
 
@@ -133,8 +147,7 @@ def proj_field_type(type_name: str, idx: int, struct_expr: Expr,
     if not isinstance(tp_w, ForallE):
         raise KernelException(
             f"kernel Proj: could not find field type at index {idx} "
-            f"in constructor '{ctor_name}'"
-        )
+            f"in constructor '{ctor_name}'")
     return tp_w.binder_type
 
 
@@ -179,69 +192,59 @@ def infer_type(expr: Expr, env: Environment, lctx: LocalContext,
         return Sort(LSucc(expr.level))
 
     if isinstance(expr, BVar):
-        raise KernelException(
-            f"loose BVar({expr.idx})"
-        )
+        raise KernelException(f"loose BVar({expr.idx})")
 
     if isinstance(expr, MVar):
         decl = mctx.find_decl(expr.id)
         if decl is None:
-            raise KernelException(
-                f"MVar '{expr.id.id}' not declared in mctx"
-            )
+            raise KernelException(f"MVar '{expr.id.id}' not declared in mctx")
         assigned = mctx.expr_assignments.get(expr.id.id)
         if assigned is not None:
             return infer_type(assigned, env, lctx, mctx)
         raise KernelException(
             f"Unresolved MVar '{expr.id.id}'"
-            "term must be fully elaborated before kernel checking"
-        )
+            "term must be fully elaborated before kernel checking")
 
     if isinstance(expr, FVar):
-        decl = lctx.find(expr.id)
-        if decl is None:
-            raise KernelException(
-                f"FVar '{expr.id.id}' not in local context"
-            )
-        return decl.type
+        fvar_decl = lctx.find(expr.id)
+        if fvar_decl is None:
+            raise KernelException(f"FVar '{expr.id.id}' not in local context")
+        return fvar_decl.type
 
     if isinstance(expr, Const):
         ci = env.constants.get(expr.name)
         if ci is None:
-            raise KernelException(
-                f"Unknown constant '{expr.name}'"
-            )
+            raise KernelException(f"Unknown constant '{expr.name}'")
         if ci.level_params and len(expr.levels) != len(ci.level_params):
 
             raise KernelException(
                 f"constant '{expr.name}' expects "
                 f"{len(ci.level_params)} universe level argument(s), got "
-                f"{len(expr.levels)}"
-            )
+                f"{len(expr.levels)}")
         tp = ci.type
         if ci.level_params and expr.levels:
-            tp = instantiate_level_params_in_expr(
-                tp, list(ci.level_params), list(expr.levels)
-            )
+            tp = instantiate_level_params_in_expr(tp, list(ci.level_params),
+                                                  list(expr.levels))
         return tp
 
     if isinstance(expr, App):
         fn_type = infer_type(expr.func, env, lctx, mctx)
         fn_whnf = whnf(fn_type, env, lctx, mctx)
         if not isinstance(fn_whnf, ForallE):
-            raise KernelException(
-                f"Function has non-Pi type "
-                f"(got {type(fn_whnf).__name__})"
-            )
+            raise KernelException(f"Function has non-Pi type "
+                                  f"(got {type(fn_whnf).__name__})")
 
         arg_type = infer_type(expr.arg, env, lctx, mctx)
-        ok, _ = is_def_eq(arg_type, fn_whnf.binder_type, env, lctx, mctx,
+        ok, _ = is_def_eq(arg_type,
+                          fn_whnf.binder_type,
+                          env,
+                          lctx,
+                          mctx,
                           allow_assign=False)
         if not ok:
             raise KernelException(
                 "Argument type does not match expected "
-                f"parameter type (binder {fn_whnf.binder_name!r})"
-            )
+                f"parameter type (binder {fn_whnf.binder_name!r})")
         return instantiate1(fn_whnf.body, expr.arg)
 
     if isinstance(expr, Lam):
@@ -260,7 +263,7 @@ def infer_type(expr: Expr, env: Environment, lctx: LocalContext,
             dom_level = tp_whnf.level
         else:
             raise KernelException(
-                f"kernel: expression is not a type (expected Sort, got {type(tp_whnf).__name__})"
+                f"kernel: expression is not a type (expected Sort, got {type(tp_whnf).__name__})"  # noqa: E501
             )
         new_lctx, fv = lctx.push_local(expr.binder_name, expr.binder_type)
         # codomain
@@ -271,7 +274,7 @@ def infer_type(expr: Expr, env: Environment, lctx: LocalContext,
             cod_level = tp_whnf_cod.level
         else:
             raise KernelException(
-                        f"kernel: expression is not a type (expected Sort, got {type(tp_whnf_cod).__name__})"
+                f"kernel: expression is not a type (expected Sort, got {type(tp_whnf_cod).__name__})"  # noqa: E501
             )
         return Sort(mk_level_imax(dom_level, cod_level))
 
@@ -288,17 +291,14 @@ def infer_type(expr: Expr, env: Environment, lctx: LocalContext,
         raise KernelException(f"Unknown literal type {type(v).__name__}")
 
     if isinstance(expr, Proj):
-        return proj_field_type(
-            expr.type_name, expr.idx, expr.expr, env, lctx, mctx
-        )
+        return proj_field_type(expr.type_name, expr.idx, expr.expr, env, lctx,
+                               mctx)
 
-    raise KernelException(
-        f"Unhandled Expr node {type(expr).__name__}"
-    )
+    raise KernelException(f"Unhandled Expr node {type(expr).__name__}")
 
 
-def check(expr: Expr, expected: Expr, env: Environment,
-          lctx: LocalContext, mctx: MetaVarContext) -> None:
+def check(expr: Expr, expected: Expr, env: Environment, lctx: LocalContext,
+          mctx: MetaVarContext) -> None:
     """
     Infer type of ``expr`` and verifies is definitionally equal to
     ``expected``.
@@ -335,6 +335,4 @@ def check(expr: Expr, expected: Expr, env: Environment,
 
     ok, _ = is_def_eq(inferred, expected, env, lctx, mctx, allow_assign=False)
     if not ok:
-        raise KernelException(
-            "inferred type does not match declared type"
-        )
+        raise KernelException("inferred type does not match declared type")
