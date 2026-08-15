@@ -128,8 +128,7 @@ def proj_field_type(type_name: str, idx: int, struct_expr: Expr,
         if i >= len(type_args):
             raise KernelException(
                 f"kernel Proj: struct_expr's inferred type supplies only "
-                f"{len(type_args)} type argument(s), expected {num_params}"
-            )
+                f"{len(type_args)} type argument(s), expected {num_params}")
         tp = instantiate1(tp_w.body, type_args[i])
 
     # Skip idx-1 field binders by instantiating with
