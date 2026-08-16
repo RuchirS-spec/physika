@@ -218,6 +218,14 @@ class TTensor:
 
 
 @dataclass(frozen=True)
+class TList:
+    elements: tuple
+    def __repr__(self) -> str:
+        return "list"
+
+
+
+@dataclass(frozen=True)
 class TFunc:
     """
     A function type ``(p0, p1, ...): return_type``.
@@ -304,7 +312,7 @@ class TInstance:
         return f"instance({self.class_name})"
 
 
-Type = Union[TVar, TDim, TScalar, TTensor, TFunc, TInstance]
+Type = Union[TVar, TDim, TScalar, TTensor, TFunc, TInstance, TList]
 
 # Ground scalar types
 T_REAL = TScalar("ℝ")
@@ -469,6 +477,11 @@ class Substitution(dict):
                          self.apply(t.ret))
         if isinstance(t, TInstance):
             return t
+        if isinstance(t, TList):
+            return TList(tuple(
+                    self.apply(element) if element is not None else None
+                    for element in t.elements)
+            )
         return t
 
     def apply_dim(self, d: Any) -> Any:

@@ -1,5 +1,5 @@
 from typing import Any, Callable, Optional, Tuple, Union, cast
-from physika.utils.types import Substitution, Type, TVar, TDim, TTensor, TInstance, TFunc, TScalar, T_NAT, T_REAL, T_COMPLEX, new_dim  # noqa: E501
+from physika.utils.types import Substitution, Type, TVar, TDim, TTensor, TInstance, TFunc, TScalar, T_NAT, T_REAL, T_COMPLEX, TList, new_dim  # noqa: E501
 from physika.utils.ast_utils import ASTNode
 from physika.elf import REGISTRY
 
@@ -259,6 +259,20 @@ def expr_array(node: Any,
     if isinstance(base, TTensor):
         return TTensor(((n, "invariant"), ) + base.dims), cur
     return make_tensor([n]), cur
+
+def expr_list(node: Any,
+               ctx: ExprContext) -> Tuple[Optional[Type], Substitution]:
+
+    elements = node[1]
+
+    elem_types = []
+    cur = ctx.s
+    for e in elements:
+        et, cur = infer_expr(e, ctx.env, cur, ctx.func_env, ctx.class_env,
+                             ctx.add_error)
+        elem_types.append(et)
+
+    return TList(tuple(elem_types)), cur
 
 
 def expr_chain_index(node: Any,
@@ -1147,6 +1161,7 @@ EXPR_DISPATCH: dict = {
     "complex": expr_complex,
     "imaginary": expr_imaginary,
     "array": expr_array,
+    "list": expr_list,
     "chain_index": expr_chain_index,
     "slice": expr_slice,
     "add": expr_add_sub,
