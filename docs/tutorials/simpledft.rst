@@ -32,9 +32,9 @@ From the many-electron problem to DFT
 A molecule is a quantum system of positively charged nuclei and electrons interacting
 through Coulomb forces. Because the nuclei are much heavier than the electrons, the
 Born-Oppenheimer approximation allows us to treat the nuclear positions as fixed while
-solving the electronic problem [BO]_.
+solving the electronic problem [BornOppenheimer1927]_.
 
-For :math:`N` electrons, the electronic Schrödinger equation is described by a
+For :math:`N` electrons, the electronic Schrödinger equation [Schrodinger1926]_ is described by a
 many-electron wavefunction
 
 .. math::
@@ -133,7 +133,8 @@ in the exchange-correlation energy :math:`E_{\mathrm{xc}}[n]`.
 The Kohn-Sham energy
 --------------------
 
-The Kohn-Sham formulation allows the total energy to be written as
+The Kohn-Sham formulation [KS1965]_ allows the total energy to be written as a functional 
+of the electron density :math:`n`:
 
 .. math::
 
@@ -194,8 +195,7 @@ source.**
 Porting SimpleDFT to Physika adds two important features:
 
 * **Mathematical types:** Physika's types reflect the objects being represented. For example, a plane-wave coefficient vector can be declared as `ℂ[p]` and a real-space field as `ℝ[k]`, with their shapes checked before execution.
-* **Automatic differentiation:** Physika programs compile to PyTorch and are differentiable. The gradient of the total energy with respect to the orbital coefficients can therefore be obtained directly with ``grad``, rather than implemented separately.
-
+* **Automatic differentiation:** Physika provides ``grad(f, x)``, which computes the gradient of an expression ``f`` with respect to a variable ``x``. Here we use it to get the gradient of the total energy with respect to the orbital coefficients, rather than working that derivative out by hand.
 
 From the DFT equations to code
 ------------------------------
@@ -263,7 +263,7 @@ defining the simulation cell and the real and reciprocal-space grids.
 Simulation setup: ``dft_atoms``
 -------------------------------
 
-Everything starts with the simulation cell. SimpleDFT places the system in a cubic cell of side :math:`a``
+Everything starts with the simulation cell. SimpleDFT places the system in a cubic cell of side :math:`a`
 with periodic boundary conditions and represents fields on a uniform real-space grid. For the isolated systems 
 considered here, we choose a sufficiently large cell to reduce interactions between periodic images.
 Periodic boundary conditions make plane waves a natural basis. For a cubic cell of side :math:`a`, 
@@ -1440,12 +1440,16 @@ References
    `<https://gitlab.com/wangenau/simpledft.jl>`_.
 
 .. [SimpleDFT] Schulze, W. T. SimpleDFT: A simple plane wave density functional
-   theory code. `<https://gitlab.com/wangenau/simpledft>`_. Documentation:
-   `<https://wangenau.gitlab.io/simpledft_pages/>`_.
+   theory code. `<https://gitlab.com/wangenau/simpledft>`_.
+   Documentation: `<https://wangenau.gitlab.io/simpledft_pages/>`_.
 
-.. [BO] Born, M. and Oppenheimer, J. Zur Quantentheorie der Molekeln.
-   Annalen der Physik, 389(20):457–484, 1927.
-   doi: `10.1002/andp.19273892002 <https://doi.org/10.1002/andp.19273892002>`_.
+.. [BornOppenheimer1927] Born, M. and Oppenheimer, R. Zur Quantentheorie der
+   Molekeln. *Annalen der Physik*, 389(20):457-484, 1927. doi:
+   `10.1002/andp.19273892002 <https://doi.org/10.1002/andp.19273892002>`_.
+
+.. [Schrodinger1926] Schrödinger, E. Quantisierung als Eigenwertproblem
+   (Erste Mitteilung). *Annalen der Physik*, 384(4):361-376, 1926. doi:
+   `10.1002/andp.19263840404 <https://doi.org/10.1002/andp.19263840404>`_.
 
 .. [HK1964] Hohenberg, P. and Kohn, W. Inhomogeneous electron gas.
    *Physical Review*, 136(3B):B864-B871, 1964. doi:
@@ -1453,15 +1457,14 @@ References
 
 .. [KS1965] Kohn, W. and Sham, L. J. Self-consistent equations including
    exchange and correlation effects. *Physical Review*, 140(4A):A1133-A1138,
-   1.    doi: `10.1103/PhysRev.140.A1133
+   1965. doi: `10.1103/PhysRev.140.A1133
    <https://doi.org/10.1103/PhysRev.140.A1133>`_.
 
 .. [IsmailBeigiArias2000] Ismail-Beigi, S. and Arias, T. A. New algebraic
    formulation of density functional calculation. *Computer Physics
    Communications*, 128(1-2):1-45, 2000. doi:
    `10.1016/S0010-4655(00)00072-2
-   <https://doi.org/10.1016/S0010-4655(00)00072-2>`_. arXiv:
-   `cond-mat/9909130 <https://arxiv.org/abs/cond-mat/9909130>`_.
+   <https://doi.org/10.1016/S0010-4655(00)00072-2>`_.
 
 .. [AriasDFT] Arias, T. A. Practical DFT mini-course. Cornell University.
    `<http://jdftx.org/PracticalDFT.html>`_.
