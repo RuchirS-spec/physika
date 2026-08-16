@@ -696,12 +696,10 @@ def p_func_loop_stmt_call(p):
 
 def _convert_list_ast(node):
     if isinstance(node, tuple) and node[0] == "array":
-        return (
-            "list",
-            [_convert_list_ast(e) for e in node[1]]
-        )
+        return ("list", [_convert_list_ast(e) for e in node[1]])
 
     return node
+
 
 def p_statement_decl(p):
     """statement : ID COLON type_spec EQUALS expr NEWLINE"""
