@@ -4,20 +4,16 @@ Graph Convolutional Networks
 In this tutorial we implemented a Graph Convolutional Network (GCN) in physika
 and trained it on Hydration free energy prediction with the FreeSolv dataset.
 
-GCN Architecture
+Why Use a GCN?
 ------------------------
 
-**Purpose:** A GCN aims to make predictions on data that is naturally
-expressed as a graph rather than an array or a grid. In our scenario,
-each molecule is not a list of numbers or an image, but a graph of atoms
-connected by bonds in a specific pattern. Our GCN learns to predict
-hydration free energy by exploiting the graph structure of each molecule.
+Molecular data is naturally graph-structured, atoms as nodes and bonds as
+edges. Standard neural networks cannot directly exploit this structure,
+whereas GCNs operate on the graph itself via its adjacency matrix which
+yields a more data-efficient model for predicting graph level properties.
 
-**Problem:** A standard neural network has no understanding of which atoms 
-are connected to each other, and therefore has to learn the graph structure 
-from scratch. This is inefficient and requires a lot of data. A GCN is designed 
-to take advantage of the graph structure of the data instead, allowing it to
-learn much more efficiently.
+GCN Architecture
+------------------------
 
 .. figure:: /_static/tutorial_files/GCN_vs_CNN_overview.png
    :alt: Comparison of a GCN and a CNN processing a molecule
@@ -28,17 +24,21 @@ learn much more efficiently.
 
    Source: `mbernste.github.io <https://mbernste.github.io/posts/gcn/>`_
 
-**Solution:** A GCN exploits the adjacency matrix of a graph to propagate
-information between the nodes of the graph. Each atom's own features are
-blended with its bonded neighbors' features to produce a new set of
-features for each atom.
+Each atom is initialized with a feature vector (e.g. atomic number,
+degree). A graph convolution layer updates these via message passing,
+each node aggregates its neighbor's features with its own.
+
+The final node features are pooled into a graph-level representation
+and passed through fully connected layers to predict the target
+property. 
 
 
 Dataset
 --------
 
-We trained the GCN model on the FreeSolv dataset to predict hydration free
-energy (kcal/mol) for small molecules.
+We trained the GCN model on the FreeSolv dataset (generated using the
+DeepChem library) to predict hydration free energy (kcal/mol) for small
+molecules.
 
 .. code-block:: text
 
@@ -103,7 +103,7 @@ energy (kcal/mol) for small molecules.
 
 
 Every molecule's adjacency matrix and feature matrix are padded upto a 
-fixed size (molecule with maximum atoms) using torch.nn.functional.pad, 
+fixed size (molecule with maximum atoms) using ``torch.nn.functional.pad``, 
 which pads zeros to the matrix.
 Bond connectivity is figured out from RDKit's "GetAjacencyMatrix" and 
 the 30 dimensional per-atom features come from DeepChem's "MolGraphConvFeaturizer"
@@ -334,6 +334,7 @@ Initializing GCNModel object
 
     W1: ℝ[30, 4] = for i:ℕ(30) -> row: ℝ[4] ~ Normal(μ, σ, 4)
     W2: ℝ[4] ~ Normal(μ, σ, 4)
+    # Normal distribution to generate random values with sigma as 1.0 and μ as 0.0
 
     gcn_object: GCNModel = GCNModel(W1, W2)
 
@@ -378,7 +379,7 @@ where:
 
     def train(epochs: ℕ, lr: ℝ) -> ℝ:
         len_train_X: ℝ = get_1d_array_length(train_sizes)
-        loss = 0
+        loss: ℝ = 0
         for i:ℕ(epochs):
             loss = 0
             for j:ℕ(len_train_X):
@@ -404,7 +405,7 @@ Training is then a single call:
 
     epochs: ℕ = 100
     lr: ℝ = 0.0005
-    final_loss = gcn_object.train(epochs, lr)
+    final_loss: ℝ = gcn_object.train(epochs, lr)
     physika_print(final_loss)
 
 
@@ -436,7 +437,7 @@ The final accuracy is computed as:
 
     def evaluate() -> ℝ:
         len_test_X: ℝ = get_1d_array_length(test_sizes)
-        correct = 0
+        correct: ℝ = 0
         for i:ℕ(len_test_X):
             A_i = test_A[i]
             H_i = test_H[i]
@@ -540,7 +541,7 @@ Full Code
             return pred
         def train(epochs: ℕ, lr: ℝ) -> ℝ:
             len_train_X: ℝ = get_1d_array_length(train_sizes)
-            loss = 0
+            loss: ℝ = 0
             for i:ℕ(epochs):
                 loss = 0
                 for j:ℕ(len_train_X):
@@ -557,7 +558,7 @@ Full Code
             return loss
         def evaluate() -> ℝ:
             len_test_X: ℝ = get_1d_array_length(test_sizes)
-            correct = 0
+            correct: ℝ = 0
             for i:ℕ(len_test_X):
                 A_i = test_A[i]
                 H_i = test_H[i]
@@ -574,6 +575,7 @@ Full Code
 
     W1: ℝ[30, 4] = for i:ℕ(30) -> row: ℝ[4] ~ Normal(μ, σ, 4)
     W2: ℝ[4] ~ Normal(μ, σ, 4)
+    # Normal distribution to generate random values with sigma as 1.0 and μ as 0.0
 
     gcn_object: GCNModel = GCNModel(W1, W2)
 
@@ -597,7 +599,7 @@ Full Code
 
     epochs: ℕ = 100
     lr: ℝ = 0.0005
-    final_loss = gcn_object.train(epochs, lr)
+    final_loss: ℝ = gcn_object.train(epochs, lr)
     physika_print(final_loss)
 
     accuracy = gcn_object.evaluate()
