@@ -515,7 +515,7 @@ class IndexingandSlicing(ELF):
                 print(elem_types)
 
                 if not elem_types:
-                    return None
+                    return None, s
 
                 # If the list is homogeneous, which means all the
                 # types are same, in this case we know the index type
