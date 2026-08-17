@@ -220,9 +220,9 @@ class TTensor:
 @dataclass(frozen=True)
 class TList:
     elements: tuple
+
     def __repr__(self) -> str:
         return "list"
-
 
 
 @dataclass(frozen=True)
@@ -478,10 +478,10 @@ class Substitution(dict):
         if isinstance(t, TInstance):
             return t
         if isinstance(t, TList):
-            return TList(tuple(
+            return TList(
+                tuple(
                     self.apply(element) if element is not None else None
-                    for element in t.elements)
-            )
+                    for element in t.elements))
         return t
 
     def apply_dim(self, d: Any) -> Any:

@@ -260,8 +260,9 @@ def expr_array(node: Any,
         return TTensor(((n, "invariant"), ) + base.dims), cur
     return make_tensor([n]), cur
 
+
 def expr_list(node: Any,
-               ctx: ExprContext) -> Tuple[Optional[Type], Substitution]:
+              ctx: ExprContext) -> Tuple[Optional[Type], Substitution]:
 
     elements = node[1]
 
