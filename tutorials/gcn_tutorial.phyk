@@ -80,7 +80,7 @@ class GCNModel(W1: ℝ[30, 4], W2: ℝ[4]):
         return pred
     def train(epochs: ℕ, lr: ℝ) -> ℝ:
         len_train_X: ℝ = get_1d_array_length(train_sizes)
-        loss = 0
+        loss: ℝ = 0
         for i:ℕ(epochs):
             loss = 0
             for j:ℕ(len_train_X):
@@ -97,7 +97,7 @@ class GCNModel(W1: ℝ[30, 4], W2: ℝ[4]):
         return loss
     def evaluate() -> ℝ:
         len_test_X: ℝ = get_1d_array_length(test_sizes)
-        correct = 0
+        correct: ℝ = 0
         for i:ℕ(len_test_X):
             A_i = test_A[i]
             H_i = test_H[i]
@@ -114,6 +114,7 @@ class GCNModel(W1: ℝ[30, 4], W2: ℝ[4]):
 
 W1: ℝ[30, 4] = for i:ℕ(30) -> row: ℝ[4] ~ Normal(μ, σ, 4)
 W2: ℝ[4] ~ Normal(μ, σ, 4)
+# Normal distribution to generate random values with sigma as 1.0 and μ as 0.0
 
 gcn_object: GCNModel = GCNModel(W1, W2)
 
@@ -141,7 +142,7 @@ lr: ℝ = 0.0005
 # physika code through tests/test_tutorials.py
 # ------------------------------------------------------------------
 epochs: ℕ = 1
-final_loss = gcn_object.train(epochs, lr)
+final_loss: ℝ = gcn_object.train(epochs, lr)
 physika_print(final_loss)
 
 accuracy = gcn_object.evaluate()
