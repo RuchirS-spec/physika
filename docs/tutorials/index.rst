@@ -57,6 +57,7 @@ Tutorials
    learn_parameter_schrodinger_equation
    quantum_SHO
    HCl_morse_oscillator
+   simpledft
 
 .. toctree::
    :maxdepth: 1
