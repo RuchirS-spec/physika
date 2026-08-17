@@ -997,37 +997,3 @@ def compl_mul1d(x_ft, weights1):
     """
     return torch.einsum("ix,iox->ox", x_ft, weights1)
 
-
-def create_dataset(train_test_split=80, total_dataset_size=642, max_atoms=44):
-    import deepchem as dc
-    import torch
-    import torch.nn.functional as F
-    from rdkit import Chem
-    from rdkit.Chem import rdmolops
-
-    tasks, datasets, transformers = dc.molnet.load_sampl(
-        featurizer='Raw', splitter='random',
-        frac_train=train_test_split/100.0, frac_valid=0.0,
-        frac_test=1-train_test_split/100.0, seed=42
-    )
-    train_dataset, valid_dataset, test_dataset = datasets
-    featurizer = dc.feat.MolGraphConvFeaturizer(use_edges=False)
-
-    def build(dataset, limit):
-        A_list, H_list, sizes, y_list = [], [], [], []
-        for i in range(min(limit, len(dataset.X))):
-            mol = Chem.AddHs(dataset.X[i])
-            n = mol.GetNumAtoms()
-            graph = featurizer.featurize([mol])[0]
-            A = torch.tensor(rdmolops.GetAdjacencyMatrix(mol), dtype=torch.float32)
-            H = torch.tensor(graph.node_features, dtype=torch.float32)
-            A_list.append(F.pad(A, (0, max_atoms-n, 0, max_atoms-n)))
-            H_list.append(F.pad(H, (0, 0, 0, max_atoms-n)))
-            sizes.append(n)
-            y_list.append(dataset.y[i][0])
-        return [torch.stack(A_list), torch.stack(H_list),
-                torch.tensor(sizes, dtype=torch.float32), torch.tensor(y_list, dtype=torch.float32)]
-
-    train_data = build(train_dataset, total_dataset_size)
-    test_data = build(test_dataset, total_dataset_size)
-    return [train_data, test_data]
