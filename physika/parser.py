@@ -1,6 +1,6 @@
 import ply.yacc as yacc
 from physika.lexer import tokens  # noqa: F401
-from physika.utils.parser_utils import find_indexed_arrays
+from physika.utils.parser_utils import find_indexed_arrays, _convert_list_ast
 import sys
 from pathlib import Path
 from physika.elf import REGISTRY
@@ -695,13 +695,6 @@ def p_func_loop_stmt_call(p):
     # Returns:
     #   ("loop_call", function_name, arguments)
     p[0] = ("loop_call", p[1], p[3])
-
-
-def _convert_list_ast(node):
-    if isinstance(node, tuple) and node[0] == "array":
-        return ("list", [_convert_list_ast(e) for e in node[1]])
-
-    return node
 
 
 def p_statement_decl(p):
