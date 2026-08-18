@@ -50,7 +50,7 @@ class A(nn.Module):
 # === Program ===
 x = torch.tensor([1.0, 2.0, 3.0], device=DEVICE)
 y = torch.tensor([9.0, 3.0, 5.0, 1.0, 4.0], device=DEVICE)
-complex_list = torch.tensor([1j, 2j, 3j], device=DEVICE)
+complex_list = torch.tensor([1j, 2j, 3j], dtype=torch.complex64)
 simple_nested_list = [x, y]
 nested_list = [1, 2, x, [x, y]]
 mixed_list = [1, x, complex_list, [y, complex_list]]
