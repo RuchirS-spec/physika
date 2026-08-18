@@ -68,7 +68,10 @@ def run_phyk(src: str, phyk_file: str = None) -> dict:
             program_ast,
             Path(phyk_file).resolve(),
         )
-    ast = build_unified_ast(program_ast,pm.symbol_table,)
+    ast = build_unified_ast(
+        program_ast,
+        pm.symbol_table,
+    )
     code = from_ast_to_torch(ast, print_code=False)
     ns: dict = {}
     exec(code, ns)
