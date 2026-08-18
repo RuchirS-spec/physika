@@ -4,7 +4,7 @@ from physika.parser import symbol_table
 from physika.lexer import lexer
 
 import pytest
-from tests.conftest import exec_phyk
+from tests.conftest import exec_phyk, run_phyk, type_errors
 
 r_tol = 1e-02
 
@@ -56,6 +56,30 @@ class TestExampleImportFile:
         phi = numeric_ns["φ"]
         assert len(phi) == 5
         assert phi.tolist() == [0.0, 0.0, 1.0, 1.0, 2.0]
+
+    def test_imported_statement_runtime_error(self):
+        """Test runtime error in import statement"""
+        src = ("from examples.example_tensors import v\n"
+               "v[3]")
+        with pytest.raises(
+                IndexError,
+                match="index 3 is out of bounds for dimension 0 with size 3",
+        ):
+            run_phyk(src, "examples/example_tensors.phyk")
+
+    def test_imported_statement_type_error(self):
+        """Test type error in import statement"""
+        src = ("from examples.physika_class import ExampleClass\n"
+               "obj = ExampleClass()\n"
+               "obj.another_method()")
+
+        errors = type_errors(
+            src,
+            "examples/physika_class.phyk",
+        )
+        assert len(errors) == 1
+        assert "Class 'ExampleClass' has no method 'another_method'" in errors[
+            0]
 
 
 class TestImportManager:
