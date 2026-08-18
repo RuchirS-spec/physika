@@ -91,6 +91,14 @@ squared_tensor: ℝ[3] = square_list(x)
 squared_tensor
 
 
+def f_return_list(x: ℝ, y: ℝ, z: ℝ): list:
+    results: list = [x, y, z]
+    return results
+
+
+f_results: list = f_return_list(1, 2, 3)
+f_results
+
 # --------------------------------- 
 # Classes
 # --------------------------------- 
@@ -99,8 +107,14 @@ class A:
     x: list
     def get_list(): list:
         return this.x
+    def get_value_list(value1: ℝ, value2: ℝ): list:
+        results: list = [value1, value2]
+        return results
 
 
 obj: A = A(nested_list)
-obj_results: list = obj.get_list()
-obj_results
+obj_list: list = obj.get_list()
+obj_list
+
+obj_value_results: list = obj.get_value_list(1, 2)
+obj_value_results
