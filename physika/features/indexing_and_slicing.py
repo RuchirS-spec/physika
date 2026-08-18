@@ -512,7 +512,6 @@ class IndexingandSlicing(ELF):
                 elem_types = [
                     s.apply(t) for t in arr_t.elements if t is not None
                 ]
-                print(elem_types)
 
                 if not elem_types:
                     return None, s
