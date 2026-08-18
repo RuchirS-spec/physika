@@ -3,12 +3,8 @@ import torch.nn as nn
 import torch.optim as optim
 from physika.runtime import DEVICE
 
-<<<<<<< HEAD
 from physika.runtime import print
-=======
-from physika.runtime import physika_print
 from physika.runtime import compute_grad
->>>>>>> 1963e7f (added more examples in import statement physika file)
 
 # === Functions ===
 def f_x(x):
@@ -69,17 +65,17 @@ print(fact_results)
 torch_funcs_results = torch_funcs_with_scalar_R(x)
 print(torch_funcs_results)
 f_results = f(x)
-physika_print(f_results)
+print(f_results)
 obj_example_class = ExampleClass().to(DEVICE)
 class_value = obj_example_class.class_method()
-physika_print(class_value)
+print(class_value)
 v = torch.tensor([1.0, 2.0, 3.0], device=DEVICE)
 for i in range(int(0), int(3)):
     if v[int(i)] > 2:
         v[int(i)] = (v[int(i)] * 2)
-physika_print(v)
+print(v)
 grad_f_x = compute_grad(f_x, v[int(2)])
-physika_print(grad_f_x)
+print(grad_f_x)
 r = torch.tensor([(-1.0), 0.0, 0.5, 1.0, 2.0], device=DEVICE)
 φ = superbee(r)
-physika_print(φ)
+print(φ)
