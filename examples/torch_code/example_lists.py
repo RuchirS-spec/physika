@@ -26,6 +26,10 @@ def square_list(values):
     results = torch.stack([(values[int(i)] ** 2) for _fi_i in range(int(len_list)) for i in [torch.tensor(float(_fi_i), device=DEVICE)]])
     return results
 
+def f_return_list(x, y, z):
+    results = [x, y, z]
+    return results
+
 # === Classes ===
 class A(nn.Module):
     def __init__(self, x):
@@ -36,6 +40,13 @@ class A(nn.Module):
     def get_list(self):
         this = self
         return self.x
+
+    def get_value_list(self, value1, value2):
+        this = self
+        value1 = torch.as_tensor(value1, device=DEVICE).float()
+        value2 = torch.as_tensor(value2, device=DEVICE).float()
+        results = [value1, value2]
+        return results
 
     @property
     def params(self):
@@ -78,6 +89,10 @@ print(tensor_grad)
 print(nested_grad)
 squared_tensor = square_list(x)
 print(squared_tensor)
+f_results = f_return_list(1, 2, 3)
+print(f_results)
 obj = A(nested_list).to(DEVICE)
-obj_results = obj.get_list()
-print(obj_results)
+obj_list = obj.get_list()
+print(obj_list)
+obj_value_results = obj.get_value_list(1, 2)
+print(obj_value_results)

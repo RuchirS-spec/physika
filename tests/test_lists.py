@@ -75,15 +75,20 @@ class TestLists:
     def test_lists_functions(self, lists_ns):
         # Tests for using lists in Physika functions.
         squared_tensor = lists_ns["squared_tensor"]
-
         assert squared_tensor.tolist() == [1.0, 4.0, 9.0]
+
+        f_results = lists_ns["f_results"]
+        assert f_results == [1, 2, 3]
 
     def test_lists_class(self, lists_ns):
         # Tests for using lists in Physika classes.
-        obj_results = lists_ns["obj_results"]
+        obj_list = lists_ns["obj_list"]
 
-        assert torch.equal(obj_results[2], torch.tensor([1.0, 2.0, 3.0]))
-        assert len(obj_results[3]) == 2
-        assert torch.equal(obj_results[3][0], torch.tensor([1.0, 2.0, 3.0]))
-        assert torch.equal(obj_results[3][1],
+        assert torch.equal(obj_list[2], torch.tensor([1.0, 2.0, 3.0]))
+        assert len(obj_list[3]) == 2
+        assert torch.equal(obj_list[3][0], torch.tensor([1.0, 2.0, 3.0]))
+        assert torch.equal(obj_list[3][1],
                            torch.tensor([9.0, 3.0, 5.0, 1.0, 4.0]))
+
+        obj_value_results = lists_ns["obj_value_results"]
+        assert obj_value_results == [1, 2]
