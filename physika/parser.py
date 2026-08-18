@@ -256,7 +256,10 @@ def p_func_body_stmt_assign(p):
 def p_func_body_stmt_decl(p):
     """func_body_stmt : ID COLON type_spec EQUALS func_expr NEWLINE"""
     # Typed declaration: x : R = expr
-    p[0] = ("body_decl", p[1], p[3], p[5])
+    expr = p[5]
+    if p[3] == "list":
+        expr = _convert_list_ast(expr)
+    p[0] = ("body_decl", p[1], p[3], expr)
 
 
 def p_func_body_stmt_zeros_decl(p):
