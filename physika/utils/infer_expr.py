@@ -263,7 +263,59 @@ def expr_array(node: Any,
 
 def expr_list(node: Any,
               ctx: ExprContext) -> Tuple[Optional[Type], Substitution]:
+    """
+    Infer the type of a list literal ``[e0, e1, ..., en]``.
 
+    Each element is inferred independently and its type is preserved in the
+    resulting ``TList``.
+
+    Parameters
+    ----------
+    node : ASTNode
+        AST node of the form ``("list", elements)`` where *elements* is a
+        list of AST expression nodes, one for each list element.
+
+    ctx : ExprContext
+        Current inference context. ``ctx.s`` is threaded through each
+        element inference so later elements see bindings from earlier ones.
+        Type errors are registered via ``ctx.add_error``.
+
+    Returns
+    -------
+    tuple[Optional[Type], Substitution]
+        ``(TList(element_types), updated_s)`` where each entry in
+        ``element_types`` is the inferred type of the corresponding list
+        element. Nested list expressions are represented recursively as
+        ``TList`` values
+
+    Examples
+    --------
+    >>> from physika.utils.infer_expr import ExprContext, expr_list
+    >>> from physika.utils.types import Substitution
+    >>> ctx = ExprContext({}, Substitution(), {}, {}, [].append)
+
+    >>> t, _ = expr_list(
+    ...     ("list", [("num", 1.0), ("num", 2.0), ("num", 3.0)]),
+    ...     ctx
+    ... )
+    >>> t
+    list
+
+    >>> t, _ = expr_list(
+    ...     ("list", [("num", 1.0), ("complex", 3)]),
+    ...     ctx
+    ... )
+    >>> t
+    list
+
+    >>> nested = (
+    ...     ("num", 1.0),
+    ...     ("list", [("num", 2.0), ("num", 3.0)])
+    ... )
+    >>> t, _ = expr_list(("list", list(nested)), ctx)
+    >>> t
+    list
+    """
     elements = node[1]
 
     elem_types = []
