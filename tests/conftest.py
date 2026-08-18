@@ -6,6 +6,7 @@ from physika.codegen import from_ast_to_torch
 from physika.utils.import_manager import resolve_imports
 from io import StringIO
 from contextlib import redirect_stdout
+from typing import Optional
 
 EXAMPLES_DIR = Path(__file__).parent.parent / "examples"
 
@@ -33,7 +34,7 @@ def exec_phyk(stem: str) -> dict:
     return ns
 
 
-def type_errors(src: str, phyk_file: str = None) -> list:
+def type_errors(src: str, phyk_file: Optional[str] = None) -> list:
     """
     Parse Physika source string, run the type checker and return the list of
     error strings if any.
@@ -53,7 +54,7 @@ def type_errors(src: str, phyk_file: str = None) -> list:
     return TypeChecker(ast).run()
 
 
-def run_phyk(src: str, phyk_file: str = None) -> dict:
+def run_phyk(src: str, phyk_file: Optional[str] = None) -> dict:
     """
     Helper function to parse, emits codegen, and exec a Physika source
     string.
