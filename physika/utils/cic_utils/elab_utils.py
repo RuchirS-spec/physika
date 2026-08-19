@@ -58,7 +58,7 @@ def return_type_contains_more_elements(tp: Expr) -> bool:
         return False
     ret = lvl2.body
     expected = App(App(_VEC_CONST, _REAL_CONST),
-                   App(App(_NAT_ADD, BVar(2)), Lit(1)))
+                   App(App(_NAT_ADD, BVar(2)), Lit(1)))  # type: ignore[arg-type]
     return ret == expected
 
 

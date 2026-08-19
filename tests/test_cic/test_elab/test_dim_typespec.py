@@ -1,5 +1,4 @@
 import pytest
-from physika.core.elab import ElabM
 from physika.core.elab.dim_typespec import (
     _NAT_CONST,
     _REAL_CONST,
@@ -19,9 +18,18 @@ from physika.core.elab.dim_typespec import (
 )
 from physika.core.environment import ConstantInfo, Environment, InductiveInfo
 from physika.core.expr import (App, BVar, BinderInfo, Const, ForallE, Lit,
-                               MVar, Sort)
+                               MVar, MVarId, Sort)
 from physika.core.inductive import Constructor, InductiveDecl
 from physika.core.level import LSucc, LZero
+
+
+class _StubElab:
+    """
+    Minimal stand-in for the elaborator, exposing only ``new_mvar``.
+    """
+
+    def new_mvar(self, name: str, type_: object) -> MVar:
+        return MVar(MVarId(name))
 
 
 def register_struct(env: Environment, class_name: str) -> None:
@@ -267,7 +275,7 @@ class TestElaborateFuncType:
         types.
         """
         # non-dependent
-        elab = ElabM(Environment())
+        elab = _StubElab()
         func_def = {"params": [("x", "ℝ")], "return_type": "ℝ"}
         result = elaborate_func_type(func_def, elab)
         assert result == ForallE(
@@ -278,7 +286,7 @@ class TestElaborateFuncType:
         )
 
         # dependent type
-        elab = ElabM(Environment())
+        elab = _StubElab()
         func_def = {
             "params": [("v", ("tensor", [("n", "invariant")]))],
             "return_type": "ℝ",
@@ -296,7 +304,7 @@ class TestElaborateFuncType:
         )
 
         # `n` only appears in the return type, not in any param
-        elab = ElabM(Environment())
+        elab = _StubElab()
         func_def = {
             "params": [],
             "return_type": ("tensor", [("n", "invariant")])

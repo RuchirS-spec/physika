@@ -179,7 +179,7 @@ def dim_to_cic_resolved(
     True
     """
     if isinstance(dim, int):
-        return Lit(dim)
+        return Lit(dim)  # type: ignore[arg-type]
     if isinstance(dim, str):
         return resolve(dim)
     if isinstance(dim, tuple) and len(dim) == 3:
@@ -247,7 +247,7 @@ def typespec_to_cic_resolved(ts: Union[str, tuple],
             d_expr = dim_to_cic_resolved(d, resolve)
             if d_expr is None:
                 # unbound symbolic dim
-                d_expr = Lit(0)
+                d_expr = Lit(0)  # type: ignore[arg-type]
             elem = App(App(_VEC_CONST, elem), d_expr)
         return elem
     if isinstance(ts, tuple) and ts[0] == "struct_type":
@@ -347,17 +347,15 @@ def elaborate_func_type(func_def: dict, elab: object) -> Expr:
     ----------
     func_def : dict
         Parsed function defintion
-    elab : ElabM
-        Used to add a fresh ``MVar``s for return dim vars.
+    elab : object
+        Elaborator exposing ``new_mvar(name, type)``, used to add a fresh
+        ``MVar`` for each return-only dim var.
 
     Example
     -------
     >>> from physika.core.elab.dim_typespec import elaborate_func_type  # noqa: E501
-    >>> from physika.utils.cic_utils.inductive_utils import mk_builtin_env
-    >>> from physika.core.elab import ElabM
-    >>> elab = ElabM(mk_builtin_env())
     >>> func_def = {"params": [("x", "ℝ")], "return_type": "ℝ"}
-    >>> elaborate_func_type(func_def, elab)
+    >>> elaborate_func_type(func_def, object())
     ForallE(binder_name='x', binder_type=Const(name='Real', levels=()), body=Const(name='Real', levels=()), binder_info=<BinderInfo.DEFAULT: 1>)
     """
     params = func_def.get("params", [])  # [(name, type_spec), ...]
@@ -461,15 +459,23 @@ def struct_field_names(type_name: str,
 
     Example
     -------
-    >>> from physika.core.elab.dim_typespec import struct_field_names
-    >>> from physika.utils.cic_utils.inductive_utils import mk_builtin_env
-    >>> from physika.core.elab import ElabM
-    >>> elab = ElabM(mk_builtin_env())
-    >>> unified = {"functions": {}, "program": [],
-    ...            "classes": {"Box": {"class_params": [("n", "ℝ"), ("m", "ℝ")],  # noqa: E501
-    ...                                "methods": []}}}
-    >>> _ = elab.elaborate(unified)
-    >>> struct_field_names("Box", elab.state.env)
+    >>> from physika.core.elab.dim_typespec import (
+    ...     elaborate_struct_kind_and_ctor, struct_field_names)
+    >>> from physika.core.environment import (
+    ...     ConstantInfo, Environment, InductiveInfo)
+    >>> from physika.core.inductive import Constructor, InductiveDecl
+    >>> kind, ctor_type, num_params, _ = elaborate_struct_kind_and_ctor(
+    ...     "Box", [("n", "ℝ"), ("m", "ℝ")])
+    >>> decl = InductiveDecl(
+    ...     name="Box", level_params=(), num_params=num_params, type=kind,
+    ...     constructors=(Constructor("Box.mk", ctor_type),),
+    ...     is_recursive=False)
+    >>> ctor_ci = ConstantInfo("Box.mk", (), ctor_type, None)
+    >>> rec_ci = ConstantInfo("Box.rec", ("u",), kind, None)
+    >>> env = Environment()
+    >>> env.add_inductive(InductiveInfo(
+    ...     decl=decl, ctors={"Box.mk": ctor_ci}, recursor=rec_ci))
+    >>> struct_field_names("Box", env)
     ['n', 'm']
     """
     ii = env.inductives.get(type_name)

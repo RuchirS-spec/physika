@@ -26,7 +26,7 @@ def append_shape() -> ForallE:
                 "v",
                 _REAL_CONST,
                 App(App(_VEC_CONST, _REAL_CONST),
-                    App(App(_NAT_ADD, BVar(2)), Lit(1))),
+                    App(App(_NAT_ADD, BVar(2)), Lit(1))),  # type: ignore[arg-type]
                 BinderInfo.DEFAULT,
             ),
             BinderInfo.DEFAULT,
