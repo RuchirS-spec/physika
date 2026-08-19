@@ -1,7 +1,4 @@
-from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Tuple, Union
-
-if TYPE_CHECKING:
-    from .elab import ElabM
+from typing import Callable, Dict, List, Optional, Tuple, Union
 
 from physika.core.level import (
     LZero,
@@ -339,7 +336,7 @@ def typespec_to_cic(
         ts, bvar_resolver(binder_names, depth, return_only_mvars))
 
 
-def elaborate_func_type(func_def: dict, elab: "ElabM") -> Expr:
+def elaborate_func_type(func_def: dict, elab: object) -> Expr:
     """
     Build CIC ``ForallE`` expression for one Physika function definition.
 
@@ -371,7 +368,7 @@ def elaborate_func_type(func_def: dict, elab: "ElabM") -> Expr:
     param_dim_names = set(collect_dim_vars_ordered(params, None))
     binder_dim_vars = [d for d in dim_vars if d in param_dim_names]
     return_only_mvars: Dict[str, "MVar"] = {
-        d: elab.new_mvar(f"_ret_dim_{d}", _NAT_CONST)
+        d: elab.new_mvar(f"_ret_dim_{d}", _NAT_CONST)  # type: ignore[attr-defined]
         for d in dim_vars if d not in param_dim_names
     }
 
