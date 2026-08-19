@@ -10,7 +10,8 @@ Why Use a GCN?
 Molecular data is naturally graph-structured, atoms as nodes and bonds as
 edges. Standard neural networks cannot directly exploit this structure,
 whereas GCNs operate on the graph itself via its adjacency matrix which
-yields a more data-efficient model for predicting graph level properties.
+yields a more data-efficient model for predicting graph level properties
+[DistillGNN2021]_.
 
 GCN Architecture
 ------------------------
@@ -20,9 +21,7 @@ GCN Architecture
    :align: center
    :width: 500px
 
-   Comparison of a GCN and a CNN processing a molecule
-
-   Source: `mbernste.github.io <https://mbernste.github.io/posts/gcn/>`_
+   *Comparison of a GCN and a CNN processing a molecule* [Bernstein2023]_
 
 Each atom is initialized with a feature vector (e.g. atomic number,
 degree). A graph convolution layer updates these via message passing,
@@ -36,29 +35,29 @@ property.
 Dataset
 --------
 
-We trained the GCN model on the FreeSolv dataset (generated using the
-DeepChem library) to predict hydration free energy (kcal/mol) for small
-molecules.
+We trained the GCN model on the FreeSolv dataset [FreeSolv]_ (generated
+using the DeepChem library) to predict hydration free energy (kcal/mol)
+for small molecules.
 
 .. code-block:: text
 
-    train_test_split: N = 80
-    total_dataset_size: N = 642
-    max_atoms: N = 44
+    train_test_split: ℕ = 80
+    total_dataset_size: ℕ = 642
+    max_atoms: ℕ = 44
 
     dataset = create_dataset(train_test_split, total_dataset_size, max_atoms)
     train_dataset = dataset[0]
     test_dataset = dataset[1]
 
-    train_A: R[513, 44, 44] = train_dataset[0]
-    train_H: R[513, 44, 30] = train_dataset[1]
-    train_sizes: R[513] = train_dataset[2]
-    train_y: R[513] = train_dataset[3]
+    train_A: ℝ[513, 44, 44] = train_dataset[0]
+    train_H: ℝ[513, 44, 30] = train_dataset[1]
+    train_sizes: ℝ[513] = train_dataset[2]
+    train_y: ℝ[513] = train_dataset[3]
 
-    test_A: R[65, 44, 44] = test_dataset[0]
-    test_H: R[65, 44, 30] = test_dataset[1]
-    test_sizes: R[65] = test_dataset[2]
-    test_y: R[65] = test_dataset[3]
+    test_A: ℝ[65, 44, 44] = test_dataset[0]
+    test_H: ℝ[65, 44, 30] = test_dataset[1]
+    test_sizes: ℝ[65] = test_dataset[2]
+    test_y: ℝ[65] = test_dataset[3]
 
 
 .. note::
@@ -317,6 +316,8 @@ The final linear layer then computes a single predicted value:
 
     pred = \text{pooled} \cdot W_2
 
+This follows the message-passing formulation of Kipf and Welling [Kipf2017]_.
+
 where:
 
 .. math::
@@ -451,7 +452,7 @@ Evaluation is then a single call too:
 
 .. code-block:: text
 
-    accuracy = gcn_object.evaluate()
+    accuracy: ℝ = gcn_object.evaluate()
     physika_print(accuracy)
 
 
@@ -610,8 +611,20 @@ Full Code
 References
 ----------
 
-- `A Gentle Introduction to Graph Neural Networks (Distill) <https://distill.pub/2021/gnn-intro/>`_
-- `Graph convolutional neural networks <https://mbernste.github.io/posts/gcn/>`_
-- `FreeSolv: The Free Solvation Database (Mobley Lab) <https://github.com/MobleyLab/FreeSolv>`_
+.. [Kipf2017] Kipf, T. N., & Welling, M. (2017). *Semi-Supervised
+   Classification with Graph Convolutional Networks*. International
+   Conference on Learning Representations (ICLR).
+   https://arxiv.org/abs/1609.02907
+
+.. [Bernstein2023] Bernstein, M. N. (2023). *Graph convolutional neural
+   networks*. https://mbernste.github.io/posts/gcn/
+
+.. [DistillGNN2021] Sanchez-Lengeling, B., Reif, E., Pearce, A., &
+   Wiltschko, A. B. (2021). *A Gentle Introduction to Graph Neural
+   Networks*. Distill. https://distill.pub/2021/gnn-intro/
+
+.. [FreeSolv] Mobley Lab. *FreeSolv: The Free Solvation Database*.
+   https://github.com/MobleyLab/FreeSolv
+
 - `RDKit: Open-source cheminformatics <https://www.rdkit.org/>`_
 - `DeepChem Documentation <https://deepchem.readthedocs.io/>`_
