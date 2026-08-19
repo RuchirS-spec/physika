@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from physika.runtime import DEVICE
 
-from physika.runtime import physika_print
+from physika.runtime import print
 
 # === Functions ===
 def get_1d_array_length(x):
@@ -66,4 +66,4 @@ def gaussian_solve(A, b):
 # === Program ===
 A = torch.tensor([[1, 2, 1], [3, 1, (-1)], [2, (-1), 1]], device=DEVICE)
 b = torch.tensor([8, 2, 3], device=DEVICE)
-physika_print(gaussian_solve(A, b))
+print(gaussian_solve(A, b))
