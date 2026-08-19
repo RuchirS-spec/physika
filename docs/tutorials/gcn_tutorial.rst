@@ -329,12 +329,13 @@ Initializing GCNModel object
 
 .. code-block:: text
 
+    # Normal distribution to generate random values with sigma as 1.0 and μ as 0.0
+
     μ : ℝ = 0.0
     σ : ℝ = 1.0
 
     W1: ℝ[30, 4] = for i:ℕ(30) -> row: ℝ[4] ~ Normal(μ, σ, 4)
     W2: ℝ[4] ~ Normal(μ, σ, 4)
-    # Normal distribution to generate random values with sigma as 1.0 and μ as 0.0
 
     gcn_object: GCNModel = GCNModel(W1, W2)
 
@@ -570,39 +571,39 @@ Full Code
             this.W1 = this.W1 - lr * learnable_grads[0]
             this.W2 = this.W2 - lr * learnable_grads[1]
 
+    # Normal distribution to generate random values with sigma as 1.0 and μ as 0.0
     μ : ℝ = 0.0
     σ : ℝ = 1.0
 
     W1: ℝ[30, 4] = for i:ℕ(30) -> row: ℝ[4] ~ Normal(μ, σ, 4)
     W2: ℝ[4] ~ Normal(μ, σ, 4)
-    # Normal distribution to generate random values with sigma as 1.0 and μ as 0.0
 
     gcn_object: GCNModel = GCNModel(W1, W2)
 
-    train_test_split: N = 80
-    total_dataset_size: N = 642
-    max_atoms: N = 44
+    train_test_split: ℕ = 80
+    total_dataset_size: ℕ = 642
+    max_atoms: ℕ = 44
 
     dataset = create_dataset(train_test_split, total_dataset_size, max_atoms)
     train_dataset = dataset[0]
     test_dataset = dataset[1]
 
-    train_A: R[513, 44, 44] = train_dataset[0]
-    train_H: R[513, 44, 30] = train_dataset[1]
-    train_sizes: R[513] = train_dataset[2]
-    train_y: R[513] = train_dataset[3]
+    train_A: ℝ[513, 44, 44] = train_dataset[0]
+    train_H: ℝ[513, 44, 30] = train_dataset[1]
+    train_sizes: ℝ[513] = train_dataset[2]
+    train_y: ℝ[513] = train_dataset[3]
 
-    test_A: R[65, 44, 44] = test_dataset[0]
-    test_H: R[65, 44, 30] = test_dataset[1]
-    test_sizes: R[65] = test_dataset[2]
-    test_y: R[65] = test_dataset[3]
+    test_A: ℝ[65, 44, 44] = test_dataset[0]
+    test_H: ℝ[65, 44, 30] = test_dataset[1]
+    test_sizes: ℝ[65] = test_dataset[2]
+    test_y: ℝ[65] = test_dataset[3]
 
     epochs: ℕ = 100
     lr: ℝ = 0.0005
     final_loss: ℝ = gcn_object.train(epochs, lr)
     physika_print(final_loss)
 
-    accuracy = gcn_object.evaluate()
+    accuracy: ℝ = gcn_object.evaluate()
     physika_print(accuracy)
 
 
