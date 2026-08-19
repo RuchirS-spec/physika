@@ -16,6 +16,7 @@ Following is the linear equations which we are going to solve:
    3x + y - z &= 2 \\
    2x - y + z &= 3
    \end{aligned}
+   \label{linear_equation_form}
 
 First we will write this equations in form of ``Ax = B`` which is as follow:
 
@@ -40,7 +41,7 @@ First we will write this equations in form of ``Ax = B`` which is as follow:
     2 \\
     3
     \end{bmatrix}}
-
+    \label{ax_equation}
 
 In physika we define this matrices such as:
 
@@ -58,15 +59,16 @@ In physika we define this matrices such as:
 Gaussian elimination method
 ------------------------------
 
-Gaussian elimination is a method for solving a system of linear equations :math:`Ax = b` by
+Gaussian elimination is a method for solving a system of linear equations which are in form of :math:`Ax = b` It works by
 eliminating variables, row by row, until the system (matrix) is reduced to a form that can be solved directly which is defined as
-Upper triangular matrix :math:`U`.
+Upper triangular matrix :math:`U`. In this tutorial, we will understand the method step by step with code.
 
-This section will get divided into 3 subsections:
+The method can be divided into three main steps:
 
-* Build the augmented matrix
-* Perform Forward elimination
-* Back substitution to find values
+* **Build the augmented matrix** - Combine the coefficient matrix :math:`A` and right-hand side vector :math:`b` into single Augmented matrix, this allows same row operations applied to both
+  matrices at once.
+* **Perform Forward elimination** - Use row operations to eliminate variables and transform the matrix into upper triangular matrix.
+* **Back substitution to find values** - Start with the last equation and solve upwards to find values of all variables.
 
 Before starting lets create a function as:
 
@@ -82,8 +84,8 @@ Before starting lets create a function as:
 Step 1 - Augmented matrix
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-In this step we will merge matrix :math:`A` and :math:`b` into single matrix called as Augmented matrix, so that 
-every row operations (follow up steps) gets applied to both the matrices at the same time.
+Since the row operations need to be applied to both the :math:`A` and :math:`b` matrix, we combine them into 
+a single **Augmented matrix**, In Physika, this can be written as:
 
 
 .. code-block:: text
@@ -97,7 +99,7 @@ every row operations (follow up steps) gets applied to both the matrices at the 
         aug[i, :a_col] = A[i, :]
         aug[i, a_col] = b[i]
 
-Since the :math:`A` matrix is of size ``3x3`` and :math:`b` is of size ``1x3``, the augmented matrix will have shape of ``3x4``
+Here, the :math:`A` matrix is of size ``3x3`` and :math:`b` is of size ``1x3``, the augmented matrix will have shape of ``3x4``
 so we loop through number of rows of :math:`A` which is 3, and add each row from :math:`A` ``aug[i, :a_col] = A[i, :]``
 and :math:`b` ``aug[i, a_col] = b[i]`` together into the ``aug`` matrix row.
 
@@ -115,13 +117,17 @@ After that augmented matrix looks like this:
 Step 2 - Forward elimination
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-This section will get further divided into 3 sub-section, which are
+The goal of the Forward elimination is to transform the augmented matrix into an Upper triangular matrix.
+We do this by going through each column and removing the values below the diagonal.
 
-- Partial pivoting
-- swap rows using buffer
-- Elimination
+This process gets furher divided into 3 sub-section, which are:
 
-We will go through each of this in detail, but to give some context, here is the physika code:
+- **Partial pivoting** - Choose the pivot as largest absolute value in the current column.
+- **swap rows using buffer** - Swap the pivot row with current row.
+- **Elimination** - Use pivot value to eliminate entries below it.
+
+We will go through each of this in detail, To give some context, here is the physika code
+that performs Forward elimination:
 
 
 .. code-block:: text
@@ -166,6 +172,11 @@ Now we will go step by step in first iteration of outer loop.
 2.1 Partial pivoting
 ********************
 
+
+For each step, we start with the diagonal element as the pivot. We then
+look at the values below it in the same column and choose the one with the
+largest absolute value. This is called **partial pivoting**. [Chasnov_PartialPivot]_ 
+
 .. code-block:: text
 
     # -------------------------
@@ -176,8 +187,8 @@ Now we will go step by step in first iteration of outer loop.
         if abs(aug[k, i]) > abs(aug[max_row, i]):
             max_row = k
 
-The pivot values are the diagonal values so for the first iteration the pivot is
-at first value of first row, column which is denoted by red box in below matrix [Chasnov_PartialPivot]_ 
+For the first iteration the pivot is at first value of first row,
+column which is denoted by red box in below matrix:
 
 .. math::
 
@@ -217,6 +228,8 @@ Now after this value of ``max_row`` gets updated to 1 which is second row.
 2.2 swap rows using buffer
 ***************************
 
+After partial pivoting, ``max_row`` contains the row that has the largest pivot value.
+If ``max_row`` is different from the current row ``i``, we need to swap these two rows.
 
 .. code-block:: text
 
@@ -275,6 +288,9 @@ also after swapping the pivot value also gets updated now which is 3:
 2.3 Elimination
 ***************************
 
+Once the row-swapping is done, we move to Elimination section where we transform our augmented matrix into upper-triangular matrix
+so for this first iteration we will eliminate all the entries below the pivot value to zeros.
+
 .. code-block:: text
 
     # -------------------------
@@ -286,10 +302,7 @@ also after swapping the pivot value also gets updated now which is 3:
             aug[j, k] = aug[j, k] - factor * aug[i, k]
         
 
-Once the row-swapping is done, we move to Elimination section where we transform our augmented matrix into upper-triangular matrix
-so for this first iteration we will eliminate all the entries below the pivot value to zeros.
-
-To do that, we start the ``j`` loop from second row, since our first iteration starts with first row (outer loop)
+To do the elimination, we start the ``j`` loop from second row, since our first iteration starts with first row (outer loop)
 and we make a ``factor`` value:
 
 .. math::
