@@ -127,7 +127,9 @@ def check_mutual_recursion_termination(functions: dict,
 
     cycle_members = {name for name in names if in_cycle(name)}
 
-    for name in cycle_members:
+    for name in functions:
+        if name not in cycle_members:
+            continue
         func_def = functions[name]
         params = func_def.get("params", [])
         context_label = f"In function '{name}'"
