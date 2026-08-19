@@ -408,7 +408,7 @@ Training is then a single call:
     epochs: ℕ = 100
     lr: ℝ = 0.0005
     final_loss: ℝ = gcn_object.train(epochs, lr)
-    physika_print(final_loss)
+    print(final_loss)
 
 
 Testing the Model
@@ -453,7 +453,7 @@ Evaluation is then a single call too:
 .. code-block:: text
 
     accuracy: ℝ = gcn_object.evaluate()
-    physika_print(accuracy)
+    print(accuracy)
 
 
 Full Code
@@ -602,10 +602,10 @@ Full Code
     epochs: ℕ = 100
     lr: ℝ = 0.0005
     final_loss: ℝ = gcn_object.train(epochs, lr)
-    physika_print(final_loss)
+    print(final_loss)
 
     accuracy: ℝ = gcn_object.evaluate()
-    physika_print(accuracy)
+    print(accuracy)
 
 
 References
