@@ -59,7 +59,7 @@ In physika we define this matrices such as:
 Gaussian elimination method
 ------------------------------
 
-Gaussian elimination is a method for solving a system of linear equations which are in form of :math:`Ax = b` It works by
+Gaussian elimination is a method for solving a system of linear equations which are in form of :math:`Ax = b`. It works by
 eliminating variables, row by row, until the system (matrix) is reduced to a form that can be solved directly which is defined as
 Upper triangular matrix :math:`U`. In this tutorial, we will understand the method step by step with code.
 
