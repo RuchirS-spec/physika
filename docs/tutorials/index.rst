@@ -27,6 +27,7 @@ Tutorials
 
    repressilator
    toggle_switch
+   central_dogma
 
 .. toctree::
    :maxdepth: 1
