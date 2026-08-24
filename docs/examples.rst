@@ -76,6 +76,11 @@ Lists
 ~~~~~
 
 .. literalinclude:: ../examples/example_lists.phyk
+
+Tuple unpack
+~~~~~~~~~~~~
+
+.. literalinclude:: ../examples/tuple_unpack.phyk
    :language: text
 
 ----

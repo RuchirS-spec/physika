@@ -95,6 +95,23 @@ Output::
    [2.0, 4.0, 6.0] ∈ ℝ[3]
    [3.0, 7.0, 10.0] ∈ ℝ[3]
 
+Variables can also be declared using tuple unpacking:
+
+.. code-block:: text
+
+   x, y, z : ℝ = 1, 2, 3
+
+   print(x)
+   print(y)
+   print(z)
+
+Tuple unpacking can also be used with an individual type annotation:
+
+.. code-block:: text
+
+   x : ℝ, y : ℝ, z : ℝ = 1, 2, 3
+
+
 Functions
 ---------
 
