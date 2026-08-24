@@ -479,19 +479,25 @@ def make_parser_rules():
         # Accumulates multiple field/method items into a list.
         # p[1] - existing item list
         # p[2]  (next item appended)
-        p[0] = p[1] + [p[2]]
+        if isinstance(p[2], list):
+            p[0] = p[1] + p[2]
+        else:
+            p[0] = p[1] + [p[2]]
 
     def p_class_items_single(p):
         """class_items : class_item"""
         # Base case:
         # A single field or method item starts the list.
-        p[0] = [p[1]]
+        if isinstance(p[1], list):
+            p[0] = p[1]
+        else:
+            p[0] = [p[1]]
 
     def p_class_item_field(p):
         """class_item : ID COLON type_spec NEWLINE"""
         # Field declaration inside a class body.
         # Example:
-        # clas Particle:
+        # class Particle:
         #   mass : ℝ
         # Parameters:
         #    p[1] - field name
