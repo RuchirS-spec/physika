@@ -38,7 +38,7 @@ y_arr
 # Inside functions
 # -----------------------------------------
 
-def unpack_simple_array(arr: ℝ[3]): R:
+def unpack_simple_array(arr: ℝ[3]): ℝ:
     a, b, c: ℝ = arr
     return a
 
@@ -47,7 +47,7 @@ unpack_simple_array([1, 2, 3])
 
 # Helper function
 def return_array(n: ℝ): R[n]:
-    results: ℝ[n] = for i:N(n) -> i*1
+    results: ℝ[n] = for i:ℕ(n) -> i*1
     return results
 
 
