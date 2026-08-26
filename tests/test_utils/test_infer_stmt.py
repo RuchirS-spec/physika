@@ -310,6 +310,38 @@ class TestStmtBodyDecl:
         assert errors == [
             "In 'f': 'x' declared ℝ[4], inferred ℝ: Cannot unify tensor ℝ[4] with scalar ℝ"  # noqa: E501
         ]
+    
+    def test_list_declared_and_inferred(self):
+        """Inferred list preserves its element types."""
+        errors = []
+
+        a = TTensor(((3, 'invariant'), ))
+        b = TTensor(((5, 'invariant'), ))
+
+        ctx = make_stmt_ctx(
+            env={
+                'a': a,
+                'b': b,
+            },
+            errors=errors,
+        )
+        stmt = (
+            'body_decl',
+            'v',
+            'list',
+            (
+                'list',
+                [
+                    ('var', 'a'),
+                    ('var', 'b'),
+                ],
+            ),
+        )
+
+        stmt_body_decl(stmt, ctx)
+
+        assert ctx.env['v'] == TList((a, b))
+        assert errors == []
 
 
 class TestStmtBodyAssign:

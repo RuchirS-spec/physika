@@ -1349,6 +1349,16 @@ class TestExprCall:
         t, _ = expr_call(("call", "g", [("var", "x")]), ctx)
         assert t == T_REAL
 
+        # f -> list
+        vec4 = TTensor(((4, "invariant"), ))
+        vec5 = TTensor(((5, "invariant"), ))
+        list_type = TList((vec4, vec5))
+        func_env = {"f": ([], list_type)}
+        ctx = make_ctx(func_env=func_env)
+        t, _ = expr_call(("call", "f", []), ctx)
+        assert t == list_type
+        assert t.elements == (vec4, vec5)
+
     def test_user_function_wrong_parameters_error(self):
         """Wrong number of arguments reports an error."""
         errors = []

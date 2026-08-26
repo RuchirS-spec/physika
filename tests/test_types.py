@@ -517,6 +517,50 @@ class TestCheckFunction:
         check_function("f", fdef, {}, {}, errors.append)
         assert errors == []
 
+        # list case, which should preserve the element types.
+        errors = []
+        vec2 = TTensor(((2, "invariant"), ))
+        vec3 = TTensor(((3, "invariant"), ))
+
+        fdef = make_fdef(
+            params=[],
+            stmts=[
+                (
+                    "body_decl",
+                    "A",
+                    ("tensor", [(2, "invariant")]),
+                    ("array", [
+                        ("num", 1.0),
+                        ("num", 2.0),
+                    ]),
+                ),
+                (
+                    "body_decl",
+                    "b",
+                    ("tensor", [(3, "invariant")]),
+                    ("array", [
+                        ("num", 1.0),
+                        ("num", 2.0),
+                        ("num", 3.0),
+                    ]),
+                ),
+            ],
+            body=(
+                "list",
+                [
+                    ("var", "A"),
+                    ("var", "b"),
+                ],
+            ),
+            return_type="list",
+        )
+
+        func_env = {}
+
+        check_function("f", fdef, func_env, {}, errors.append)
+        assert errors == []
+        assert func_env["f"][1] == TList((vec2, vec3))
+
         # A function without a declared return type does not report an error,
         # instead type is inferred so the type checker can proceed to check the
         # remaning program.
