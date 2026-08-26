@@ -310,7 +310,7 @@ class TestStmtBodyDecl:
         assert errors == [
             "In 'f': 'x' declared ℝ[4], inferred ℝ: Cannot unify tensor ℝ[4] with scalar ℝ"  # noqa: E501
         ]
-    
+
     def test_list_declared_and_inferred(self):
         """Inferred list preserves its element types."""
         errors = []
