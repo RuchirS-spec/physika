@@ -49,6 +49,22 @@ index_nested_list
 index_mixed_list
 
 
+# return list from a function which contains different elements and use indexing.
+# since we are returning only list, the inner elements here should preserve the types.
+def return_diff_list(x: ℝ): list:
+    A: ℝ[2, 2] = [[1, 2], [3, 4]]
+    b: ℝ[2] = [5, 6]
+    results: list = [A, b]
+    return results
+
+diff_list_results: list = return_diff_list(1.0)
+diff_list_first_index: ℝ[2, 2] = diff_list_results[0]
+diff_list_second_index: ℝ[2] = diff_list_results[1]
+
+diff_list_first_index
+diff_list_second_index
+
+
 # ---------------------------------
 # differentiation
 # ---------------------------------

@@ -48,6 +48,8 @@ class TestLists:
         index_simple_nested_list = lists_ns["index_simple_nested_list"]
         index_nested_list = lists_ns["index_nested_list"]
         index_mixed_list = lists_ns["index_mixed_list"]
+        diff_list_first_index = lists_ns["diff_list_first_index"]
+        diff_list_second_index = lists_ns["diff_list_second_index"]
 
         assert simple_index_x == 1.0
         assert simple_complex_index == 2j
@@ -61,6 +63,8 @@ class TestLists:
         assert torch.equal(index_mixed_list[0],
                            torch.tensor([9.0, 3.0, 5.0, 1.0, 4.0]))
         assert torch.equal(index_mixed_list[1], torch.tensor([1j, 2j, 3j]))
+        assert torch.equal(diff_list_first_index, torch.tensor([[1, 2], [3, 4]]))
+        assert torch.equal(diff_list_second_index, torch.tensor([5, 6]))
 
     def test_lists_differentiation(self, lists_ns):
         # Tests for lists differentiability

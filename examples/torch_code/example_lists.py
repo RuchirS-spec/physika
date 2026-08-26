@@ -7,6 +7,12 @@ from physika.runtime import print
 from physika.runtime import compute_grad
 
 # === Functions ===
+def return_diff_list(x):
+    A = torch.tensor([[1, 2], [3, 4]], device=DEVICE)
+    b = torch.tensor([5, 6], device=DEVICE)
+    results = [A, b]
+    return results
+
 def f_scalar(x):
     return (x ** 2)
 
@@ -81,6 +87,11 @@ print(simple_complex_index)
 print(index_simple_nested_list)
 print(index_nested_list)
 print(index_mixed_list)
+diff_list_results = return_diff_list(1.0)
+diff_list_first_index = diff_list_results[int(0)]
+diff_list_second_index = diff_list_results[int(1)]
+print(diff_list_first_index)
+print(diff_list_second_index)
 scalar_grad = compute_grad(f_scalar, x[int(0)])
 tensor_grad = compute_grad(f_tensor, y)
 nested_grad = compute_grad(f_tensor, mixed_list[int(1)])
