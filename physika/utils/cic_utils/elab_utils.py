@@ -491,7 +491,7 @@ def lit_to_real(cic: Expr, expected_type: Expr) -> Expr:
         return cic
     if (isinstance(cic, Lit) and isinstance(cic.val, int)
             and not isinstance(cic.val, bool)):
-        return Lit(float(cic.val))
+        return Lit(float(cic.val))  # type: ignore[arg-type]
     if (isinstance(cic, Proj) and cic.type_name == "OfNat" and cic.idx == 0
             and isinstance(cic.expr, App) and isinstance(cic.expr.func, Const)
             and cic.expr.func.name == "instOfNatNat"
@@ -1976,7 +1976,7 @@ def try_elaborate_accumulator_body(loop_body: list, var_name: str,
     if isinstance(then_cic, MVar):
         return None
     if if_stmt[0] == "loop_if":
-        else_cic: Expr = Lit(0.0)
+        else_cic: Expr = Lit(0.0)  # type: ignore[arg-type]
     else:
         else_rhs = _single_pluseq_rhs(if_stmt[3])
         if else_rhs is None:

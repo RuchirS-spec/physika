@@ -790,7 +790,7 @@ def elab_expr_num(node: tuple, fvar_env: Dict[str, Expr], elab: ElabT,
     """
     raw = node[1]
     if isinstance(raw, float):
-        return Lit(raw)
+        return Lit(raw)  # type: ignore[arg-type]
     target = safe_whnf(elab,
                        expected_type) if expected_type is not None else None
     # defaults to Nat
@@ -970,7 +970,10 @@ def elab_expr_array(node: tuple, fvar_env: Dict[str, Expr], elab: ElabT,
     length = 0
     for elem in reversed(coerced):
         vec = App(
-            App(App(App(Const("Vec.cons", ()), elem_type), Lit(length)), elem),
+            App(
+                App(App(Const("Vec.cons", ()), elem_type),
+                    Lit(length)),  # type: ignore[arg-type]
+                elem),
             vec)
         length += 1
     return vec
