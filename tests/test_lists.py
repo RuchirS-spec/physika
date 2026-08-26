@@ -63,7 +63,8 @@ class TestLists:
         assert torch.equal(index_mixed_list[0],
                            torch.tensor([9.0, 3.0, 5.0, 1.0, 4.0]))
         assert torch.equal(index_mixed_list[1], torch.tensor([1j, 2j, 3j]))
-        assert torch.equal(diff_list_first_index, torch.tensor([[1, 2], [3, 4]]))
+        assert torch.equal(diff_list_first_index, torch.tensor([[1, 2], [3,
+                                                                         4]]))
         assert torch.equal(diff_list_second_index, torch.tensor([5, 6]))
 
     def test_lists_differentiation(self, lists_ns):
