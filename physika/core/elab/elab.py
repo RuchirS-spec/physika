@@ -697,10 +697,7 @@ class Elab:
                                    level_params=(),
                                    type=ctor_type,
                                    value=None)
-            # No ι-reduction rules (rec_info=None) — a struct is only ever
-            # eliminated via Proj (field access), never a recursor; this
-            # stub ConstantInfo exists purely to satisfy InductiveInfo's
-            # schema and is never referenced as a Const anywhere.
+            # No ι-reduction rules (rec_info=None)
             rec_ci = ConstantInfo(name=f"{name}.rec",
                                   level_params=(),
                                   type=_TYPE_0_LEVEL,
@@ -1083,56 +1080,3 @@ class Elab:
         True
         """
         self.state.mctx.restore(snap)
-
-    # ── Run tactics ───────────────────────────────────────────────────
-
-    # def run_tactics(self, goal: Expr, tactic_block: list) -> Expr:
-    #     """Execute a tactic block to produce a proof of *goal*.
-
-    #     Delegates to ``_tactic_run`` which processes tactics recursively.
-
-    #     Supported tactics
-    #     -----------------
-    #     ("exact",         term)        — close goal with *term*
-    #     ("rfl",)                       — close ``Eq α a a`` with ``Eq.refl α a``
-    #     ("intro",         name)        — introduce a ``ForallE`` binder
-    #     ("apply",         func)        — reduce goal to *func*'s premise
-    #     ("assumption",)                — close goal from a local hypothesis
-    #     ("induction",     var)         — Nat induction (zero + succ+IH cases)
-    #     ("cases",         var)         — Nat case split (zero + succ, no IH)
-    #     ("have",          h, tp, subs) — introduce a sub-goal and bind its proof
-    #     ("rewrite_builder", builder)   — rewrite goal via an Eq proof
-    #     ("exact_builder", builder)     — exact with lazily-resolved term
-    #     ("apply_builder", builder)     — apply with lazily-resolved term
-
-    #     Parameters
-    #     ----------
-    #     goal         : the Prop/Type to prove
-    #     tactic_block : list of tactic tuples (see above)
-
-    #     Returns
-    #     -------
-    #     Expr
-    #         A proof term whose type is definitionally equal to *goal*.
-
-    #     Raises
-    #     ------
-    #     TacticError
-    #         Any tactic failure — wrong type, open goal after block, etc.
-
-    #     Examples
-    #     --------
-    #     >>> from physika.utils.cic_utils.inductive_utils import mk_builtin_env
-    #     >>> from physika.core.elab import Elab
-    #     >>> from physika.core.expr import App, Const
-    #     >>> elab = Elab(mk_builtin_env())
-    #     >>> NAT  = Const("Nat",      ())
-    #     >>> ZERO = Const("Nat.zero", ())
-    #     >>> eq_goal = App(App(App(Const("Eq", ()), NAT), ZERO), ZERO)
-    #     >>> proof = elab.run_tactics(eq_goal, [("rfl",)])
-    #     >>> proof == App(App(Const("Eq.refl", ()), NAT), ZERO)
-    #     True
-    #     """
-    #     return _tactic_run(self, goal, list(tactic_block))
-
-    # ── Save / restore ────────────────────────────────────────────────

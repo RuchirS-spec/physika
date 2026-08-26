@@ -46,15 +46,44 @@ from physika.core.expr import (
     Lit,
     MVar,
 )
-from physika.utils.cic_utils.expr_utils import (
-    get_app_fn_args,
-    expr_to_str,
-)
+from physika.utils.cic_utils.expr_utils import get_app_fn_args
 from physika.core.reduction import whnf
 
 from physika.core.elab.dim_typespec import (_REAL_CONST, _TYPE_0_LEVEL,
                                             _NAT_CONST, _NAT_SUB,
                                             typespec_to_cic_resolved)
+
+
+def expr_to_str(e: Expr) -> str:
+    """
+    Expression to string helper fucntion used for writing when ``t``/``dim``
+    isn't one of ``error_type_str``'s own named cases (Const, Vec
+    App, FVar, MVar, Lit).
+
+    Parameters
+    ----------
+    e : Expr
+        CIC term to render.
+
+    Example
+    -------
+    >>> from physika.core.elab.body_elab import expr_to_str
+    >>> from physika.core.expr import App, Const
+    >>> expr_to_str(Const("Real", ()))
+    'Real'
+    >>> node = App(App(Const("Nat.add", ()), Const("n", ())), Const("one", ()))
+    >>> expr_to_str(node)
+    'Nat.add n one'
+    """
+    if isinstance(e, Const):
+        return e.name
+    if isinstance(e, App):
+        head, args = get_app_fn_args(e)
+        if not isinstance(head, Const):
+            return "?"
+        args_s = " ".join(expr_to_str(a) for a in args)
+        return f"{head.name} {args_s}" if args_s else head.name
+    return "?"
 
 
 def error_type_str(t: Expr, elab: ElabT) -> str:
@@ -99,10 +128,7 @@ def error_type_str(t: Expr, elab: ElabT) -> str:
             elif isinstance(dim, Lit):
                 dim_s = str(dim.val)
             else:
-                try:
-                    dim_s = expr_to_str(dim)
-                except Exception:
-                    dim_s = "?"
+                dim_s = expr_to_str(dim)
             inner = error_type_str(args[0], elab)
             if inner.startswith("ℝ["):
                 return f"ℝ[{dim_s}, {inner[2:-1]}]"
@@ -116,10 +142,7 @@ def error_type_str(t: Expr, elab: ElabT) -> str:
         return "?"
     if isinstance(t, Lit):
         return str(t.val)
-    try:
-        return expr_to_str(t)
-    except Exception:
-        return "?"
+    return expr_to_str(t)
 
 
 def elaborate_expr(node: ASTNode,
@@ -1469,383 +1492,15 @@ EXPR_TAG_HANDLERS = {
     "pow": elab_expr_pow,
     "neg": elab_expr_neg,
     "body_if_else_return": elab_expr_if_else_return,
-    # "tuple_return": elab_expr_tuple_return,
-    # "sample_expr": elab_expr_sample,
-    # "typed_sample_expr": elab_expr_sample,
 }
 
 TAG_HANDLERS = {
     "body_decl": elab_body_decl,
-    # "body_tuple_unpack": elab_body_tuple_unpack,
     "body_assign": elab_body_assign,
-    # "body_zeros_decl": elab_body_zeros_decl,
     "body_for": elab_body_for,
     "body_for_range": elab_body_for,
     "body_if": elab_body_if,
     "body_if_else": elab_body_if,
-    # "sample": elab_sample,
-    # "typed_sample": elab_sample,
-    # "dual_sample": elab_body_dual_sample,
     "body_if_return": elab_body_if_return,
     "body_if_else_return": elab_body_if_else_return,
 }
-
-# def elaborate_dist_call(call_node: Optional[tuple], fvar_env: Dict[str, Expr],
-#                          elab: Elab, errors: List[str]) -> Expr:
-#     """
-#     Elaborate a distribution call to a CIC term.
-
-#     Parameters
-#     ----------
-#     call_node : Optional[tuple]
-#         Distribution call ``("call", dist_name, args)`` as AST node.
-#     fvar_env : Dict[str, Expr]
-#         Variable Variable names in scope.
-#     elab : Elab
-#         Elaborator object with current local and metavariable context.
-#     errors : List[str]
-#         List of error messages so far.
-
-#     Example
-#     -------
-#     >>> from physika.core.elab.body_elab import elaborate_dist_call
-#     >>> from physika.core.elab.elab import Elab
-#     >>> from physika.core.environment import Environment
-#     >>> elab = Elab(Environment())
-#     >>> call_node = ("call", "Normal", [("num", 0.0), ("num", 1.0)])
-#     >>> elaborate_dist_call(call_node, {}, elab, [])
-#     App(func=App(func=Const(name='Real.sample_normal', levels=()), arg=Lit(val=0.0)), arg=Lit(val=1.0))
-#     """
-#     if not (isinstance(call_node, tuple) and call_node
-#             and call_node[0] == "call"):
-#         return elab.new_mvar("_sample", _TYPE_0_LEVEL)
-#     dist_name = call_node[1]
-#     if dist_name not in DIST_SCALAR_AXIOM:
-#         return elab.new_mvar("_sample", _TYPE_0_LEVEL)
-#     axiom_name, n_params = DIST_SCALAR_AXIOM[dist_name]
-#     raw_args = call_node[2] if len(call_node) > 2 else []
-#     param_args, shape_args, _mode = extract_dist_args(raw_args, n_params)
-#     if len(param_args) != n_params:
-#         return elab.new_mvar("_sample", _TYPE_0_LEVEL)
-#     param_cics = [elaborate_expr(a, fvar_env, elab, errors) for a in param_args]
-#     if any(isinstance(c, MVar) for c in param_cics):
-#         return elab.new_mvar("_sample", _TYPE_0_LEVEL)
-#     scalar_call: Expr = Const(axiom_name, ())
-#     for c in param_cics:
-#         scalar_call = App(scalar_call, c)
-#     if not shape_args:
-#         return scalar_call
-#     n_cic = elaborate_expr(shape_args[0], fvar_env, elab, errors)
-#     if isinstance(n_cic, MVar):
-#         return elab.new_mvar("_sample", _TYPE_0_LEVEL)
-#     fin_n = App(Const("Fin", ()), n_cic)
-#     # scalar_call has no loose BVars (built purely from FVars/Consts/
-#     # Lits), so it can be used directly as a constant-function Lam body —
-#     # no abstract_fvars/instantiate needed, unlike _try_elaborate_sum_
-#     # accumulator above (whose body genuinely references the loop var).
-#     fn = Lam("i", fin_n, scalar_call, BinderInfo.DEFAULT)
-#     # Always Real — every scalar sampling axiom (Real.sample_*) returns
-#     # Real, so the tabulated element type is never anything else.
-#     return App(App(App(Const("Vec.tabulate", ()), _REAL_CONST), n_cic), fn)
-
-# def elab_body_tuple_unpack(stmt: tuple, i: int, stmts: List[tuple],
-#                            body_node: Optional[tuple],
-#                            terminal_node: Optional[tuple],
-#                            cur_env: Dict[str, Expr], cur_elab: Elab,
-#                            local_decls: List[Tuple[str, Expr]],
-#                            fvar_names: Dict[FVarId, str], errors: List[str],
-#                            context_label: str) -> HandlerResult:
-#     """
-#     Handle a ``body_tuple_unpack`` statement (``a, b : T1, T2 = e1, e2``)
-#     — body-level counterpart of ``tuple_return``'s multi-value
-#     return. Every target gets its own opaque FVar (same ``with_local`` +
-#     ``local_decls`` convention ``body_decl`` uses), but RHS
-#     expressions are all elaborated first, against *same*
-#     pre-statement ``cur_env``, before any target is bound — matching
-#     Python/Physika tuple-unpack semantics (``a, b = b, a`` swaps rather
-#     than aliasing).
-
-#     See ``elab_body_decl`` for shared parameter/return contract.
-
-#     Example
-#     -------
-#     >>> from physika.core.elab.body_elab import elab_body_tuple_unpack
-#     >>> from physika.core.elab.elab import Elab
-#     >>> from physika.core.environment import Environment
-#     >>> elab = Elab(Environment())
-#     >>> stmt = ("body_tuple_unpack", [("a", "ℝ"), ("b", "ℝ")],
-#     ...         ("expr_list", [("num", 1.0), ("num", 2.0)]))
-#     >>> env, elab, decls, names, ctrl = elab_body_tuple_unpack(
-#     ...     stmt, 0, [stmt], None, None, {}, elab, [], {}, [], "f")
-#     >>> sorted(env)
-#     ['a', 'b']
-#     """
-#     _, targets, expr_list_node = stmt
-#     if (isinstance(expr_list_node, tuple) and len(expr_list_node) == 2
-#             and expr_list_node[0] == "expr_list"
-#             and len(expr_list_node[1]) == len(targets)):
-#         computed = []
-#         for (var_name, type_spec), expr_node in zip(
-#                 targets, expr_list_node[1]):
-#             # A dim var in type_spec is resolved in local env
-#             # (cur_env), not a fresh Pi-binder — already bound earlier.
-#             decl_type = typespec_to_cic_resolved(type_spec, cur_env.get)
-#             rhs_cic = elaborate_expr(expr_node, cur_env, cur_elab,
-#                                       errors, expected_type=decl_type)
-#             computed.append((var_name, decl_type, rhs_cic))
-#         for var_name, decl_type, rhs_cic in computed:
-#             cur_env, cur_elab = bind_declared_local(
-#                 var_name, decl_type, rhs_cic, cur_env, cur_elab,
-#                 local_decls, fvar_names, errors, context_label)
-#     return cur_env, cur_elab, local_decls, fvar_names, None
-
-# def elab_body_zeros_decl(stmt: tuple, i: int, stmts: List[tuple],
-#                          body_node: Optional[tuple],
-#                          terminal_node: Optional[tuple],
-#                          cur_env: Dict[str, Expr], cur_elab: Elab,
-#                          local_decls: List[Tuple[str, Expr]],
-#                          fvar_names: Dict[FVarId, str], errors: List[str],
-#                          context_label: str) -> HandlerResult:
-#     """
-#     Handle a ``body_zeros_decl`` statement (``x: T`` with no
-#     initializer). Recognizes two paired-loop idioms immediately
-#     following it — a sum-accumulator (``try_elaborate_sum_accumulator``)
-#     or a multi-index construction/reduction loop (outer product, matmul,
-#     tensor contraction, ... — ``_try_elaborate_tabulate_construction``)
-#     — and otherwise, if nothing later reassigns ``var_name``, binds it to
-#     a plain ``Vec.zeros`` stub.
-
-#     NOTE: ``tab_cic`` branch below returns ``("skip_to", i + 2)``,
-#     not ``i + 1`` — this looks off at a glance but is correct: the
-#     paired construction loop this recognizes is always exactly
-#     ``stmts[i + 1]`` (checked directly, no gap-scanning like the
-#     ``sum_cic``/``find_accum_loop_index`` case allows), so landing at
-#     ``i + 2`` is "one index past consumed loop," same place
-#     ``sum_cic``'s ``("skip_to", j)`` lands once caller's own
-#     ``i += 1`` fallthrough is added on top of it. Verified empirically:
-#     a statement placed right after a recognized construction loop is
-#     elaborated normally, not skipped.
-
-#     See ``elab_body_decl`` for shared parameter/return contract.
-
-#     Example
-#     -------
-#     >>> from physika.core.elab.body_elab import elab_body_zeros_decl
-#     >>> from physika.core.elab.elab import Elab
-#     >>> from physika.core.environment import Environment
-#     >>> elab = Elab(Environment())
-#     >>> stmt = ("body_zeros_decl", "v", ("tensor", [(3, "invariant")]))
-#     >>> env, elab, decls, names, ctrl = elab_body_zeros_decl(
-#     ...     stmt, 0, [stmt], None, None, {}, elab, [], {}, [], "f")
-#     >>> env["v"]
-#     App(func=Const(name='Vec.zeros', levels=()), arg=Lit(val=3))
-#     """
-#     _, var_name, type_spec = stmt
-#     j = find_accum_loop_index(stmts, i + 1, var_name)
-#     next_stmt = stmts[j] if j is not None else None
-#     sum_cic = try_elaborate_sum_accumulator(
-#         var_name, type_spec, next_stmt, cur_env, cur_elab, errors
-#     )
-#     # A multi-index construction/reduction loop (outer product,
-#     # matmul, tensor contraction, ...) immediately following this
-#     # zeros-decl — see _try_elaborate_tabulate_construction's own
-#     # docstring for exactly which shapes match. Computed
-#     # unconditionally alongside sum_cic (both attempts are cheap
-#     # no-ops — an early shape check — for a decl that pairs with
-#     # neither), not inside an elif's own condition, since
-#     # new_mvar/with_local are side-effecting and must only ever
-#     # run once per statement.
-#     next_for_stmt = (stmts[i + 1] if i + 1 < len(stmts)
-#                      and isinstance(stmts[i + 1], tuple)
-#                      and stmts[i + 1]
-#                      and stmts[i + 1][0] in ("body_for_map",
-#                                               "body_for_accum")
-#                      else None)
-#     tab_cic = (_try_elaborate_tabulate_construction(
-#         var_name, type_spec, next_for_stmt, cur_env, cur_elab, errors)
-#         if next_for_stmt is not None else None)
-#     control = None
-#     if sum_cic is not None:
-#         cur_env = {**cur_env, var_name: sum_cic}
-#         cur_env = invalidate_loop_locals(
-#             next_stmt[2], cur_env, cur_elab, exclude=frozenset({var_name})
-#         )
-#         control = ("skip_to", j)
-#     elif tab_cic is not None:
-#         cur_env = {**cur_env, var_name: tab_cic}
-#         control = ("skip_to", i + 2)
-#     elif (isinstance(type_spec, tuple) and type_spec[0] == "tensor"
-#           and len(type_spec[1]) == 1
-#           and var_name not in body_stmts_assigned_names(stmts[i + 1:])):
-#         # No accumulator loop pairs with this decl, and nothing
-#         # later in body reassigns var_name either (whole-var
-#         # reassign, indexed write, or loop mutation) — the
-#         # "declare a zero vector and immediately return it
-#         # unmutated" stub pattern. Bind to a real Vec.zeros term
-#         # instead of leaving var_name out of cur_env entirely
-#         # (which would surface as an unresolved MVar at the
-#         # return statement). Narrow fix: does not attempt to
-#         # represent actual mutation, which this guard rules out.
-#         dim_expr = dim_to_cic_resolved(type_spec[1][0][0], cur_env.get)
-#         if dim_expr is not None:
-#             cur_env = {**cur_env, var_name:
-#                        App(Const("Vec.zeros", ()), dim_expr)}
-#     return cur_env, cur_elab, local_decls, fvar_names, control
-
-# def elab_sample(stmt: tuple, i: int, stmts: List[tuple],
-#                 body_node: Optional[tuple], terminal_node: Optional[tuple],
-#                 cur_env: Dict[str, Expr], cur_elab: Elab,
-#                 local_decls: List[Tuple[str, Expr]],
-#                 fvar_names: Dict[FVarId, str], errors: List[str],
-#                 context_label: str) -> HandlerResult:
-#     """
-#     Handle a ``sample``/``typed_sample`` statement.
-
-#     See ``elab_body_decl`` for shared parameter/return contract.
-
-#     Example
-#     -------
-#     >>> from physika.core.elab.body_elab import elab_sample
-#     >>> from physika.core.elab.elab import Elab
-#     >>> from physika.utils.cic_utils.inductive_utils import mk_builtin_env
-#     >>> elab = Elab(mk_builtin_env())
-#     >>> stmt = ("sample", "eps", ("call", "Normal", [("num", 0.0), ("num", 1.0)]))
-#     >>> env, elab, decls, names, ctrl = elab_sample(
-#     ...     stmt, 0, [stmt], None, None, {}, elab, [], {}, [], "f")
-#     >>> list(env)
-#     ['eps']
-#     """
-#     from physika.core.elab.body_elab import elaborate_dist_call
-#     from physika.core.elab.dim_typespec import typespec_to_cic_resolved
-
-#     if stmt[0] == "typed_sample":
-#         var_name, type_spec, call_node = stmt[1], stmt[2], stmt[3]
-#     else:
-#         var_name, call_node = stmt[1], stmt[2]
-#         type_spec = None
-#     sample_cic = elaborate_dist_call(call_node, cur_env, cur_elab, errors)
-#     if not isinstance(sample_cic, MVar):
-#         # A dim var in type_spec is resolved in local env (cur_env),
-#         # not a fresh Pi-binder — already bound earlier.
-#         decl_type = (typespec_to_cic_resolved(type_spec, cur_env.get)
-#                     if type_spec is not None
-#                     else safe_infer_type(cur_elab, sample_cic))
-#         if decl_type is not None:
-#             cur_env, cur_elab = bind_local(
-#                 var_name, sample_cic, decl_type, cur_env, cur_elab,
-#                 local_decls, fvar_names)
-#     return cur_env, cur_elab, local_decls, fvar_names, None
-
-# def elab_body_dual_sample(stmt: tuple, i: int, stmts: List[tuple],
-#                           body_node: Optional[tuple],
-#                           terminal_node: Optional[tuple],
-#                           cur_env: Dict[str, Expr], cur_elab: Elab,
-#                           local_decls: List[Tuple[str, Expr]],
-#                           fvar_names: Dict[FVarId, str], errors: List[str],
-#                           context_label: str) -> HandlerResult:
-#     """
-#     Handle a ``dual_sample`` statement.
-
-#     See ``elab_body_decl`` for shared parameter/return contract.
-
-#     Example
-#     -------
-#     >>> from physika.core.elab.body_elab import elab_body_dual_sample
-#     >>> from physika.core.elab.elab import Elab
-#     >>> from physika.utils.cic_utils.inductive_utils import mk_builtin_env
-#     >>> elab = Elab(mk_builtin_env())
-#     >>> call_node = ("call", "Bernoulli", [("num", 0.5)])
-#     >>> stmt = ("dual_sample", "b", "ℝ", "lp", "ℝ", call_node)
-#     >>> env, elab, decls, names, ctrl = elab_body_dual_sample(
-#     ...     stmt, 0, [stmt], None, None, {}, elab, [], {}, [], "f")
-#     >>> sorted(env)
-#     ['_dual_b', 'b', 'lp']
-#     """
-#     dual_cic = _elaborate_dual_sample(stmt, cur_env, cur_elab, errors)
-#     if dual_cic is not None:
-#         name1, name2 = stmt[1], stmt[3]
-#         prod_type = safe_infer_type(cur_elab, dual_cic)
-#         if prod_type is not None:
-#             hidden_name = f"_dual_{name1}"
-#             cur_env, cur_elab = bind_local(
-#                 hidden_name, dual_cic, prod_type, cur_env, cur_elab,
-#                 local_decls, fvar_names)
-#             hidden_fv = cur_env[hidden_name]
-#             fst_proj = Proj("Prod", 0, hidden_fv)
-#             snd_proj = Proj("Prod", 1, hidden_fv)
-#             fst_type = safe_infer_type(cur_elab, fst_proj)
-#             snd_type = safe_infer_type(cur_elab, snd_proj)
-#             if fst_type is not None and snd_type is not None:
-#                 cur_env, cur_elab = bind_local(
-#                     name1, fst_proj, fst_type, cur_env, cur_elab,
-#                     local_decls, fvar_names)
-#                 cur_env, cur_elab = bind_local(
-#                     name2, snd_proj, snd_type, cur_env, cur_elab,
-#                     local_decls, fvar_names)
-#     return cur_env, cur_elab, local_decls, fvar_names, None
-
-# def elab_expr_tuple_return(node: tuple, fvar_env: Dict[str, Expr], elab: Elab,
-#                            errors: List[str], expected_type: Optional[Expr]) -> Expr:
-#     """
-#     Handle a ``tuple_return`` node — ``return a, b, ...``, a multi-value
-#     return parsed as ``("tuple_return", a, b, ...)``.
-
-#     Builds same right-associative Prod nesting ``"tuple_type"``
-#     case of ``typespec_to_cic_resolved`` (via ``typespec_to_cic`` or the
-#     local_env-resolved call above) builds for declared return type
-#     (``Prod.mk t1 (Prod t2 t3...) v1 (Prod.mk v2 ...)``), so two
-#     actually agree instead of return type silently defaulting to a
-#     plain ℝ while body builds nothing at all.
-
-#     See ``elab_expr_var`` for shared parameter/return contract.
-
-#     Example
-#     -------
-#     >>> from physika.core.elab.body_elab import elab_expr_tuple_return
-#     >>> from physika.core.elab.elab import Elab
-#     >>> from physika.core.environment import Environment
-#     >>> from physika.core.expr import MVar
-#     >>> elab = Elab(Environment())
-#     >>> node = ("tuple_return", ("num", 1.0), ("num", 2.0))
-#     >>> isinstance(elab_expr_tuple_return(node, {}, elab, [], None), MVar)
-#     False
-#     """
-#     values = node[1:]
-#     cics = [elaborate_expr(v, fvar_env, elab, errors) for v in values]
-#     if not cics or any(isinstance(c, MVar) for c in cics):
-#         return elab.new_mvar("_tuple_return", _TYPE_0_LEVEL)
-#     result = cics[-1]
-#     for c in reversed(cics[:-1]):
-#         try:
-#             t_c = elab.infer_type(c)
-#             t_result = elab.infer_type(result)
-#         except Exception:
-#             return elab.new_mvar("_tuple_return", _TYPE_0_LEVEL)
-#         result = App(App(App(App(Const("Prod.mk", ()), t_c), t_result), c), result)
-#     return result
-
-# def elab_expr_sample(node: tuple, fvar_env: Dict[str, Expr], elab: Elab,
-#                      errors: List[str], expected_type: Optional[Expr]) -> Expr:
-#     """
-#     Handle a ``sample_expr``/``typed_sample_expr`` node — inline
-#     sampling inside a for-comprehension body, e.g.
-#     ``for i -> ε : ℝ[2] ~ Normal(mu, sigma, 2)``.
-
-#     loop variable itself is irrelevant to sample (each iteration
-#     draws its own independent value; see ``elaborate_dist_call``), only
-#     distribution call matters here.
-
-#     See ``elab_expr_var`` for shared parameter/return contract.
-
-#     Example
-#     -------
-#     >>> from physika.core.elab.body_elab import elab_expr_sample
-#     >>> from physika.core.elab.elab import Elab
-#     >>> from physika.core.environment import Environment
-#     >>> elab = Elab(Environment())
-#     >>> call_node = ("call", "Normal", [("num", 0.0), ("num", 1.0)])
-#     >>> elab_expr_sample(("sample_expr", "eps", call_node), {}, elab, [], None)
-#     App(func=App(func=Const(name='Real.sample_normal', levels=()), arg=Lit(val=0.0)), arg=Lit(val=1.0))
-#     """
-#     call_node = node[3] if node[0] == "typed_sample_expr" else node[2]
-#     return elaborate_dist_call(call_node, fvar_env, elab, errors)
