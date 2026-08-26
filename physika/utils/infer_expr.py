@@ -951,8 +951,8 @@ def expr_call(node: Any,
         else:
             for i, (pt, at) in enumerate(zip(param_types, arg_types)):
                 # Convert raw typespec to Type when needed.
-                if not isinstance(pt,
-                                  (TVar, TScalar, TTensor, TFunc, TInstance)):
+                if not isinstance(
+                        pt, (TVar, TScalar, TTensor, TFunc, TInstance, TList)):
                     pt = from_typespec(pt)
                 if pt is not None and at is not None:
                     try:
@@ -960,8 +960,9 @@ def expr_call(node: Any,
                     except TypeError as e:
                         ctx.add_error(f"Arg {i} of '{func_name}': {e}")
         # return the inferred type (no errors catched during unifcation)
-        if not isinstance(ret_type, (TVar, TScalar, TTensor, TFunc, TInstance,
-                                     type(None))):  # noqa: E125
+        if not isinstance(ret_type,
+                          (TVar, TScalar, TTensor, TFunc, TInstance, TList,
+                           type(None))):  # noqa: E125
             ret = from_typespec(ret_type)
         else:
             ret = ret_type
