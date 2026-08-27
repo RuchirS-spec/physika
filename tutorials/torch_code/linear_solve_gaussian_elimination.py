@@ -1,6 +1,3 @@
-  ✓ No type errors found
-
-=== Physika generated Pytorch code ===
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -100,6 +97,3 @@ def gaussian_solve(A, b):
 A = torch.tensor([[1, 2, 1], [3, 1, (-1)], [2, (-1), 1]], device=DEVICE)
 b = torch.tensor([8, 2, 3], device=DEVICE)
 print(gaussian_solve(A, b))
-=== End Pytorch code ===
-
-[1.0, 2.0, 3.0] ∈ ℝ[3]
