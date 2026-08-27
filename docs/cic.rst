@@ -277,6 +277,52 @@ program's types and checks them against the declared ones in the elaborated CIC 
 Physika kernel makes CIC terms verifiable with its type inference and type checker
 rules, independent from elaboration.
 
+Elaboration
+-----------
+In CIC, elaboration takes parsed source code, AST parsed from a Physika file, and
+converts each AST node into an equivalent CIC expression (``Expr``). Some of these expressions contain
+metavariables (``MVar``), placeholders created with a known type but no CIC value yet. Unification
+assigns a value to a metavariable. Given two terms that must be equal, it reduces through
+the global environment's definitions, the local context's let-bindings, and metavariables already assigned in the
+metavariable context, and assigns a value to any unassigned metavariable. If any
+metavariable is still unassigned once elaboration finishes, an error is raised. This means the term is incomplete, and the
+next step, a small trusted kernel, only accepts fully elaborated terms.
+
+As a brief example, let's consider the following declaration:
+
+.. code-block:: text
+
+   x: ℝ = 1.0 + 2.0
+
+The parser produces an AST node:
+
+.. code-block:: text
+
+   ("body_decl", "x", "ℝ", ("add", ("num", 1.0), ("num", 2.0)))
+
+The goal is to produce a CIC term. That is, an expression built from one of the twelve ``Expr``
+constructors introduced earlier. Elaboration recurses into ``add`` node first. Since each operand is a
+numeral, each elaborates to a CIC literal, ``Lit(1.0)`` and ``Lit(2.0)``. Both operands
+are ``ℝ`` type, so ``add`` elaborates to the registered ``Real.add`` axiom of ``Real`` inductive type, giving the CIC term:
+
+.. code-block:: text
+
+   App(App(Const("Real.add", ()), Lit(1.0)), Lit(2.0))
+
+To simplify this example, no metavariable was needed, since both operands' types were already known.
+This term is bound to a local variable ``x``, and the trusted kernel confirms it
+have type ``ℝ``.
+
+Elaborating an addition of two real numbers might looks trivial, but the same idea scales. A dependent
+Π-type function with implicit parameters elaborates through the same process allowing to compute with dependent type,
+and so does a theorem proof. By the Curry–Howard correspondence, a theorem is itself a ``Prop`` type, and its proof is just a
+CIC term of that type. So once the proof is elaborated, checking it reduces to ordinary type checking.
+Verifying the proof term's type matches the proposition, means proof is complete.
+
+To briefly summarize, elaboration converts an AST into CIC terms for each function, top-level program
+statement, and class. Once everything is elaborated, the trusted kernel independently type-checks the whole
+program using WHNF and definitional equality as described previously.
+
 
 Physika implementation
 ----------------------
@@ -699,6 +745,27 @@ Infers an expression type (``expr: Expr``) and checks if it is equal in defintio
 ``KernelException`` otherwise. It is the analog of Lean 4's ``Environment.addDecl``, the call an
 elaborator makes to verify a declaration's body has its declared type before trusting it.
 
+``Elab``
+~~~~~~~~
+In Physika, elaboration is driven by ``Elab``, which carries the global environment, local context, and
+metavariable context. During elaboration (``.elaborate()``), functions and classes are registered first.
+Class signatures are registered as single-constructor inductive types. Function signatures, class
+method signatures, and class constructors are all elaborated into ``ForallE`` types. ``ForallE`` terms allows
+explicit parameters, implicit dimension parameters, and return type. Once every Π-type is registered, function
+bodies are elaborated, then class method bodies, and finally top-level program statements, including
+function calls.
+
+At each elaboration step, ``.infer_type`` and ``.unify()`` (both ``Elab`` methods) check terms. For example,
+unifying an inferred argument type against a Pi-type's declared binder type. The
+final check is not done by ``Elab``, but independently by trusted ``kernel.check``and
+``kernel.infer_type``.
+
+Currently in Physika, each AST node tag has its "hardcoded" elaboration rule, one per
+statement tag and one per expression tag (``TAG_HANDLERS``/ ``EXPR_TAG_HANDLERS``). This is the reason
+why the current implementation is very extense. Every new syntax form requires writing and 
+registering a new handler. We are working towards a more robust design following Lean 4's approach. 
+This is adding support for macro expansion during elaboration. Core elaboration rules would still live in main Physika,
+while users could define their own elaboration rules alongside macros.
 
 References
 ----------
