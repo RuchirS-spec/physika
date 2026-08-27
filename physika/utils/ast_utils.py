@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import Any, Callable, Literal, Union, cast
+from typing import Any, Callable, Literal, Union, cast, Optional
 from physika.utils.print_utils import print_unified_ast
 from physika.elf import REGISTRY
 # AST TYPE DEFINITIONS
@@ -512,7 +512,8 @@ def _has_complex(node: ASTNode) -> bool:
 
 def ast_to_torch_expr(node: ASTNode,
                       indent: int = 0,
-                      current_loop_var: str | set[str] | None = None) -> str:
+                      current_loop_var: str | set[str] | None = None,
+                      type_info: Optional[str] = None) -> str:
     """Convert an AST expression node to a PyTorch source code string.
 
     Recursively translates a Physika AST subtree into a valid
@@ -611,6 +612,48 @@ def ast_to_torch_expr(node: ASTNode,
         val = ast_to_torch_expr(node[1], indent, current_loop_var)
         return f"(-{val})"
 
+    elif op == "array" and type_info == "list":
+        elements = node[1]
+
+        # Check if any element in list contains complex number
+        contains_complex = any(_has_complex(e) for e in elements)
+
+        all_numeric = all(
+            isinstance(e, tuple) and
+            (e[0] == "num" or e[0] == "complex" or
+             (e[0] == "neg" and isinstance(e[1], tuple) and e[1][0] == "num"))
+            for e in elements)
+
+        # Preserve list semantics for nested array literals.
+        elem_strs = []
+        for e in elements:
+            if isinstance(e, tuple) and e[0] == "array":
+                elem_strs.append(
+                    ast_to_torch_expr(
+                        e,
+                        indent,
+                        current_loop_var,
+                        type_info="list",
+                    )
+                )
+            else:
+                elem_strs.append(
+                    ast_to_torch_expr(
+                        e,
+                        indent,
+                        current_loop_var,
+                    )
+                )
+
+        if all_numeric:
+            if contains_complex:
+                return (f"torch.tensor([{', '.join(elem_strs)}], "
+                        f"dtype=torch.complex64)")
+            return (f"torch.tensor([{', '.join(elem_strs)}], "
+                    f"device=DEVICE)")
+
+        return f"[{', '.join(elem_strs)}]"
+
     elif op == "array":
         elements = node[1]
         # Check if this is a nested array (contains other arrays)
@@ -659,32 +702,6 @@ def ast_to_torch_expr(node: ASTNode,
                     # use torch.stack
                     wrapped = [f"torch.as_tensor({s})" for s in elem_strs]
                     return f"torch.stack([{', '.join(wrapped)}])"
-
-    elif op == "list":
-        elements = node[1]
-
-        # Check if any element in list contains complex number
-        contains_complex = any(_has_complex(e) for e in elements)
-
-        all_numeric = all(
-            isinstance(e, tuple) and
-            (e[0] == "num" or e[0] == "complex" or
-             (e[0] == "neg" and isinstance(e[1], tuple) and e[1][0] == "num"))
-            for e in elements)
-
-        # convert each element to Pytorch expression
-        elem_strs = [
-            ast_to_torch_expr(e, indent, current_loop_var) for e in elements
-        ]
-
-        if all_numeric:
-            if contains_complex:
-                return (f"torch.tensor([{', '.join(elem_strs)}], "
-                        f"dtype=torch.complex64)")
-            return (f"torch.tensor([{', '.join(elem_strs)}], "
-                    f"device=DEVICE)")
-
-        return f"[{', '.join(elem_strs)}]"
 
     elif op == "slice":
         var_name = node[1]
@@ -1110,7 +1127,7 @@ def emit_body_stmts(
             _, var_name, var_type, expr = stmt
             if isinstance(expr, tuple) and expr[0] == "string":
                 equation_vars.add(var_name)
-            expr_code = generate_solve_call(expr)
+            expr_code = generate_solve_call(expr, type_info=var_type)
             lines.append(f"{prefix}{var_name} = {expr_code}")
             known_vars.append(var_name)
         elif stmt_op == "body_call":
@@ -1328,14 +1345,14 @@ def generate_function(name: str, func_def: dict[str, Any]) -> str:
     # Helper to generate solve call with known variables
     # (kept local: it accumulates known_vars/equation_vars as statements
     # are processed)
-    def generate_solve_call(expr):
+    def generate_solve_call(expr, type_info=None):
         if isinstance(expr,
                       tuple) and expr[0] == "call" and expr[1] == "solve":
             args = expr[2]
             arg_strs = [ast_to_torch_expr(arg) for arg in args]
             # Add known variables as keyword arguments (exclude equation vars)
             return f"solve({', '.join(arg_strs)})"
-        return ast_to_torch_expr(expr)
+        return ast_to_torch_expr(expr, type_info=type_info)
 
     # Use if/else (not torch.where) when all params are scalars
     # — allows recursion
@@ -1550,7 +1567,7 @@ def generate_statement(stmt: ASTNode,
         name = stmt[1]
         type_spec = stmt[2]
         expr = stmt[3]
-        expr_code = ast_to_torch_expr(expr)
+        expr_code = ast_to_torch_expr(expr, type_info=type_spec)
 
         # Class instance
         if (isinstance(type_spec, tuple) and type_spec[0] == "struct_type"
