@@ -55,6 +55,7 @@ class TestExprContext:
         assert ctx.func_env is func_env
         assert ctx.class_env is class_env
         assert ctx.add_error is cb
+        assert ctx.type_info is None
 
     def test_empty_dicts(self):
         """
@@ -112,6 +113,23 @@ class TestExprContext:
                           add_error=[].append)
         env["y"] = T_NAT
         assert ctx.env["y"] == T_NAT
+    
+    def test_type_info(self):
+        """
+        ``type_info`` is stored when provided.
+        """
+        type_info = TList(())
+
+        ctx = ExprContext(
+            env={},
+            s=Substitution(),
+            func_env={},
+            class_env={},
+            add_error=[].append,
+            type_info=type_info,
+        )
+
+        assert ctx.type_info is type_info
 
 
 def make_ctx(env=None, s=None, func_env=None, class_env=None, errors=None):
