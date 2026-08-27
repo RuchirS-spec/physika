@@ -39,12 +39,13 @@ class ExprContext:
     """
 
     def __init__(self, env: dict, s: Substitution, func_env: dict,
-                 class_env: dict, add_error: Callable) -> None:
+                 class_env: dict, add_error: Callable, type_info: Optional[Type] = None) -> None:
         self.env = env
         self.s: Substitution = s
         self.func_env: dict = func_env
         self.class_env: dict = class_env
         self.add_error: Callable = add_error
+        self.type_info: Optional[Type] = type_info
 
 
 def expr_num(node: Any,
@@ -321,8 +322,20 @@ def expr_list(node: Any,
     elem_types = []
     cur = ctx.s
     for e in elements:
-        et, cur = infer_expr(e, ctx.env, cur, ctx.func_env, ctx.class_env,
-                             ctx.add_error)
+        if isinstance(e, tuple) and e[0] == "array":
+            # A nested array inside a list is treated as another list.
+            et, cur = infer_expr(
+                e,
+                ctx.env,
+                cur,
+                ctx.func_env,
+                ctx.class_env,
+                ctx.add_error,
+                type_info=TList(()),
+            )
+        else:
+            et, cur = infer_expr(e, ctx.env, cur, ctx.func_env, ctx.class_env,
+                                ctx.add_error)
         elem_types.append(et)
 
     return TList(tuple(elem_types)), cur
@@ -1244,6 +1257,7 @@ def infer_expr(
     func_env: dict,
     class_env: dict,
     add_error: Callable,
+    type_info: Optional[Type] = None
 ) -> Tuple[Optional[Type], Substitution]:
     """
     Infer the type of an expression AST node.
@@ -1333,9 +1347,14 @@ def infer_expr(
                       s=s,
                       func_env=func_env,
                       class_env=class_env,
-                      add_error=add_error)
+                      add_error=add_error,
+                      type_info=type_info)
     # Dispatch to the appropriate expr_* handler based on the AST tag.
     handler = EXPR_DISPATCH.get(node[0])
+
+    if node[0] == "array" and isinstance(type_info, TList):
+        return expr_list(node, ctx)
+
     if handler is not None:
         if node[0] in ("for_expr", "for_expr_range"):
             return handler(node, ctx, new_dim)
