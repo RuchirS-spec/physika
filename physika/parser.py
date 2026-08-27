@@ -1,6 +1,6 @@
 import ply.yacc as yacc
 from physika.lexer import tokens  # noqa: F401
-from physika.utils.parser_utils import find_indexed_arrays, _convert_list_ast
+from physika.utils.parser_utils import find_indexed_arrays
 import sys
 from pathlib import Path
 from physika.elf import REGISTRY
@@ -256,10 +256,7 @@ def p_func_body_stmt_assign(p):
 def p_func_body_stmt_decl(p):
     """func_body_stmt : ID COLON type_spec EQUALS func_expr NEWLINE"""
     # Typed declaration: x : R = expr
-    expr = p[5]
-    if p[3] == "list":
-        expr = _convert_list_ast(expr)
-    p[0] = ("body_decl", p[1], p[3], expr)
+    p[0] = ("body_decl", p[1], p[3], p[5])
 
 
 def p_func_body_stmt_zeros_decl(p):
@@ -705,8 +702,6 @@ def p_statement_decl(p):
     type_spec = p[3]
     expr_ast = p[5]  # This is now an AST, not an evaluated value
 
-    if type_spec == "list":
-        expr_ast = _convert_list_ast(expr_ast)
 
     # Return AST node for declaration (evaluation happens later)
     # Include line number for error reporting
