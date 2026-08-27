@@ -38,8 +38,13 @@ class ExprContext:
     {}
     """
 
-    def __init__(self, env: dict, s: Substitution, func_env: dict,
-                 class_env: dict, add_error: Callable, type_info: Optional[Type] = None) -> None:
+    def __init__(self,
+                 env: dict,
+                 s: Substitution,
+                 func_env: dict,
+                 class_env: dict,
+                 add_error: Callable,
+                 type_info: Optional[Type] = None) -> None:
         self.env = env
         self.s: Substitution = s
         self.func_env: dict = func_env
@@ -335,7 +340,7 @@ def expr_list(node: Any,
             )
         else:
             et, cur = infer_expr(e, ctx.env, cur, ctx.func_env, ctx.class_env,
-                                ctx.add_error)
+                                 ctx.add_error)
         elem_types.append(et)
 
     return TList(tuple(elem_types)), cur
@@ -1251,13 +1256,13 @@ EXPR_DISPATCH: dict = {
 
 
 def infer_expr(
-    node: ASTNode,
-    env: dict,
-    s: Substitution,
-    func_env: dict,
-    class_env: dict,
-    add_error: Callable,
-    type_info: Optional[Type] = None
+        node: ASTNode,
+        env: dict,
+        s: Substitution,
+        func_env: dict,
+        class_env: dict,
+        add_error: Callable,
+        type_info: Optional[Type] = None
 ) -> Tuple[Optional[Type], Substitution]:
     """
     Infer the type of an expression AST node.

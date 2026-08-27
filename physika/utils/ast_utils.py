@@ -634,16 +634,14 @@ def ast_to_torch_expr(node: ASTNode,
                         indent,
                         current_loop_var,
                         type_info="list",
-                    )
-                )
+                    ))
             else:
                 elem_strs.append(
                     ast_to_torch_expr(
                         e,
                         indent,
                         current_loop_var,
-                    )
-                )
+                    ))
 
         if all_numeric:
             if contains_complex:

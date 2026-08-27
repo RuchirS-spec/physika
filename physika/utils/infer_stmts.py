@@ -1,5 +1,5 @@
 from typing import Any, Callable, Optional, Tuple
-from physika.utils.types import Substitution, Type, T_NAT, TList, new_var, new_dim, TList  # noqa: E501
+from physika.utils.types import Substitution, Type, T_NAT, TList, new_var, new_dim  # noqa: E501
 from physika.elf import REGISTRY
 
 
@@ -67,7 +67,9 @@ class StmtContext:
         self.func_name: str = func_name
         self.return_type: Optional[Type] = return_type
 
-    def infer_type(self, expr: Any, type_info: Optional[Type] = None) -> Optional[Type]:
+    def infer_type(self,
+                   expr: Any,
+                   type_info: Optional[Type] = None) -> Optional[Type]:
         """Infer the type of a Physika expression.
 
         Calls ``infer_expr`` using the current context environments and
@@ -169,7 +171,7 @@ def stmt_body_decl(stmt: Tuple, ctx: StmtContext) -> None:
     if var_type_spec == "list":
         inferred = ctx.infer_type(expr, type_info=TList(()))
     else:
-        inferred = ctx.infer_type(expr)  
+        inferred = ctx.infer_type(expr)
     declared = from_typespec(var_type_spec)
     mismatch = False
     if declared is not None and inferred is not None:

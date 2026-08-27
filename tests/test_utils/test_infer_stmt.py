@@ -186,7 +186,7 @@ class TestInferTypeMethod:
         ctx = make_stmt_ctx(errors=errors)
         t = ctx.infer_type(("var", "unknown"))
         assert t is None
-    
+
     def test_list_literal_with_type_info(self):
         """An array literal with TList context is inferred as a TList."""
         ctx = make_stmt_ctx()
@@ -199,8 +199,7 @@ class TestInferTypeMethod:
             ],
         )
         assert ctx.infer_type(node, type_info=TList(())) == TList(
-            (T_REAL, T_REAL, T_REAL)
-        )
+            (T_REAL, T_REAL, T_REAL))
 
 
 class TestStmtBodyDecl:
@@ -357,7 +356,7 @@ class TestStmtBodyDecl:
 
         assert ctx.env['v'] == TList((a, b))
         assert errors == []
-    
+
     def test_list_assigned_to_scalar_reports_error(self):
         """A list literal cannot be assigned to a scalar variable."""
         errors = []
@@ -374,9 +373,8 @@ class TestStmtBodyDecl:
         stmt_body_decl(stmt, ctx)
 
         assert len(errors) == 1
-        assert errors[0] == (
-            "In '': 'y' declared ℝ, inferred ℝ[1]: Cannot unify scalar ℝ with tensor ℝ[1]"
-        )
+        assert errors[0] == ("In '': 'y' declared ℝ, inferred ℝ[1]: Cannot"
+                             " unify scalar ℝ with tensor ℝ[1]")
 
 
 class TestStmtBodyAssign:

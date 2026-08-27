@@ -113,7 +113,7 @@ class TestExprContext:
                           add_error=[].append)
         env["y"] = T_NAT
         assert ctx.env["y"] == T_NAT
-    
+
     def test_type_info(self):
         """
         ``type_info`` is stored when provided.

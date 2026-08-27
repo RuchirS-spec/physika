@@ -702,7 +702,6 @@ def p_statement_decl(p):
     type_spec = p[3]
     expr_ast = p[5]  # This is now an AST, not an evaluated value
 
-
     # Return AST node for declaration (evaluation happens later)
     # Include line number for error reporting
     p[0] = ("decl", name, type_spec, expr_ast, p.lineno(1))
