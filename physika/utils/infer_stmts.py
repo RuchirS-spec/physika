@@ -82,6 +82,12 @@ class StmtContext:
             ``("add", left, right)``, ``("call", name, args)``,
             ``("index", arr, idx)``, ``("for_expr", var, size, body)``,
             or a numeric literal (``int`` / ``float``).
+        
+        type_info : Optional[Type], optional
+            Optional contextual type information used to guide expression
+            inference. For example, passing ``TList(())`` for an array
+            literal causes it to be inferred as a ``TList`` rather than
+            a tensor.
 
         Returns
         -------
@@ -103,6 +109,13 @@ class StmtContext:
         ℝ
         >>> ctx.infer_type(("var", "v"))
         ℝ[3]
+        >>> errors
+        []
+        >>> ctx.infer_type(
+        ...     ("array", [("num", 1.0), ("num", 2.0)]),
+        ...     type_info=TList(()),
+        ... )
+        list
         >>> errors
         []
         """

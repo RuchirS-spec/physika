@@ -25,6 +25,11 @@ class ExprContext:
         ``return_type``, ...).
     add_error : Callable
         Error callback.
+    type_info : Optional[Type]
+        Optional contextual type information used when inferring an
+        expression. For example, an array literal with ``TList`` type
+        information can be inferred using ``expr_list`` instead of
+        ``expr_array``.
 
     Examples
     --------
@@ -36,6 +41,8 @@ class ExprContext:
     {'x': ℝ}
     >>> ctx.s
     {}
+    >>> ctx.type_info is None
+    True
     """
 
     def __init__(self,

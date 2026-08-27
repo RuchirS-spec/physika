@@ -1055,7 +1055,7 @@ def emit_body_stmts(
     lines: list[str],
     known_vars: list[str],
     equation_vars: set[str],
-    generate_solve_call: Callable[[ASTNode], str],
+    generate_solve_call: Callable[..., str],
     scalar_only: bool = False,
     expr_fn=ast_to_torch_expr,
     _equation_vars: set[str] | None = None,
@@ -1087,7 +1087,7 @@ def emit_body_stmts(
     equation_vars: set[str]
         Set of variable names bound to equation strings (used to exclude
         them from ``solve()`` keyword arguments).  Updated in place.
-    generate_solve_call: Callable[[ASTNode], str]
+    generate_solve_call: Callable[..., str],
         Callable that converts an expression AST to a Python string,
         expanding ``solve(...)`` calls with the current `known_vars`.
     expr_fn : callable, optional
