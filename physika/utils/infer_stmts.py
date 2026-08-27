@@ -82,7 +82,7 @@ class StmtContext:
             ``("add", left, right)``, ``("call", name, args)``,
             ``("index", arr, idx)``, ``("for_expr", var, size, body)``,
             or a numeric literal (``int`` / ``float``).
-        
+
         type_info : Optional[Type], optional
             Optional contextual type information used to guide expression
             inference. For example, passing ``TList(())`` for an array
