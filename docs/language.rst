@@ -58,6 +58,17 @@ Symbolic Function
 
    u: Function
 
+list
+~~~~
+
+.. code-block:: text
+
+   x: list = [1.0, 2.0, 3.0]
+   y: list = [9.0, 3.0, 5.0, 1.0, 4.0]
+
+   simple_nested_list: list = [x, y]
+   nested_list: list = [1, 2, x, [x, y]]
+
 
 Declarations and Expressions
 -----------------------------

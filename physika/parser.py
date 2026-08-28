@@ -54,6 +54,8 @@ def p_type_scalar(p):
         p[0] = "ℕ"
     elif p[1] == "ℂ":
         p[0] = "ℂ"
+    elif p[1] == "list":
+        p[0] = "list"
     else:
         p[0] = "ℝ"
 
