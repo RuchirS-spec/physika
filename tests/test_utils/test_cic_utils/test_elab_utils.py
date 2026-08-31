@@ -498,7 +498,7 @@ class TestCoerceToFin:
         degrades to an MVar.
         """
         elab = Elab(Environment())
-        errors: list = []
+        errors = []
         result = coerce_to_fin(Lit(5), Lit(3), elab, errors)
         assert isinstance(result, MVar)
         assert errors and "out of range" in errors[0]

@@ -315,7 +315,7 @@ def canon_nat_shape(expr: Expr) -> Expr:
         b = canon_nat_shape(args[1])
         av, bv = nat_lit_int(a), nat_lit_int(b)
         if av is not None and bv is not None:
-            return Lit(max(av - bv, 0))
+            return Lit(max(av - bv, 0))  # type: ignore[arg-type]
         if bv == 0:
             return a
         return App(App(head, a), b)
@@ -337,13 +337,13 @@ def canon_nat_shape(expr: Expr) -> Expr:
             lit_acc *= tv
 
     if op == "Nat.mul" and lit_acc == 0:
-        return Lit(0)
+        return Lit(0)  # type: ignore[arg-type]
 
     non_lits.sort(key=repr)
 
     ordered: List[Expr] = list(non_lits)
     if lit_acc != CANON_IDENTITY[op] or not non_lits:
-        ordered.append(Lit(lit_acc))
+        ordered.append(Lit(lit_acc))  # type: ignore[arg-type]
 
     result = ordered[-1]
     for t in reversed(ordered[:-1]):
