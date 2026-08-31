@@ -379,9 +379,12 @@ class TestDeriveRecursor:
         env = mk_builtin_env()
         if decl.name in env.inductives:
             ii = env.inductives[decl.name]
-            assert verify_recursor_rules(decl, ii.ctors, ii.recursor,
-                                         ii.rec_info,
-                                         env) is None  # type: ignore[arg-type]
+            assert verify_recursor_rules(
+                decl,
+                ii.ctors,
+                ii.recursor,
+                ii.rec_info,  # type: ignore[arg-type]
+                env) is None
             return ii.rec_info
         ctors = {
             c.name: ConstantInfo(c.name, (), c.type, None)

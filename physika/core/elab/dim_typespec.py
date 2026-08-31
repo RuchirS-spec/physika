@@ -12,10 +12,12 @@ from physika.core.expr import (
     ForallE,
     Lit,
     MVar,
+    NatLit,
     Sort,
     BinderInfo,
 )
 from physika.core.environment import Environment
+from physika.utils.cic_utils.expr_utils import get_app_fn_args
 
 _NAT_CONST = Const("Nat", ())
 _REAL_CONST = Const("Real", ())
@@ -209,6 +211,146 @@ def dim_to_cic_resolved(
     return None
 
 
+CANON_IDENTITY = {"Nat.add": 0, "Nat.mul": 1}
+
+
+def nat_lit_int(e: Expr) -> Optional[int]:
+    """
+    Return a non negative integer value of a ``Nat`` literal.
+
+    Parameters
+    ----------
+    e : Expr
+        Expression to inspect.
+
+    Examples
+    --------
+    >>> from physika.core.expr import Lit, NatLit, Const
+    >>> from physika.core.elab.dim_typespec import nat_lit_int
+    >>> nat_lit_int(Lit(3))
+    3
+    >>> nat_lit_int(Lit(NatLit(4)))
+    4
+    >>> nat_lit_int(Const("n", ())) is None
+    True
+    """
+    if isinstance(e, Lit):
+        v = e.val
+        if isinstance(v, NatLit):
+            return v.val
+        if isinstance(v, int) and not isinstance(v, bool) and v >= 0:
+            return v
+    return None
+
+
+def flatten_nat_chain(e: Expr, op_name: str, acc: List[Expr]) -> None:
+    """
+    Flatten a nested ``op_name`` application chain into ``acc``.
+
+    Walks ``e`` collecting leaves of a left and right nested chain of
+    Nat operations (``Nat.add`` or ``Nat.mul``).
+
+    Parameters
+    ----------
+    e : Expr
+        Expression to be flattened.
+    op_name : str
+        `"Nat.add"`` or ``"Nat.mul"``chain operator.
+    acc : List[Expr]
+        Output list mutated in place.
+
+    Examples
+    --------
+    >>> from physika.core.expr import App, BVar, Const
+    >>> from physika.core.elab.dim_typespec import flatten_nat_chain
+    >>> add = Const("Nat.add", ())
+    >>> chain = App(App(add, App(App(add, BVar(0)), BVar(1))), BVar(2))
+    >>> acc = []
+    >>> flatten_nat_chain(chain, "Nat.add", acc)
+    >>> acc
+    [BVar(idx=0), BVar(idx=1), BVar(idx=2)]
+    """
+    if isinstance(e, App):
+        head, args = get_app_fn_args(e)
+        if (isinstance(head, Const) and head.name == op_name
+                and len(args) == 2):
+            flatten_nat_chain(args[0], op_name, acc)
+            flatten_nat_chain(args[1], op_name, acc)
+            return
+    acc.append(canon_nat_shape(e))
+
+
+def canon_nat_shape(expr: Expr) -> Expr:
+    """
+    Normalize a CIC ``Nat`` shape expression to a canonical form.
+    ``canon_nat_shape``is useful when  two definitionally equal shapes
+    become the same``Expr`.
+
+    Examples
+    --------
+    >>> from physika.core.elab.dim_typespec import canon_nat_shape
+    >>> from physika.core.expr import App, BVar, Const, Lit
+    >>> add = Const("Nat.add", ())
+    >>> canon_nat_shape(App(App(add, Lit(0)), BVar(0)))
+    BVar(idx=0)
+    >>> m_plus_n = App(App(add, BVar(1)), BVar(0))
+    >>> n_plus_m = App(App(add, BVar(0)), BVar(1))
+    >>> canon_nat_shape(m_plus_n) == canon_nat_shape(n_plus_m)
+    True
+    >>> canon_nat_shape(App(App(add, Lit(3)), Lit(1)))
+    Lit(val=4)
+    """
+    if not isinstance(expr, App):
+        return expr
+
+    head, args = get_app_fn_args(expr)
+    if not (isinstance(head, Const) and len(args) == 2
+            and head.name in ("Nat.add", "Nat.mul", "Nat.sub")):
+        return expr
+
+    op = head.name
+
+    if op == "Nat.sub":
+        a = canon_nat_shape(args[0])
+        b = canon_nat_shape(args[1])
+        av, bv = nat_lit_int(a), nat_lit_int(b)
+        if av is not None and bv is not None:
+            return Lit(max(av - bv, 0))
+        if bv == 0:
+            return a
+        return App(App(head, a), b)
+
+    # Nat.add / Nat.mul
+    # flatten, fold literals, sort non-literals.
+    terms: List[Expr] = []
+    flatten_nat_chain(expr, op, terms)
+
+    lit_acc = CANON_IDENTITY[op]
+    non_lits: List[Expr] = []
+    for t in terms:
+        tv = nat_lit_int(t)
+        if tv is None:
+            non_lits.append(t)
+        elif op == "Nat.add":
+            lit_acc += tv
+        else:
+            lit_acc *= tv
+
+    if op == "Nat.mul" and lit_acc == 0:
+        return Lit(0)
+
+    non_lits.sort(key=repr)
+
+    ordered: List[Expr] = list(non_lits)
+    if lit_acc != CANON_IDENTITY[op] or not non_lits:
+        ordered.append(Lit(lit_acc))
+
+    result = ordered[-1]
+    for t in reversed(ordered[:-1]):
+        result = App(App(head, t), result)
+    return result
+
+
 def typespec_to_cic_resolved(ts: Union[str, tuple],
                              resolve: Callable[[str], Optional[Expr]]) -> Expr:
     """Convert a Physika type spec ``ts`` to a CIC ``Expr``, given a
@@ -248,6 +390,10 @@ def typespec_to_cic_resolved(ts: Union[str, tuple],
             if d_expr is None:
                 # unbound symbolic dim
                 d_expr = Lit(0)  # type: ignore[arg-type]
+            # Canonicalize the shape so definitionally-equal dims
+            # (m+n vs n+m, 0+n vs n) become the identical Expr — see
+            # canon_nat_shape.
+            d_expr = canon_nat_shape(d_expr)
             elem = App(App(_VEC_CONST, elem), d_expr)
         return elem
     if isinstance(ts, tuple) and ts[0] == "struct_type":

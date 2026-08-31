@@ -4,7 +4,9 @@ from physika.core.elab.dim_typespec import (
     _REAL_CONST,
     _VEC_CONST,
     _NAT_ADD,
+    flatten_nat_chain,
     bvar_resolver,
+    canon_nat_shape,
     collect_dim_vars_ordered,
     dim_bvar,
     dim_leaf_names,
@@ -12,13 +14,14 @@ from physika.core.elab.dim_typespec import (
     elaborate_func_type,
     elaborate_method_type,
     elaborate_struct_kind_and_ctor,
+    nat_lit_int,
     struct_field_names,
     typespec_to_cic,
     typespec_to_cic_resolved,
 )
 from physika.core.environment import ConstantInfo, Environment, InductiveInfo
 from physika.core.expr import (App, BVar, BinderInfo, Const, ForallE, Lit,
-                               MVar, MVarId, Sort)
+                               MVar, MVarId, NatLit, Sort)
 from physika.core.inductive import Constructor, InductiveDecl
 from physika.core.level import LSucc, LZero
 
@@ -161,6 +164,55 @@ class TestDimToCiCResolved:
         assert result == App(App(_NAT_ADD, BVar(1)), BVar(0))
 
 
+class TestNatLitInt:
+    """
+    Tests for ``nat_lit_int``.
+    """
+
+    def test_int_literal(self):
+        """A non negative ``Lit(int)`` returns its value."""
+        assert nat_lit_int(Lit(0)) == 0
+        assert nat_lit_int(Lit(7)) == 7
+        assert nat_lit_int(Lit(NatLit(4))) == 4
+
+        # non literal expression shoudl return none
+        assert nat_lit_int(BVar(0)) is None
+        assert nat_lit_int(App(App(_NAT_ADD, BVar(0)), Lit(1))) is None
+
+    def test_negative_and_bool_rejected(self):
+        """Negative ints and ``bool`` are not accepted as Nat literals."""
+        assert nat_lit_int(Lit(-1)) is None
+        assert nat_lit_int(Lit(True)) is None
+
+
+class TestFlattenNatChain:
+    """
+    Tests for ``flatten_nat_chain``.
+    """
+
+    def test_flattens_nested_chain(self):
+        """``(a + b) + c`` -> ``[a, b, c]``."""
+        add = Const("Nat.add", ())
+        chain = App(App(add, App(App(add, BVar(0)), BVar(1))), BVar(2))
+        acc = []
+        flatten_nat_chain(chain, "Nat.add", acc)
+        assert acc == [BVar(0), BVar(1), BVar(2)]
+
+    def test_non_matching_op_is_a_single_leaf(self):
+        """A chain of a *different* operator."""
+        mul = Const("Nat.mul", ())
+        expr = App(App(mul, BVar(0)), BVar(1))
+        acc = []
+        flatten_nat_chain(expr, "Nat.add", acc)
+        assert acc == [expr]
+
+    def test_atom_is_a_single_leaf(self):
+        """A non application node is appended."""
+        acc = []
+        flatten_nat_chain(BVar(3), "Nat.add", acc)
+        assert acc == [BVar(3)]
+
+
 class TestTypespecToCicResolved:
     """
     Tests for ``typespec_to_cic_resolved``.
@@ -214,6 +266,71 @@ class TestTypespecToCicResolved:
             lambda name: None,
         )
         assert result == App(App(Const("Prod", ()), _REAL_CONST), _REAL_CONST)
+
+    def test_canon_nat_shape_rewrites(self):
+        """
+        ``canon_nat_shape`` folds literals and drop identities
+        so equal shapes are the same ``Expr``.
+        """
+        add = Const("Nat.add", ())
+        mul = Const("Nat.mul", ())
+        sub = Const("Nat.sub", ())
+
+        # constant folding
+        assert canon_nat_shape(App(App(add, Lit(3)), Lit(1))) == Lit(4)
+        assert canon_nat_shape(App(App(mul, Lit(3)), Lit(4))) == Lit(12)
+        assert canon_nat_shape(App(App(sub, Lit(3)), Lit(5))) == Lit(0)
+
+        # identities
+        assert canon_nat_shape(App(App(add, Lit(0)), BVar(0))) == BVar(0)
+        assert canon_nat_shape(App(App(add, BVar(0)), Lit(0))) == BVar(0)
+        assert canon_nat_shape(App(App(sub, BVar(0)), Lit(0))) == BVar(0)
+        assert canon_nat_shape(App(App(mul, BVar(0)), Lit(1))) == BVar(0)
+        assert canon_nat_shape(App(App(mul, BVar(0)), Lit(0))) == Lit(0)
+
+        # m + n == n + m
+        m_n = App(App(add, BVar(1)), BVar(0))
+        n_m = App(App(add, BVar(0)), BVar(1))
+        assert canon_nat_shape(m_n) == canon_nat_shape(n_m)
+
+        # folded literal stays on the right
+        assert canon_nat_shape(App(App(add, Lit(1)),
+                                   BVar(0))) == App(App(add, BVar(0)), Lit(1))
+        assert canon_nat_shape(App(App(add, BVar(0)),
+                                   Lit(1))) == App(App(add, BVar(0)), Lit(1))
+
+    def test_canon_nat_shapes(self):
+        """Applying ``canon_nat_shape`` twice equals applying it once."""
+        add = Const("Nat.add", ())
+        exprs = [
+            App(App(add, BVar(1)), BVar(0)),
+            App(App(add, Lit(0)), BVar(0)),
+            App(App(add, App(App(add, Lit(2)), BVar(0))), Lit(1)),
+        ]
+        for e in exprs:
+            once = canon_nat_shape(e)
+            assert canon_nat_shape(once) == once
+
+    def test_equal_shapes_produce_same_cic(self):
+        """
+        ``ℝ[m+n]`` and ``ℝ[n+m]`, and ``ℝ[0+n]`` vs ``ℝ[n]`` should resolve to
+        the identical CIC ``Expr`` after canonicalization.
+        """
+        resolve = lambda name: {  # noqa: E731
+            "m": BVar(1),
+            "n": BVar(0)
+        }.get(name)  # noqa: E731
+        mn = typespec_to_cic_resolved(
+            ("tensor", [(("add_dim_id", "m", "n"), "invariant")]), resolve)
+        nm = typespec_to_cic_resolved(
+            ("tensor", [(("add_dim_id", "n", "m"), "invariant")]), resolve)
+        assert mn == nm
+
+        zn = typespec_to_cic_resolved(
+            ("tensor", [(("add_dim", "n", 0), "invariant")]), resolve)
+        just_n = typespec_to_cic_resolved(("tensor", [("n", "invariant")]),
+                                          resolve)
+        assert zn == just_n
 
 
 class TestBvarResolver:
