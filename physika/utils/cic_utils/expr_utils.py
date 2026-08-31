@@ -562,6 +562,7 @@ def instantiate_level_params_in_expr(e: Expr, params: List[str],
     else:  # BVar, FVar, MVar, Lit
         return e
 
+
 def mk_arrow(domain: Expr, codomain: Expr) -> ForallE:
     """
     Build non-dependent function type ``domain -> codomain``.
