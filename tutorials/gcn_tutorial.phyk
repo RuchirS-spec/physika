@@ -22,6 +22,15 @@ def zero_2d_array(rows: ℝ, cols: ℝ): ℝ[m, n]:
     results: ℝ[rows, cols] = for i:ℕ(rows) -> for j:ℕ(cols) -> j*0
     return results
 
+# dummy dataset creation
+def zero_3d_A(n: ℝ): ℝ[m, 44, 44]:
+    results: ℝ[n, 44, 44] = for i:ℕ(n) -> for j:ℕ(44) -> for k:ℕ(44) -> k*0
+    return results
+
+def zero_3d_H(n: ℝ): ℝ[m, 44, 30]:
+    results: ℝ[n, 44, 30] = for i:ℕ(n) -> for j:ℕ(44) -> for k:ℕ(30) -> k*0
+    return results
+
 def get_sum_of_1d_array(x: ℝ[m]): ℝ:
     total: ℝ = 0
     for i:
@@ -74,9 +83,9 @@ def within_tolerance(pred: ℝ, target: ℝ, tol: ℝ): ℝ:
 class GCNModel(W1: ℝ[30, 4], W2: ℝ[4]):
     def λ(A: ℝ[n,n], H: ℝ[n,30], sz: ℝ) -> ℝ:
         A_hat: ℝ[n,n] = normalize_adj(A)
-        H1: ℝ[n,4] = sigma(A_hat @ (H @ W1))
+        H1: ℝ[n,4] = sigma(A_hat @ (H @ this.W1))
         pooled: ℝ[4] = masked_graph_sum_pool(H1, sz)
-        pred: ℝ = pooled @ W2
+        pred: ℝ = pooled @ this.W2
         return pred
     def train(epochs: ℕ, lr: ℝ) -> ℝ:
         len_train_X: ℝ = get_1d_array_length(train_sizes)
@@ -118,23 +127,16 @@ W2: ℝ[4] ~ Normal(μ, σ, 4)
 
 gcn_object: GCNModel = GCNModel(W1, W2)
 
-train_test_split: ℕ = 80
-total_dataset_size: ℕ = 642
-max_atoms: ℕ = 44
+# dummy dataset: all zeros, matching the shapes create_dataset(...) would produce
+train_A: ℝ[513, 44, 44] = zero_3d_A(513)
+train_H: ℝ[513, 44, 30] = zero_3d_H(513)
+train_sizes: ℝ[513] = zero_1d_array(513)
+train_y: ℝ[513] = zero_1d_array(513)
 
-dataset = create_dataset(train_test_split, total_dataset_size, max_atoms)
-train_dataset = dataset[0]
-test_dataset = dataset[1]
-
-train_A: ℝ[513, 44, 44] = train_dataset[0]
-train_H: ℝ[513, 44, 30] = train_dataset[1]
-train_sizes: ℝ[513] = train_dataset[2]
-train_y: ℝ[513] = train_dataset[3]
-
-test_A: ℝ[65, 44, 44] = test_dataset[0]
-test_H: ℝ[65, 44, 30] = test_dataset[1]
-test_sizes: ℝ[65] = test_dataset[2]
-test_y: ℝ[65] = test_dataset[3]
+test_A: ℝ[65, 44, 44] = zero_3d_A(65)
+test_H: ℝ[65, 44, 30] = zero_3d_H(65)
+test_sizes: ℝ[65] = zero_1d_array(65)
+test_y: ℝ[65] = zero_1d_array(65)
 
 lr: ℝ = 0.0005
 # ------------------------------------------------------------------
