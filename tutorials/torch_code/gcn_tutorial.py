@@ -30,6 +30,14 @@ def zero_2d_array(rows, cols):
     results = torch.stack([torch.stack([(j * 0) for _fi_j in range(int(cols)) for j in [torch.tensor(float(_fi_j), device=DEVICE)]]) for _fi_i in range(int(rows)) for i in [torch.tensor(float(_fi_i), device=DEVICE)]])
     return results
 
+def zero_3d_A(n):
+    results = torch.stack([torch.stack([torch.stack([(k * 0) for _fi_k in range(int(44)) for k in [torch.tensor(float(_fi_k), device=DEVICE)]]) for _fi_j in range(int(44)) for j in [torch.tensor(float(_fi_j), device=DEVICE)]]) for _fi_i in range(int(n)) for i in [torch.tensor(float(_fi_i), device=DEVICE)]])
+    return results
+
+def zero_3d_H(n):
+    results = torch.stack([torch.stack([torch.stack([(k * 0) for _fi_k in range(int(30)) for k in [torch.tensor(float(_fi_k), device=DEVICE)]]) for _fi_j in range(int(44)) for j in [torch.tensor(float(_fi_j), device=DEVICE)]]) for _fi_i in range(int(n)) for i in [torch.tensor(float(_fi_i), device=DEVICE)]])
+    return results
+
 def get_sum_of_1d_array(x):
     total = 0
     for i in range(len(x)):
@@ -93,9 +101,9 @@ class GCNModel(nn.Module):
         H = torch.as_tensor(H, device=DEVICE).float()
         sz = torch.as_tensor(sz, device=DEVICE).float()
         A_hat = normalize_adj(A)
-        H1 = sigma((A_hat @ (H @ W1)))
+        H1 = sigma((A_hat @ (H @ self.W1)))
         pooled = masked_graph_sum_pool(H1, sz)
-        pred = (pooled @ W2)
+        pred = (pooled @ self.W2)
         return pred
 
     def train(self, epochs, lr):
@@ -154,20 +162,14 @@ class GCNModel(nn.Module):
 W1 = torch.stack([torch.distributions.Normal(μ, σ).rsample((int(4),)) for _fi_i in range(int(30)) for i in [torch.tensor(float(_fi_i), device=DEVICE)]])
 W2 = torch.distributions.Normal(μ, σ).rsample((int(4),))
 gcn_object = GCNModel(W1, W2).to(DEVICE)
-train_test_split = 80
-total_dataset_size = 642
-max_atoms = 44
-dataset = create_dataset(train_test_split, total_dataset_size, max_atoms)
-train_dataset = dataset[int(0)]
-test_dataset = dataset[int(1)]
-train_A = train_dataset[int(0)]
-train_H = train_dataset[int(1)]
-train_sizes = train_dataset[int(2)]
-train_y = train_dataset[int(3)]
-test_A = test_dataset[int(0)]
-test_H = test_dataset[int(1)]
-test_sizes = test_dataset[int(2)]
-test_y = test_dataset[int(3)]
+train_A = zero_3d_A(513)
+train_H = zero_3d_H(513)
+train_sizes = zero_1d_array(513)
+train_y = zero_1d_array(513)
+test_A = zero_3d_A(65)
+test_H = zero_3d_H(65)
+test_sizes = zero_1d_array(65)
+test_y = zero_1d_array(65)
 lr = 0.0005
 epochs = 1
 final_loss = gcn_object.train(epochs, lr)
