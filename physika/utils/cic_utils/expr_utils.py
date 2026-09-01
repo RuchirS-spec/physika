@@ -16,6 +16,7 @@ from physika.core.expr import (
 from typing import Tuple, Optional, List
 from physika.core.level import Level
 from physika.utils.cic_utils.level_utils import instantiate_level_params
+from physika.core.expr import BinderInfo
 
 
 def get_app_fn(e: Expr) -> Expr:
@@ -560,3 +561,35 @@ def instantiate_level_params_in_expr(e: Expr, params: List[str],
         return Proj(e.type_name, e.idx, ne) if ne is not e.expr else e
     else:  # BVar, FVar, MVar, Lit
         return e
+
+
+def mk_arrow(domain: Expr, codomain: Expr) -> ForallE:
+    """
+    Build non-dependent function type ``domain -> codomain``.
+
+    A ``ForallE`` with binder name (``"_"``) whose body does
+    not mention the bound variable.
+
+    ``codomain`` has no loose ``BVar`` (it is a closed term
+    or contains only ``FVar``s). Since elaborator operates with FVar,
+    mk_arrow holds during elaboration.
+
+    Parameters
+    ----------
+    domain : Expr
+        Argument type.
+    codomain : Expr
+        Result type, must not contain loose ``BVar``s.
+
+    Examples
+    --------
+    >>> from physika.core.expr import Const
+    >>> from physika.utils.cic_utils.expr_utils import mk_arrow
+    >>> nat = Const("Nat", ())
+    >>> mk_arrow(nat, nat)  # Nat -> Nat  (e.g. Nat.succ)  # noqa: E501
+    ForallE(binder_name='_', binder_type=Const(name='Nat', levels=()), body=Const(name='Nat', levels=()), binder_info=<BinderInfo.DEFAULT: 1>)
+    >>> # nests right: Nat -> Nat -> Nat
+    >>> mk_arrow(nat, mk_arrow(nat, nat)).body.binder_name
+    '_'
+    """
+    return ForallE("_", domain, codomain, BinderInfo.DEFAULT)

@@ -33,6 +33,8 @@ from physika.core.reduction import (
     whnf,
 )
 
+from physika.utils.cic_utils.expr_utils import get_app_fn_args as _fn_args
+
 NAT = Const("Nat", ())
 
 
@@ -61,19 +63,21 @@ def nat_env(rules):
         num_minors=2,
         rules=rules,
     )
+    ii = InductiveInfo(
+        decl=nat_decl,
+        ctors={
+            "Nat.zero": ConstantInfo("Nat.zero", (), NAT, None),
+            "Nat.succ": ConstantInfo("Nat.succ", (), ForallE("n", NAT, NAT),
+                                     None),
+        },
+        recursor=ConstantInfo("Nat.rec", (), TYPE_0, None),
+        rec_info=nat_rec,
+    )
     env = Environment()
-    env.add_inductive(
-        InductiveInfo(
-            decl=nat_decl,
-            ctors={
-                "Nat.zero":
-                ConstantInfo("Nat.zero", (), NAT, None),
-                "Nat.succ":
-                ConstantInfo("Nat.succ", (), ForallE("n", NAT, NAT), None),
-            },
-            recursor=ConstantInfo("Nat.rec", (), TYPE_0, None),
-            rec_info=nat_rec,
-        ))
+    env.inductives["Nat"] = ii
+    for ci in ii.ctors.values():
+        env.add_constant(ci)
+    env.add_constant(ii.recursor)
     return env
 
 
@@ -563,3 +567,59 @@ class TestTryIota:
         result = try_iota(fn, major_succ, env_no_succ_rule, LocalContext(),
                           MetaVarContext())
         assert result is None
+
+    def test_derived_builtin_recursors_reduce(self):
+        """
+        Smoke-test the ``derive_recursor``-generated ι-rules for the
+        builtin env: ``Nat.rec`` still reduces through a ``Nat.succ`` /
+        literal major, and the indexed-family recursors ``Fin.rec`` /
+        ``Vec.rec`` fire on their constructors. ``whnf``/``try_iota`` do
+        no type-checking, so opaque placeholder motives/minors are fine
+        here — the point is that the ι-rule pattern-matches and
+        substitutes.
+        """
+        from physika.core.inductive import mk_builtin_env
+        from physika.core.level import LZero
+        env = mk_builtin_env()
+        lctx, mctx = LocalContext(), MetaVarContext()
+
+        M = Const("M", ())
+        A = Const("A", ())
+        z = Const("z", ())
+        s = Const("s", ())
+
+        def app(fn, *xs):
+            for x in xs:
+                fn = App(fn, x)
+            return fn
+
+        # Nat.rec M z s (Lit 2)  →  s 1 (Nat.rec M z s 1)   (succ ι-rule)
+        nat_rec = Const("Nat.rec", (LZero(), ))
+        res = whnf(app(nat_rec, M, z, s, Lit(2)), env, lctx, mctx)
+        head, args = _fn_args(res)
+        assert head == s and args[0] == Lit(NatLit(1))
+
+        # Fin.rec M z s m (Fin.zero m)  →  z m   (zero ι-rule)
+        fin_rec = Const("Fin.rec", (LZero(), ))
+        fin_zero_major = App(Const("Fin.zero", ()), Lit(4))
+        res = whnf(app(fin_rec, M, z, s, Lit(5), fin_zero_major), env, lctx,
+                   mctx)
+        assert res == App(z, Lit(4))
+
+        # Fin.rec M z s m (Fin.succ m k)  →  s m k (Fin.rec ... m k)
+        k = Const("k", ())
+        fin_succ_major = app(Const("Fin.succ", ()), Lit(4), k)
+        res = whnf(app(fin_rec, M, z, s, Lit(5), fin_succ_major), env, lctx,
+                   mctx)
+        head, args = _fn_args(res)
+        assert head == s and args[:2] == [Lit(4), k]
+
+        # Vec.rec A M nil cons n (Vec.cons A 0 hd Vec.nil)  →  cons branch
+        vec_rec = Const("Vec.rec", (LZero(), ))
+        nil, cons, hd = Const("nil", ()), Const("cons", ()), Const("hd", ())
+        vec_cons_major = app(Const("Vec.cons", ()), A, Lit(0), hd,
+                             App(Const("Vec.nil", ()), A))
+        res = whnf(app(vec_rec, A, M, nil, cons, Lit(1), vec_cons_major), env,
+                   lctx, mctx)
+        head, args = _fn_args(res)
+        assert head == cons and args[0] == Lit(0) and args[1] == hd

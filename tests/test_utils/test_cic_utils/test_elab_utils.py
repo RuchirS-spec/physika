@@ -474,18 +474,34 @@ class TestCoerceToFin:
 
     def test_non_fin_index_in_fin_ofnat(self):
         """
-        Wraps a Nat index in ``Fin.ofNat``.
+        A literal index with a bound should become a
+        ``Fin.succ``/``Fin.zero`` chain.
         """
 
         elab = Elab(Environment())
-        result = coerce_to_fin(Lit(0), Lit(3), elab)
-        assert result == App(App(Const("Fin.ofNat", ()), Lit(3)), Lit(0))
+        assert coerce_to_fin(Lit(0), Lit(3),
+                             elab) == App(Const("Fin.zero", ()), Lit(2))
+        assert coerce_to_fin(Lit(2), Lit(3), elab) == App(
+            App(Const("Fin.succ", ()), Lit(2)),
+            App(App(Const("Fin.succ", ()), Lit(1)),
+                App(Const("Fin.zero", ()), Lit(0))))
 
         elab, i_fv = elab.with_local("i", App(Const("Fin", ()), Lit(3)))
 
         assert isinstance(coerce_to_fin(i_fv, Lit(3), elab), FVar)
         assert isinstance(i_fv, FVar)
         assert coerce_to_fin(i_fv, Lit(3), elab) is i_fv
+
+    def test_out_of_range_index_error(self):
+        """
+        A literal index out of range shpuld produce an erro and
+        degrades to an MVar.
+        """
+        elab = Elab(Environment())
+        errors = []
+        result = coerce_to_fin(Lit(5), Lit(3), elab, errors)
+        assert isinstance(result, MVar)
+        assert errors and "out of range" in errors[0]
 
 
 class TestElaborateBinop:

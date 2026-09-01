@@ -28,6 +28,7 @@ from physika.utils.cic_utils.expr_utils import (
     instantiate_level_params_in_expr,
     lift,
     loose_bvar_range,
+    mk_arrow,
     substitute,
 )
 
@@ -121,6 +122,36 @@ class TestGetAppFnArgs:
         assert args == get_app_args(call)
         assert head == add
         assert args == [Lit(2), Lit(3)]
+
+
+class TestMkArrow:
+    """
+    Tests for ``mk_arrow``
+    """
+
+    def test_builds_non_dependent_forall(self):
+        """
+        ``mk_arrow(A, B)`` is a ``ForallE`` with a ``"_"`` binder
+        and its body shoudb be unchanged (no dependent types in the argument).
+        """
+        nat = Const("Nat", ())
+        arrow = mk_arrow(nat, nat)  # Nat -> Nat
+
+        assert isinstance(arrow, ForallE)
+        assert arrow.binder_name == "_"
+        assert arrow.binder_type == nat
+        assert arrow.body == nat
+        assert arrow.binder_info == BinderInfo.DEFAULT
+
+    def test_nests_to_the_right(self):
+        """
+        ``mk_arrow(A, mk_arrow(B, C))`` produce ``A -> (B -> C)``.
+        """
+        a, b, c = Const("A", ()), Const("B", ()), Const("C", ())
+        arrow = mk_arrow(a, mk_arrow(b, c))
+
+        assert arrow.binder_type == a
+        assert arrow.body == mk_arrow(b, c)
 
 
 class TestAbstract:

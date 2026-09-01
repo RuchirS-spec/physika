@@ -1026,7 +1026,7 @@ def elab_expr_index(node: tuple, fvar_env: Dict[str, Expr], elab: ElabT,
         if obj_type is not None:
             n_expr, elem_type = vec_shape_of(obj_type)
             if n_expr is not None and elem_type is not None:
-                idx_cic = coerce_to_fin(idx_cic, n_expr, elab)
+                idx_cic = coerce_to_fin(idx_cic, n_expr, elab, errors)
                 return App(
                     App(App(App(Const("Vec.get", ()), elem_type), n_expr),
                         obj_cic), idx_cic)
@@ -1092,7 +1092,7 @@ def elab_expr_indexn(node: tuple, fvar_env: Dict[str, Expr], elab: ElabT,
         n_expr, elem_type = vec_shape_of(obj_type)
         if n_expr is None or elem_type is None:
             return elab.new_mvar("_indexN", _TYPE_0_LEVEL)
-        idx_cic = coerce_to_fin(idx_cic, n_expr, elab)
+        idx_cic = coerce_to_fin(idx_cic, n_expr, elab, errors)
         obj_cic = App(
             App(App(App(Const("Vec.get", ()), elem_type), n_expr), obj_cic),
             idx_cic)

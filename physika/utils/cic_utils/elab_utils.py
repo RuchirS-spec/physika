@@ -17,7 +17,7 @@ from physika.core.expr import (
 )
 from physika.core.level import LSucc, LZero
 from physika.core.metavar import MetaVarKind
-from physika.core.reduction import is_def_eq, whnf
+from physika.core.reduction import is_def_eq, lit_nat_int, whnf
 from physika.utils.cic_utils.expr_utils import (
     get_app_fn_args,
     instantiate1,
@@ -844,12 +844,47 @@ def try_elaborate_dependent_fold_loop(loop_var: str, loop_body: list,
     return updates
 
 
-def coerce_to_fin(idx_cic: Expr, n_expr: Expr, elab: ElabT) -> Expr:
+def fin_lit_chain(k: int, n: int) -> Expr:
+    """
+    Build ``Fin n`` value for the literal index ``k``.
+
+    Emits the ``Fin.succ^k (Fin.zero)`` chain, with each constructor's
+    implicit ``{m}`` supplied as ``Lit(m)``.
+
+    Parameters
+    ----------
+    k : int
+        Literal index (0-based), ``0 <= k < n``.
+    n : int
+        Vector length or ``Fin`` bound.
+
+    Examples
+    --------
+    >>> from physika.utils.cic_utils.elab_utils import fin_lit_chain  # noqa: E501
+    >>> fin_lit_chain(0, 3)  # index 0 in Fin 3
+    App(func=Const(name='Fin.zero', levels=()), arg=Lit(val=2))
+    >>> fin_lit_chain(1, 3)  # index 1 in Fin 3
+    App(func=App(func=Const(name='Fin.succ', levels=()), arg=Lit(val=2)), arg=App(func=Const(name='Fin.zero', levels=()), arg=Lit(val=1)))
+    """
+    if k == 0:
+        return App(Const("Fin.zero", ()), Lit(n - 1))  # type: ignore[arg-type]
+    return App(
+        App(Const("Fin.succ", ()), Lit(n - 1)),  # type: ignore[arg-type]
+        fin_lit_chain(k - 1, n - 1))
+
+
+def coerce_to_fin(idx_cic: Expr,
+                  n_expr: Expr,
+                  elab: ElabT,
+                  errors: Optional[List[str]] = None) -> Expr:
     """
     A for loop's bound variable is Fin-typed (bound via ``with_local`` directly
     at type ``Fin n``), but a literal index (``results[0, 0]``) elaborates to
     ``Nat`` ``Lit``. ``Vec.get`` requires ``Fin n`` argument. No operation when
     ``idx_cic`` is ``Fin``-typed or its type can't be determined.
+
+    A literal index with a known bound is emitted as ``Fin.succ``/``Fin.zero``
+    chain that be checked through the kernel.
 
     Parameters
     ----------
@@ -859,6 +894,8 @@ def coerce_to_fin(idx_cic: Expr, n_expr: Expr, elab: ElabT) -> Expr:
         Vec length, i.e. ``n`` in target ``Fin n``.
     elab : Elab
         Elaborator used to infer ``idx_cic``'s type.
+    errors : Optional[List[str]]
+        List of error messages when getting an index out of range case.
 
     Example
     -------
@@ -868,7 +905,7 @@ def coerce_to_fin(idx_cic: Expr, n_expr: Expr, elab: ElabT) -> Expr:
     >>> from physika.core.expr import Lit
     >>> elab = Elab(Environment())
     >>> coerce_to_fin(Lit(0), Lit(3), elab)  # noqa: E501
-    App(func=App(func=Const(name='Fin.ofNat', levels=()), arg=Lit(val=3)), arg=Lit(val=0))
+    App(func=Const(name='Fin.zero', levels=()), arg=Lit(val=2))
     """
     try:
         idx_type = whnf(elab.infer_type(idx_cic), elab.state.env,
@@ -878,6 +915,23 @@ def coerce_to_fin(idx_cic: Expr, n_expr: Expr, elab: ElabT) -> Expr:
     head, _ = get_app_fn_args(idx_type)
     if isinstance(head, Const) and head.name == "Fin":
         return idx_cic
+
+    # Literal index with bound should return Fin.succ/Fin.zero chain
+    try:
+        idx_w = whnf(idx_cic, elab.state.env, elab.state.lctx, elab.state.mctx)
+        n_w = whnf(n_expr, elab.state.env, elab.state.lctx, elab.state.mctx)
+    except Exception:
+        idx_w, n_w = idx_cic, n_expr
+    k = lit_nat_int(idx_w)
+    n = lit_nat_int(n_w)
+    if k is not None and n is not None:
+        if 0 <= k < n:
+            return fin_lit_chain(k, n)
+        if errors is not None:
+            errors.append(
+                f"index {k} is out of range for a vector of length {n}")
+        return elab.new_mvar("_fin_oob", _TYPE_0_LEVEL)
+
     return App(App(Const("Fin.ofNat", ()), n_expr), idx_cic)
 
 
