@@ -28,6 +28,7 @@ Tutorials
    repressilator
    toggle_switch
    central_dogma
+   selkov_glycolysis
 
 .. toctree::
    :maxdepth: 1
