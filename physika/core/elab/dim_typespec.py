@@ -391,8 +391,7 @@ def typespec_to_cic_resolved(ts: Union[str, tuple],
                 # unbound symbolic dim
                 d_expr = Lit(0)  # type: ignore[arg-type]
             # Canonicalize the shape so definitionally-equal dims
-            # (m+n vs n+m, 0+n vs n) become the identical Expr — see
-            # canon_nat_shape.
+            # (m+n vs n+m, 0+n vs n) become the identical Expr
             d_expr = canon_nat_shape(d_expr)
             elem = App(App(_VEC_CONST, elem), d_expr)
         return elem

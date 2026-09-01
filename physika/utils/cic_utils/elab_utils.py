@@ -846,11 +846,10 @@ def try_elaborate_dependent_fold_loop(loop_var: str, loop_body: list,
 
 def fin_lit_chain(k: int, n: int) -> Expr:
     """
-    Build the sound ``Fin n`` value for the literal index ``k``.
+    Build ``Fin n`` value for the literal index ``k``.
 
     Emits the ``Fin.succ^k (Fin.zero)`` chain, with each constructor's
-    implicit ``{m}`` witness supplied positionally as ``Lit(m)`` — exactly
-    the shape ``Fin.rec``'s ι-rules expect. Requires ``0 <= k < n``.
+    implicit ``{m}`` supplied as ``Lit(m)``.
 
     Parameters
     ----------
@@ -896,8 +895,7 @@ def coerce_to_fin(idx_cic: Expr,
     elab : Elab
         Elaborator used to infer ``idx_cic``'s type.
     errors : Optional[List[str]]
-        When provided, an out-of-range literal index appends a message here
-        instead of silently producing an unsound ``Fin.ofNat``.
+        List of error messages when getting an index out of range case.
 
     Example
     -------
