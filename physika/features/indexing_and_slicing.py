@@ -363,7 +363,7 @@ class IndexingandSlicing(ELF):
         >>> from physika.features import IndexingandSlicing
         >>> rules = IndexingandSlicing().parser_rules()
         >>> len(rules)
-        19
+        22
         >>> rules[0].__name__
         'p_factor_index'
         """
@@ -395,8 +395,9 @@ class IndexingandSlicing(ELF):
         --------
         >>> from physika.features import IndexingandSlicing
         >>> rules = IndexingandSlicing().type_rules()
-        >>> sorted(rules.keys())
-        ['body_for_map', 'for_pluseq', 'index', 'indexN', 'loop_index_assign_nd', 'loop_index_pluseq']  # noqa
+        >>> sorted(rules.keys())  # doctest: +NORMALIZE_WHITESPACE
+        ['body_for_map', 'for_pluseq', 'index', 'indexN',
+         'loop_index_assign_nd', 'loop_index_pluseq']
         """
 
         def expr_index(
@@ -1128,8 +1129,10 @@ class IndexingandSlicing(ELF):
                     idx = to_expr(item[1])
                     parts.append(f"int({idx})")
                 elif item[0] == "slice_item":
-                    start = (to_expr(item[1]) if item[1] is not None else "")
-                    end = (to_expr(item[2]) if item[2] is not None else "")
+                    start = (f"int({to_expr(item[1])})"
+                             if item[1] is not None else "")
+                    end = (f"int({to_expr(item[2])})"
+                           if item[2] is not None else "")
                     parts.append(f"{start}:{end}")
             return f"{arr}[{', '.join(parts)}]"
 
@@ -1193,8 +1196,10 @@ class IndexingandSlicing(ELF):
                     parts.append(f"int({idx})")
 
                 elif item[0] == "slice_item":
-                    start = to_expr(item[1]) if item[1] is not None else ""
-                    end = to_expr(item[2]) if item[2] is not None else ""
+                    start = (f"int({to_expr(item[1])})"
+                             if item[1] is not None else "")
+                    end = (f"int({to_expr(item[2])})"
+                           if item[2] is not None else "")
                     parts.append(f"{start}:{end}")
             rhs_code = to_expr(rhs_expr)
             code = f"{arr_name}[{', '.join(parts)}] = {rhs_code}"
@@ -1282,8 +1287,10 @@ class IndexingandSlicing(ELF):
                     parts.append(f"int({idx})")
 
                 elif item[0] == "slice_item":
-                    start = (to_expr(item[1]) if item[1] is not None else "")
-                    end = (to_expr(item[2]) if item[2] is not None else "")
+                    start = (f"int({to_expr(item[1])})"
+                             if item[1] is not None else "")
+                    end = (f"int({to_expr(item[2])})"
+                           if item[2] is not None else "")
                     parts.append(f"{start}:{end}")
             idx_code = ", ".join(parts)
             return f"{name}[{idx_code}] = {to_expr(val)}"
@@ -1333,8 +1340,10 @@ class IndexingandSlicing(ELF):
                     idx = to_expr(item[1])
                     parts.append(f"int({idx})")
                 elif item[0] == "slice_item":
-                    start = (to_expr(item[1]) if item[1] is not None else "")
-                    end = (to_expr(item[2]) if item[2] is not None else "")
+                    start = (f"int({to_expr(item[1])})"
+                             if item[1] is not None else "")
+                    end = (f"int({to_expr(item[2])})"
+                           if item[2] is not None else "")
                     parts.append(f"{start}:{end}")
             rhs_code = to_expr(rhs)
             return f"{arr_name}[{', '.join(parts)}] += {rhs_code}"
@@ -1410,12 +1419,12 @@ class IndexingandSlicing(ELF):
                     parts.append(f"int({idx})")
 
                 elif item[0] == "slice_item":
-                    start = (to_expr(item[1],
-                                     current_loop_var=ctx["current_loop_var"])
-                             if item[1] is not None else "")
-                    end = (to_expr(item[2],
-                                   current_loop_var=ctx["current_loop_var"])
-                           if item[2] is not None else "")
+                    start = (
+                        f"int({to_expr(item[1], current_loop_var=ctx['current_loop_var'])})"  # noqa: E501
+                        if item[1] is not None else "")
+                    end = (
+                        f"int({to_expr(item[2], current_loop_var=ctx['current_loop_var'])})"  # noqa: E501
+                        if item[2] is not None else "")
                     parts.append(f"{start}:{end}")
             rhs_code = to_expr(
                 rhs,
@@ -1508,8 +1517,10 @@ class IndexingandSlicing(ELF):
                     parts.append(f"int({idx})")
 
                 elif item[0] == "slice_item":
-                    start = to_expr(item[1]) if item[1] is not None else ""
-                    end = to_expr(item[2]) if item[2] is not None else ""
+                    start = (f"int({to_expr(item[1])})"
+                             if item[1] is not None else "")
+                    end = (f"int({to_expr(item[2])})"
+                           if item[2] is not None else "")
                     parts.append(f"{start}:{end}")
             idx_code = ", ".join(parts)
             val_code = to_expr(val)

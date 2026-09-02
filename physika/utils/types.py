@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Union, Callable
+from typing import Any, Union, Callable, Optional, Set
 import itertools
 
 
@@ -743,6 +743,7 @@ def check_class(
     func_env: dict,
     class_env: dict,
     add_error: Callable[[str], None],
+    skip_methods: Optional[Set[str]] = None,
 ) -> None:
     """
     Check types of a Physika class object.
@@ -764,6 +765,8 @@ def check_class(
         Class definition registry.
     add_error : Callable[[str], None]
         Callback that receives error string.
+    skip_methods : set[str], optional
+        CIC verified class methods bodies.
 
     Examples
     --------
@@ -808,9 +811,14 @@ def check_class(
     local_env = {pn: (from_typespec(pt) or new_var()) for pn, pt in fields}
     local_env["this"] = TInstance(name)
 
+    skip_methods = skip_methods or set()
+
     for method in methods:
 
         method_name = method.get("name")
+        if f"{name}.{method_name}" in skip_methods:
+            # CIC verified
+            continue
         method_params = method.get("params", [])
         method_stmts = method.get("statements", [])
         body = method.get("body")

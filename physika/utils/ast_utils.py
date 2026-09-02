@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import Any, Callable, Literal, Union, cast, Optional
+from typing import Any, Callable, Collection, Literal, Union, cast, Optional
 from physika.utils.print_utils import print_unified_ast
 from physika.elf import REGISTRY
 # AST TYPE DEFINITIONS
@@ -13,7 +13,6 @@ from physika.elf import REGISTRY
 # can flag typos, missing branches, and wrong argument types.
 
 # Tag literals (every valid first element of an AST tuple)
-
 ExprTag = Literal[
     "add",
     "sub",
@@ -756,6 +755,10 @@ def ast_to_torch_expr(node: ASTNode,
         if func_name in torch_funcs:
             return f"{torch_funcs[func_name]}({arg} if isinstance({arg}, torch.Tensor) else torch.tensor(float({arg})))"  # noqa: E501
 
+        elif func_name == "zeros":
+            # Shape args must be ints
+            return f"torch.zeros({', '.join(f'int({a})' for a in arg_strs)})"
+
         elif func_name in multi_arg_funcs:
             return f"{multi_arg_funcs[func_name]}({', '.join(arg_strs)})"
 
@@ -1283,8 +1286,14 @@ def emit_body_stmts(
                     known_vars.append(var_name)
 
 
-def generate_function(name: str, func_def: dict[str, Any]) -> str:
-    """Generate a Python/PyTorch function definition from a function AST.
+def generate_function(
+        name: str,
+        func_def: dict[str, Any],
+        resolved: Optional[tuple] = None,
+        resolved_names: Collection[str] = (),
+) -> str:
+    """
+    Generate a Python/PyTorch function definition from a function AST.
 
     Translates a Physika function (params, body statements, return
     expression) into a valid Python function definition string.
@@ -1292,6 +1301,10 @@ def generate_function(name: str, func_def: dict[str, Any]) -> str:
     If the function body contains a ``solve()`` call, local known-variable
     tracking is used to pass all in-scope variables as keyword
     arguments to ``solve``.
+
+    ``resolved`` is an optional argument that contains CIC elaborated and
+    verified function's body terms. Then, ``name`` function is generated
+    by lowering that verified term to torch code.
 
     Parameters
     ----------
@@ -1302,6 +1315,12 @@ def generate_function(name: str, func_def: dict[str, Any]) -> str:
         ``"params"`` (list of ``(name, type)`` pairs), ``"body"``
         (return expression AST), and optionally ``"statements"``
         (list of body statement ASTs).
+    resolved: tuple[Expr, dict[FVarId, str], list, list[str], Environment]
+        When give, the return expression (including its body) is generated
+        by lowering to torch code instead deriving it from ``statements`` or
+        ``body``
+    resolved_names: Collection[str]
+        Function and method names that contains ``dim_var=None`` parameter.
 
     Returns
     -------
@@ -1321,6 +1340,13 @@ def generate_function(name: str, func_def: dict[str, Any]) -> str:
     def f(x):
         return torch.exp(x if isinstance(x, torch.Tensor) else torch.tensor(float(x)))
     """
+    from physika.core.torch_lowering import (
+        lower_function_body,
+        dim_var_name,
+        dim_extraction_stmt,
+        apply_dim_rename,
+    )
+
     params = func_def["params"]
     body = func_def["body"]
     statements = func_def.get("statements", [])
@@ -1331,6 +1357,51 @@ def generate_function(name: str, func_def: dict[str, Any]) -> str:
     for param_name, param_type in params:
         param_strs.append(f"{param_name}")
         param_names.append(param_name)
+
+    if resolved is not None:
+        body_expr, fvar_names, local_decls, param_order, dim_rename, cic_env = resolved  # noqa: E501
+        n_dim_vars = len(param_order) - len(params)
+        dim_vars = param_order[:n_dim_vars]
+        explicit_from_order = param_order[n_dim_vars:]
+        all_args = explicit_from_order + [f"{d}=None" for d in dim_vars]
+
+        lines = [f"def {name}({', '.join(all_args)}):"]
+
+        if dim_vars:
+            bound_dim_vars: set[str] = set()
+            for pname, ptype in params:
+                if not (isinstance(ptype, tuple) and ptype
+                        and ptype[0] == "tensor"):
+                    continue
+                for axis, dim_entry in enumerate(ptype[1]):
+                    dim_value = dim_entry[0] if (
+                        isinstance(dim_entry, tuple)
+                        and len(dim_entry) == 2) else dim_entry
+
+                    raw_var_name = dim_var_name(dim_value)
+                    var_name = (dim_rename.get(raw_var_name, raw_var_name)
+                                if raw_var_name is not None else None)
+                    if (var_name is None or var_name in bound_dim_vars
+                            or var_name not in dim_vars):
+                        continue
+                    extract_stmt = dim_extraction_stmt(apply_dim_rename(
+                        dim_value, dim_rename),
+                                                       axis,
+                                                       pname,
+                                                       indent="        ")
+                    if extract_stmt is not None:
+                        lines.append(f"    if {var_name} is None:")
+                        lines.append(extract_stmt)
+                        bound_dim_vars.add(var_name)
+
+        lines.append(
+            lower_function_body(body_expr,
+                                fvar_names,
+                                cic_env,
+                                local_decls=local_decls,
+                                indent="    ",
+                                resolved_names=resolved_names))
+        return "\n".join(lines)
 
     lines = [f"def {name}({', '.join(param_strs)}):"]
 
@@ -1516,7 +1587,8 @@ def emit_for_stmts(
 
 
 def generate_statement(stmt: ASTNode,
-                       grad_target_vars: set[str]) -> str | None:
+                       grad_target_vars: set[str],
+                       resolved_expr_code: str | None = None) -> str | None:
     """Generate a PyTorch code string for a program-level statement.
 
     Handles ``decl`` (variable declaration), ``assign`` (reassignment),
@@ -1538,6 +1610,8 @@ def generate_statement(stmt: ASTNode,
         Variable names used as differentiation targets in ``grad()``
         calls.  Collected by ``collect_grad_targets`` during the
         analysis pass.
+    resolved_expr_code : Optional[str]
+        CIC elaborated and verified statement expression.
 
     Returns
     -------
@@ -1565,7 +1639,8 @@ def generate_statement(stmt: ASTNode,
         name = stmt[1]
         type_spec = stmt[2]
         expr = stmt[3]
-        expr_code = ast_to_torch_expr(expr, type_info=type_spec)
+        expr_code = (resolved_expr_code if resolved_expr_code is not None else
+                     ast_to_torch_expr(expr, type_info=type_spec))
 
         # Class instance
         if (isinstance(type_spec, tuple) and type_spec[0] == "struct_type"
@@ -1602,12 +1677,14 @@ def generate_statement(stmt: ASTNode,
     elif op == "assign":
         name = stmt[1]
         expr = stmt[2]
-        expr_code = ast_to_torch_expr(expr)
+        expr_code = (resolved_expr_code if resolved_expr_code is not None else
+                     ast_to_torch_expr(expr))
         return f"{name} = {expr_code}"
 
     elif op == "expr":
         expr = stmt[1]
-        expr_code = ast_to_torch_expr(expr)
+        expr_code = (resolved_expr_code if resolved_expr_code is not None else
+                     ast_to_torch_expr(expr))
         # Don't wrap side-effect-only calls in print
         if isinstance(expr,
                       tuple) and expr[0] == "call" and expr[1] in ("simulate",

@@ -128,6 +128,110 @@ def p_module_path_multiple(p):
     p[0] = f"{p[1]}.{p[3]}"
 
 
+# parser rules for computing with dependent types
+def p_dimension_num_times_id(p):
+    """dimension_spec : NUMBER TIMES ID"""
+    # Axis scaled by a constant, constant first.
+    # Example:
+    #   x: ℝ[2*k]
+    # Parameters:
+    # p[1] - scale factor
+    # p[3] - dimension variable
+    # Returns:
+    #   (("mul_dim", var, factor), "invariant")
+    p[0] = (("mul_dim", p[3], int(p[1])), "invariant")
+
+
+def p_dimension_id_times_num(p):
+    """dimension_spec : ID TIMES NUMBER"""
+    # Axis scaled by a constant
+    # Example:
+    #   x: ℝ[k*2]
+    # Parameters:
+    # p[1] - dimension variable name
+    # p[3] - scale factor
+    # Returns:
+    #   (("mul_dim", var, factor), "invariant")
+    p[0] = (("mul_dim", p[1], int(p[3])), "invariant")
+
+
+def p_dimension_id_plus_num(p):
+    """dimension_spec : ID PLUS NUMBER"""
+    # Adding with dim variables, variable first.
+    # Example:
+    #   def append(u: ℝ[n], v: ℝ): ℝ[n+1]
+    # Parameters:
+    # p[1] - dimension variable name
+    # p[3] - integer offset
+    # Returns:
+    #   (("add_dim", var, offset), "invariant")
+    p[0] = (("add_dim", p[1], int(p[3])), "invariant")
+
+
+def p_dimension_num_plus_id(p):
+    """dimension_spec : NUMBER PLUS ID"""
+    # Adding with dim variables, constant first.
+    # Example:
+    #   x: ℝ[1+n]
+    # Parameters:
+    # p[1] - int value to add
+    # p[3] - dimension variable name
+    # Returns:
+    #   (("add_dim", var, offset), "invariant")
+    p[0] = (("add_dim", p[3], int(p[1])), "invariant")
+
+
+def p_dimension_id_minus_num(p):
+    """dimension_spec : ID MINUS NUMBER"""
+    # Substract from a dimension variable
+    # Example:
+    #   x: ℝ[n-1]
+    # Parameters:
+    # p[1] - dimension variable name
+    # p[3] - integer amount removed
+    # Returns:
+    #   (("sub_dim", var, amount), "invariant")
+    p[0] = (("sub_dim", p[1], int(p[3])), "invariant")
+
+
+def p_dimension_id_plus_id(p):
+    """dimension_spec : ID PLUS ID"""
+    # Addition betwen dimension vairables
+    #   def cat(u: ℝ[m], v: ℝ[n]): ℝ[m+n]
+    # Parameters:
+    # p[1] - first dimension variable
+    # p[3] - second dimension variable
+    # Returns:
+    #   (("add_dim_id", v1, v2), "invariant")
+    p[0] = (("add_dim_id", p[1], p[3]), "invariant")
+
+
+def p_dimension_id_minus_id(p):
+    """dimension_spec : ID MINUS ID"""
+    # substraction betwen dimension vairables
+    # Example:
+    #   x: ℝ[m-n]
+    # Parameters:
+    # p[1] - dimension variable subtracted from
+    # p[3] - dimension variable subtracted
+    # Returns:
+    #   (("sub_dim_id", v1, v2), "invariant")
+    p[0] = (("sub_dim_id", p[1], p[3]), "invariant")
+
+
+def p_dimension_id_times_id(p):
+    """dimension_spec : ID TIMES ID"""
+    # Product of dimension vairables.
+    # Example:
+    #   def outer(u: ℝ[m], v: ℝ[n]): ℝ[m*n]
+    # Parameters:
+    # p[1] - first dimension variable
+    # p[3] - second dimension variable
+    # Returns:
+    #   (("mul_dim_id", v1, v2), "invariant")
+    p[0] = (("mul_dim_id", p[1], p[3]), "invariant")
+
+
 def p_statement_import(p):
     """statement : FROM module_path IMPORT import_list NEWLINE"""
     # import statement basic syntax

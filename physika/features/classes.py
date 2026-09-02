@@ -1,6 +1,6 @@
 # flake8: noqa: E501
 import re
-from typing import Any, Optional, Callable
+from typing import Any, Collection, Optional, Callable
 from physika.elf import ELF
 
 
@@ -159,8 +159,15 @@ def build_class(constructor_params: Optional[list], body_items: list) -> dict:
     }
 
 
-def emit_method(method: dict, all_params: list, constructor_params: list,
-                to_expr: Callable, scalar_only: bool) -> list[str]:
+def emit_method(
+    method: dict,
+    all_params: list,
+    constructor_params: list,
+    to_expr: Callable,
+    scalar_only: bool,
+    resolved: Optional[tuple] = None,
+    resolved_names: Collection[str] = ()
+) -> list[str]:
     """
     Emit code for a class method as an ``nn.Module`` class.
 
@@ -174,7 +181,14 @@ def emit_method(method: dict, all_params: list, constructor_params: list,
     to_expr: Callable
         ``ast_to_torch_expr`` for getting the associated torch code.
     scalar_only: bool
-        Boolean that indicate how to define if-else blocks when emiting body stmts.  # noqa :E501
+        Boolean that indicate how to define if-else blocks when emiting
+        body stmts.
+    resolved: tuple[Expr, dict[FVarId, str], list, list[str], Environment]
+        When given the return expression (including method's body) is generated
+        by lowering to torch code instead deriving it from ``statements`` or
+        ``body``
+    resolved_names: Collection[str]
+        Function and method names that contains ``dim_var=None`` parameter.
 
     Returns
     -------
@@ -184,12 +198,16 @@ def emit_method(method: dict, all_params: list, constructor_params: list,
     Examples
     --------
     >>> from physika.features.classes import emit_method
+    >>> from physika.utils.ast_utils import ast_to_torch_expr
     >>> body = ("mul", ("num", 0.5), ("field_access", ("var", "this"), "mass"))
     >>> ke = {"name": "ke", "params": [], "return_type": "ℝ", "statements": [], "body": body}
-    >>> emit_method(ke, [("mass", "ℝ")], lambda _: "0.5 * this.mass", True)
-    ['', '    def ke(self):', '        this = self', '        return 0.5 * self.mass']
+    >>> emit_method(ke, [], [("mass", "ℝ")], ast_to_torch_expr, True)
+    ['', '    def ke(self):', '        this = self', '        return (0.5 * self.mass)']
     """
     from physika.utils.ast_utils import emit_body_stmts
+    from physika.core.torch_lowering import (dim_var_name, dim_extraction_stmt,
+                                             apply_dim_rename,
+                                             lower_function_body)
 
     method_name = method["name"]
     if method_name == "λ":
@@ -202,12 +220,47 @@ def emit_method(method: dict, all_params: list, constructor_params: list,
     body = method.get("body")
 
     param_names = [p[0] for p in params]
-    all_args = ["self"] + param_names
+    if resolved is not None:
+        # Parameter order as a Pi-type
+        _, _, _, param_order, dim_rename, _ = resolved
+        order_no_this = [p for p in param_order if p != "this"]
+        n_dim_vars = len(order_no_this) - len(params)
+        dim_vars = order_no_this[:n_dim_vars]
+        explicit_from_order = order_no_this[n_dim_vars:]
+        all_args = (["self"] + explicit_from_order +
+                    [f"{d}=None" for d in dim_vars])
+    else:
+        all_args = ["self"] + param_names
     method_lines = [
         "",
         f"    def {py_name}({', '.join(all_args)}):",
         "        this = self",  # runtime alias to access ``self``
     ]
+
+    if resolved is not None and dim_vars:
+        bound_dim_vars = set()
+        for pname, ptype in params:
+            if not (isinstance(ptype, tuple) and ptype
+                    and ptype[0] == "tensor"):
+                continue
+            for axis, dim_entry in enumerate(ptype[1]):
+                dim_value = dim_entry[0] if (isinstance(
+                    dim_entry, tuple) and len(dim_entry) == 2) else dim_entry
+                raw_var_name = dim_var_name(dim_value)
+                var_name = (dim_rename.get(raw_var_name, raw_var_name)
+                            if raw_var_name is not None else None)
+                if (var_name is None or var_name in bound_dim_vars
+                        or var_name not in dim_vars):
+                    continue
+                stmt = dim_extraction_stmt(apply_dim_rename(
+                    dim_value, dim_rename),
+                                           axis,
+                                           pname,
+                                           indent="            ")
+                if stmt is not None:
+                    method_lines.append(f"        if {var_name} is None:")
+                    method_lines.append(stmt)
+                    bound_dim_vars.add(var_name)
 
     for pname, ptype in params:
         if is_learnable(ptype):
@@ -215,6 +268,18 @@ def emit_method(method: dict, all_params: list, constructor_params: list,
                 method_lines.append(
                     f"        {pname} = torch.as_tensor({pname}, device=DEVICE).float()"
                 )
+
+    # lower torch code from CIC elaborated term
+    if resolved is not None:
+        body_expr, fvar_names, local_decls, _, _, cic_env = resolved
+        method_lines.append(
+            lower_function_body(body_expr,
+                                fvar_names,
+                                cic_env,
+                                local_decls=local_decls,
+                                indent="        ",
+                                resolved_names=resolved_names))
+        return method_lines
 
     if statements:
         stmt_method_lines: list[str] = []
@@ -226,6 +291,8 @@ def emit_method(method: dict, all_params: list, constructor_params: list,
         }
         for line in stmt_method_lines:
             line_sub = re.sub(r'\bthis\b', 'self', line)
+
+            line_sub = replace_class_params(line_sub, all_params)
 
             # check if this is a field assignment on a learnable param
             field_assign = re.match(r'^(\s+)(self\.[\w]+)\s*=\s*(.+)$',
@@ -259,7 +326,12 @@ def emit_method(method: dict, all_params: list, constructor_params: list,
     return method_lines
 
 
-def generate_class(name: str, class_def: dict) -> str:
+def generate_class(
+    name: str,
+    class_def: dict,
+    resolved_methods: Optional[dict] = None,
+    resolved_names: Collection[str] = ()
+) -> str:
     """
     Emit a ``nn.Module`` subclass from a Physika class definition.
 
@@ -271,6 +343,10 @@ def generate_class(name: str, class_def: dict) -> str:
     class_def: dict
         Dictionary that contains all the information for the defined Physika class.
         In order, "class_params" and types, methods, statements and body.
+    resolved_methods: Optional[dict]
+        CIC verified class meethods which will be lowered to torch code.
+    resolved_names: Collection[str]
+        Function and method names with ``dim_var=None`` parameter.
 
     Returns
     -------
@@ -294,6 +370,7 @@ def generate_class(name: str, class_def: dict) -> str:
         def __init__(self, mass):
             super().__init__()
             self.mass = torch.as_tensor(mass).float()
+            self.learnable_params = [self.mass]
     <BLANKLINE>
         def ke(self):
             this = self
@@ -411,10 +488,31 @@ def generate_class(name: str, class_def: dict) -> str:
             method_params = method_params + wrt_diff_vars
 
         scalar_only = all(pt == "ℝ" for _, pt in method.get("params", []))
-        class_lines.extend(
-            emit_method({
-                **method, "params": method_params
-            }, all_params, constructor_params, ast_to_torch_expr, scalar_only))
+
+        method_resolved = None
+        if resolved_methods is not None and not wrt_diff_vars:
+            method_resolved = resolved_methods.get(f"{name}.{method['name']}")
+        method_arg = {**method, "params": method_params}
+        try:
+            m_lines = emit_method(method_arg,
+                                  all_params,
+                                  constructor_params,
+                                  ast_to_torch_expr,
+                                  scalar_only,
+                                  resolved=method_resolved,
+                                  resolved_names=resolved_names)
+        except Exception as e:
+            # Method was CIC verified but torch_lowering failed
+            # fall back to raw-AST codegen for this method.
+            if method_resolved is not None:
+                print(f"  (CIC: lowering method '{name}.{method['name']}' ")
+            m_lines = emit_method(method_arg,
+                                  all_params,
+                                  constructor_params,
+                                  ast_to_torch_expr,
+                                  scalar_only,
+                                  resolved_names=resolved_names)
+        class_lines.extend(m_lines)
 
     # params property and gradient descent update helper
     class_lines += [
@@ -907,7 +1005,7 @@ class ClassFeature(ELF):
         """
         Override ``parser_rules`` handler for new grammar rules.
 
-        Sixteen PLY grammar functions (see ``make_parser_rules``) handle class
+        The PLY grammar functions (see ``make_parser_rules``) handle class
         declarations with and without constructor parameters, field declarations
         , method definitions, and single or two tuple valued returns.
 
@@ -921,7 +1019,7 @@ class ClassFeature(ELF):
         >>> from physika.features import ClassFeature
         >>> rules = ClassFeature().parser_rules()
         >>> len(rules)
-        20
+        23
         >>> rules[0].__name__
         'p_statement_class_no_params'
         """
@@ -1248,6 +1346,7 @@ class ClassFeature(ELF):
         ...     "    def __init__(self, mass):",
         ...     "        super().__init__()",
         ...     "        self.mass = torch.as_tensor(mass).float()",
+        ...     "        self.learnable_params = [self.mass]",
         ...     "",
         ...     "    @property",
         ...     "    def params(self):",

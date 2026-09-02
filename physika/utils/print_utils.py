@@ -38,6 +38,35 @@ def print_type_check_results(type_errors: list[str]) -> None:
         print("  ✓ No type errors found")
 
 
+def print_cic_check_results(cic_errors: list[str]) -> None:
+    """
+    Print CIC type checking results.
+
+    ``sys.exit` is not called since Physika CIC still needs to support user
+    inductive types, dimensional analysis, theorem proofs, macros, etc.
+
+    Parameters
+    ----------
+    cic_errors : list[str]
+        Error messages catched during CIC elaboration.
+
+    Examples
+    --------
+    >>> from physika.utils.print_utils import print_cic_check_results
+    >>> print_cic_check_results([])
+    <BLANKLINE>
+     CIC type checking:
+      ✓ No CIC elaboration errors found
+    """
+    print("\n CIC type checking:")
+    if cic_errors:
+        for error in cic_errors:
+            print(f"  ✗ {error}")
+        print(f"{len(cic_errors)} dependent-type error(s) found.")
+    else:
+        print("  ✓ No CIC elaboration errors found")
+
+
 def _pformat(value: Any, indent: int = 0) -> str:
     """Pretty-format an AST value with indentation.
 
