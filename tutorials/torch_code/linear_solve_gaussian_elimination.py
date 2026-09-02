@@ -6,6 +6,14 @@ from physika.runtime import DEVICE
 from physika.runtime import print
 
 # === Functions ===
+def zero_1d_array(len):
+    results = torch.stack([(i * 0) for _fi_i in range(int(len)) for i in [torch.tensor(float(_fi_i), device=DEVICE)]])
+    return results
+
+def zero_2d_array(rows, cols):
+    results = torch.stack([torch.stack([(j * 0) for _fi_j in range(int(cols)) for j in [torch.tensor(float(_fi_j), device=DEVICE)]]) for _fi_i in range(int(rows)) for i in [torch.tensor(float(_fi_i), device=DEVICE)]])
+    return results
+
 def get_1d_array_length(x):
     total = 0
     temp = 0
@@ -33,34 +41,56 @@ def gaussian_solve(A, b):
     a_row = get_2d_array_num_rows(A)
     a_col = get_2d_array_num_cols(A)
     new_col = (a_col + 1)
-    aug = torch.zeros(a_row, new_col)
+    aug = zero_2d_array(a_row, new_col)
     for i in range(int(0), int(a_row)):
-        aug[int(i), :a_col] = A[int(i), :]
+        for c in range(int(0), int(a_col)):
+            aug[int(i), int(c)] = A[int(i), int(c)]
         aug[int(i), int(a_col)] = b[int(i)]
-    row_buffer = torch.zeros(new_col)
     for i in range(int(0), int(a_row)):
         max_row = i
         for k in range(int((i + 1)), int(a_row)):
             if torch.abs(aug[int(k), int(i)] if isinstance(aug[int(k), int(i)], torch.Tensor) else torch.tensor(float(aug[int(k), int(i)]))) > torch.abs(aug[int(max_row), int(i)] if isinstance(aug[int(max_row), int(i)], torch.Tensor) else torch.tensor(float(aug[int(max_row), int(i)]))):
                 max_row = k
-        if max_row != i:
-            for k in range(int(0), int(new_col)):
-                row_buffer[int(k)] = aug[int(i), int(k)]
-            for k in range(int(0), int(new_col)):
-                aug[int(i), int(k)] = aug[int(max_row), int(k)]
-            for k in range(int(0), int(new_col)):
-                aug[int(max_row), int(k)] = row_buffer[int(k)]
-        for j in range(int((i + 1)), int(a_row)):
-            factor = (aug[int(j), int(i)] / aug[int(i), int(i)])
-            for k in range(int(i), int(new_col)):
-                aug[int(j), int(k)] = (aug[int(j), int(k)] - (factor * aug[int(i), int(k)]))
-    x = torch.zeros(a_col)
+        pivot_row = zero_1d_array(new_col)
+        displaced_row = zero_1d_array(new_col)
+        for c in range(int(0), int(new_col)):
+            pivot_row[int(c)] = aug[int(max_row), int(c)]
+            displaced_row[int(c)] = aug[int(i), int(c)]
+        aug_next = zero_2d_array(a_row, new_col)
+        for row_idx in range(int(0), int(a_row)):
+            if row_idx < i:
+                for c in range(int(0), int(new_col)):
+                    aug_next[int(row_idx), int(c)] = aug[int(row_idx), int(c)]
+            else:
+                if row_idx == i:
+                    for c in range(int(0), int(new_col)):
+                        aug_next[int(row_idx), int(c)] = pivot_row[int(c)]
+                else:
+                    source_row = zero_1d_array(new_col)
+                    if row_idx == max_row:
+                        for c in range(int(0), int(new_col)):
+                            source_row[int(c)] = displaced_row[int(c)]
+                    else:
+                        for c in range(int(0), int(new_col)):
+                            source_row[int(c)] = aug[int(row_idx), int(c)]
+                    factor = (source_row[int(i)] / pivot_row[int(i)])
+                    for c in range(int(0), int(new_col)):
+                        aug_next[int(row_idx), int(c)] = (source_row[int(c)] - (factor * pivot_row[int(c)]))
+        aug = aug_next
+    x = zero_1d_array(a_col)
     for i in range(int(0), int(a_col)):
         idx = ((a_col - 1) - i)
         total = aug[int(idx), int(a_col)]
         for j in range(int((idx + 1)), int(a_row)):
             total = (total - (aug[int(idx), int(j)] * x[int(j)]))
-        x[int(idx)] = (total / aug[int(idx), int(idx)])
+        solved_val = (total / aug[int(idx), int(idx)])
+        x_next = zero_1d_array(a_col)
+        for c in range(int(0), int(a_col)):
+            if c == idx:
+                x_next[int(c)] = solved_val
+            else:
+                x_next[int(c)] = x[int(c)]
+        x = x_next
     return x
 
 # === Program ===
