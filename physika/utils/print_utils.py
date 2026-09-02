@@ -42,7 +42,7 @@ def print_cic_check_results(cic_errors: list[str]) -> None:
     """
     Print CIC type checking results.
 
-    ``sys.exit` is not called since Physika CIC still needs to support user
+    ``sys.exit`` is not called since Physika CIC still needs to support user
     inductive types, dimensional analysis, theorem proofs, macros, etc.
 
     Parameters

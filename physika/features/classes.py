@@ -913,7 +913,7 @@ class ClassFeature(ELF):
 
     **Forward rules**
     Three code-generation handlers were defined. ``class_def`` emits a complete
-    ``nn.Module``. ``field_access` emits ``obj.field``. ``method_call``emits
+    ``nn.Module``. ``field_access`` emits ``obj.field``. ``method_call`` emits
     ``obj.method(args)``.
 
     Physika classes are fully differentiable using Pytroch as backend. Scalar
@@ -1315,7 +1315,7 @@ class ClassFeature(ELF):
     def forward_rules(self) -> dict:
         """
         Three code-generation handlers were defined. ``class_def`` emits a complete
-        ``nn.Module``. ``field_access` emits ``obj.field``. ``method_call``emits
+        ``nn.Module``. ``field_access`` emits ``obj.field``. ``method_call`` emits
         ``obj.method(args)``.
 
         Physika classes are fully differentiable using Pytroch as backend. Scalar
