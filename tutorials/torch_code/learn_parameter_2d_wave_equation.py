@@ -32,7 +32,7 @@ def linspace(start, end, n):
 
 def wave_equation(u, Δx, Δy, c):
     lap = zero_2d_array(nx, ny)
-    lap[1:(nx - 1), 1:(ny - 1)] = ((c ** 2) * ((((u[0:(nx - 2), 1:(ny - 1)] - (2 * u[1:(nx - 1), 1:(ny - 1)])) + u[2:nx, 1:(ny - 1)]) / (Δx ** 2)) + (((u[1:(nx - 1), 0:(ny - 2)] - (2 * u[1:(nx - 1), 1:(ny - 1)])) + u[1:(nx - 1), 2:ny]) / (Δy ** 2))))
+    lap[int(1):int((nx - 1)), int(1):int((ny - 1))] = ((c ** 2) * ((((u[int(0):int((nx - 2)), int(1):int((ny - 1))] - (2 * u[int(1):int((nx - 1)), int(1):int((ny - 1))])) + u[int(2):int(nx), int(1):int((ny - 1))]) / (Δx ** 2)) + (((u[int(1):int((nx - 1)), int(0):int((ny - 2))] - (2 * u[int(1):int((nx - 1)), int(1):int((ny - 1))])) + u[int(1):int((nx - 1)), int(2):int(ny)]) / (Δy ** 2))))
     return lap
 
 def solver(c, u0, v0, Δx, Δy, Δt, nt):

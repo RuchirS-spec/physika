@@ -24,17 +24,17 @@ def zero_2d_array(rows, cols):
 
 def central_difference_x(f):
     diff = zero_2d_array(n_points, n_points)
-    diff[1:(n_points - 1), 1:(n_points - 1)] = ((f[1:(n_points - 1), 2:n_points] - f[1:(n_points - 1), 0:(n_points - 2)]) / (2 * element_length))
+    diff[int(1):int((n_points - 1)), int(1):int((n_points - 1))] = ((f[int(1):int((n_points - 1)), int(2):int(n_points)] - f[int(1):int((n_points - 1)), int(0):int((n_points - 2))]) / (2 * element_length))
     return diff
 
 def central_difference_y(f):
     diff = zero_2d_array(n_points, n_points)
-    diff[1:(n_points - 1), 1:(n_points - 1)] = ((f[2:n_points, 1:(n_points - 1)] - f[0:(n_points - 2), 1:(n_points - 1)]) / (2 * element_length))
+    diff[int(1):int((n_points - 1)), int(1):int((n_points - 1))] = ((f[int(2):int(n_points), int(1):int((n_points - 1))] - f[int(0):int((n_points - 2)), int(1):int((n_points - 1))]) / (2 * element_length))
     return diff
 
 def laplace(f):
     diff = zero_2d_array(n_points, n_points)
-    diff[1:(n_points - 1), 1:(n_points - 1)] = (((((f[1:(n_points - 1), 0:(n_points - 2)] + f[0:(n_points - 2), 1:(n_points - 1)]) + f[1:(n_points - 1), 2:n_points]) + f[2:n_points, 1:(n_points - 1)]) - (4 * f[1:(n_points - 1), 1:(n_points - 1)])) / (element_length ** 2))
+    diff[int(1):int((n_points - 1)), int(1):int((n_points - 1))] = (((((f[int(1):int((n_points - 1)), int(0):int((n_points - 2))] + f[int(0):int((n_points - 2)), int(1):int((n_points - 1))]) + f[int(1):int((n_points - 1)), int(2):int(n_points)]) + f[int(2):int(n_points), int(1):int((n_points - 1))]) - (4 * f[int(1):int((n_points - 1)), int(1):int((n_points - 1))])) / (element_length ** 2))
     return diff
 
 def apply_u_bc(u):
@@ -65,7 +65,7 @@ def solve_pressure(p_init, rhs):
     p_prev = p_init
     for k in range(int(0), int(n_pressure_poisson_iterations)):
         p_next = zero_2d_array(n_points, n_points)
-        p_next[1:(-1), 1:(-1)] = (0.25 * ((((p_prev[1:(-1), :(-2)] + p_prev[:(-2), 1:(-1)]) + p_prev[1:(-1), 2:]) + p_prev[2:, 1:(-1)]) - ((element_length ** 2) * rhs[1:(-1), 1:(-1)])))
+        p_next[int(1):int((-1)), int(1):int((-1))] = (0.25 * ((((p_prev[int(1):int((-1)), :int((-2))] + p_prev[:int((-2)), int(1):int((-1))]) + p_prev[int(1):int((-1)), int(2):]) + p_prev[int(2):, int(1):int((-1))]) - ((element_length ** 2) * rhs[int(1):int((-1)), int(1):int((-1))])))
         p_prev = apply_p_bc(p_next)
     return p_prev
 
