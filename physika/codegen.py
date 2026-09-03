@@ -1,5 +1,7 @@
-from typing import Dict, Set, Any
-
+from typing import Dict, Optional, Set, Any
+from physika.core.torch_lowering import lower_expr, body_mutates_in_place
+from physika.core.environment import Environment
+from physika.core.expr import FVarId
 from physika.utils.ast_utils import (ast_uses_solve, ast_uses_func,
                                      collect_grad_targets, generate_function,
                                      generate_statement, ast_uses_sympy,
@@ -9,7 +11,13 @@ from physika.elf import REGISTRY
 
 
 def from_ast_to_torch(unified_ast: Dict[str, Any],
-                      print_code: bool = True) -> str:
+                      print_code: bool = True,
+                      resolved_bodies: Optional[Dict[str, Any]] = None,
+                      resolved_methods: Optional[Dict[str, Any]] = None,
+                      resolved_program: Optional[Dict[int, Any]] = None,
+                      resolved_program_fvar_names: Optional[Dict[FVarId,
+                                                                 str]] = None,
+                      cic_env: Optional[Environment] = None) -> str:
     """Convert a unified AST into a complete, executable Python/PyTorch
     source string.
 
@@ -26,6 +34,13 @@ def from_ast_to_torch(unified_ast: Dict[str, Any],
 
     The returned string is ready to be executed with ``exec()``.
 
+
+    Functions, methods and top level program declarations that has
+    been CIC elaborated, verified and lowered to torch code skips the AST walk
+    (since there Physika CIC already verified it). However, any unresolved term
+    , not present in resolved arguments, fallbacks to ast to torch codegen
+    path.
+
     Parameters
     ----------
     unified_ast : Dict[str, Any]
@@ -39,6 +54,19 @@ def from_ast_to_torch(unified_ast: Dict[str, Any],
           (decl, assign, expr, for_loop, func_def, class_def).
     print_code : bool, default True
         If ``True``, print the generated code.
+    resolved_bodies : Dict[str, Any], optional
+        Function name to verified CIC term (plus fvar names, local decls,
+        param order, dim renames) disctionary.
+    resolved_methods : Dict[str, Any], optional
+        Class method to verified CIC term mapping.
+    resolved_program : Dict[int, Any], optional
+        ``unified_ast["program"]`` to ``(var_name, CIC elborated and verified
+        term)``.
+    resolved_program_fvar_names : Dict[str, Any], optional
+        ``FVarId`` to source name mapping.
+    cic_env : Any, optional
+        ``Environment`` used during elaboration used to lower the resolved CIC
+        terms.
 
     Returns
     -------
@@ -51,6 +79,7 @@ def from_ast_to_torch(unified_ast: Dict[str, Any],
     Examples
     --------
     >>> # Example #1: simple expression
+    >>> from physika.codegen import from_ast_to_torch
     >>> unified_ast = {
     ...     "functions": {},
     ...     "classes": {},
@@ -180,15 +209,55 @@ def from_ast_to_torch(unified_ast: Dict[str, Any],
     code_lines.append("\n".join(imports))
     code_lines.append("")
 
+    # fall back to raw-AST codegen for functions instead that have statement
+    # reassignemnts in their bodies
+    if resolved_bodies:
+        resolved_bodies = {
+            name: term
+            for name, term in resolved_bodies.items() if
+            not body_mutates_in_place(unified_ast["functions"].get(name, {}))
+        }
+
+    # merge solved cic terms duting elaboration for names lookup
+    resolved_names = set(resolved_bodies or {}) | set(resolved_methods or {})
+
     # Generate functions
     if unified_ast["functions"]:
         code_lines.append("# === Functions ===")
         for name, func_def in unified_ast["functions"].items():
-            code_lines.append(generate_function(name, func_def))
+            resolved = None
+            # if resolved_bodies ot resolved_methods are empty, fallback to
+            # standard codegen (no torch lowring from cic)
+            if resolved_bodies is not None and name in resolved_bodies:
+                body, fvar_names, local_decls, param_order, dim_rename = resolved_bodies[  # noqa: E501
+                    name]
+                resolved = (body, fvar_names, local_decls, param_order,
+                            dim_rename, cic_env)
+            try:
+                fn_code = generate_function(name,
+                                            func_def,
+                                            resolved=resolved,
+                                            resolved_names=resolved_names)
+            except Exception as e:
+                # Body is CIC verified but torch lowering failed
+                # fall back to the raw-AST codegen
+                if resolved is not None:
+                    print(f"  (CIC: lowering 'def {name}' failed ({e}); ")
+                fn_code = generate_function(name, func_def)
+            code_lines.append(fn_code)
             code_lines.append("")
 
     # Generate classes
     if unified_ast["classes"]:
+        # class methods env from CIC elaboration including inferred types
+        # and dependent bindings
+        resolved_methods_with_env = {
+            qualified:
+            (body, fvar_names, local_decls, param_order, dim_rename, cic_env)
+            for qualified,
+            (body, fvar_names, local_decls, param_order,
+             dim_rename) in (resolved_methods or {}).items()
+        }
         code_lines.append("# === Classes ===")
         for name, class_def in unified_ast["classes"].items():
             if REGISTRY.features != []:
@@ -198,13 +267,38 @@ def from_ast_to_torch(unified_ast: Dict[str, Any],
                 assert class_code is not None
                 code_lines.append(class_code)
             else:
-                code_lines.append(generate_class(name, class_def))
+                code_lines.append(
+                    generate_class(name,
+                                   class_def,
+                                   resolved_methods=resolved_methods_with_env,
+                                   resolved_names=resolved_names))
             code_lines.append("")
 
     # Generate program statements
     code_lines.append("# === Program ===")
-    for stmt in unified_ast["program"]:
-        stmt_code = generate_statement(stmt, grad_target_vars)
+    for idx, stmt in enumerate(unified_ast["program"]):
+        resolved_expr_code = None
+        # lookup if there are any CIC elaborated terms from top level program
+        entry = (resolved_program or {}).get(idx)
+        if entry is not None and cic_env is not None:
+            # if there are CIC elaborated and verifeid terms, lower them to
+            # torch code
+            _, resolved_cic = entry
+            try:
+                resolved_expr_code = lower_expr(resolved_cic,
+                                                resolved_program_fvar_names
+                                                or {},
+                                                cic_env,
+                                                resolved_names=resolved_names)
+            except Exception as e:
+                # statement is CIC verified but torch lowering failed
+                # fall back to the raw-AST codegen
+                print(f"  (CIC: lowering a program statement failed ({e}); ")
+                resolved_expr_code = None
+        # else follows regular codegen
+        stmt_code = generate_statement(stmt,
+                                       grad_target_vars,
+                                       resolved_expr_code=resolved_expr_code)
         if stmt_code:
             code_lines.append(stmt_code)
 

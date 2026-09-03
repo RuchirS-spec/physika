@@ -24,7 +24,7 @@ def linspace(start, end, n):
 
 def heat_equation(T, Δx, Δy, α):
     f = zero_2d_array(nx, ny)
-    f[1:(nx - 1), 1:(ny - 1)] = (α * ((((T[0:(nx - 2), 1:(ny - 1)] - (2 * T[1:(nx - 1), 1:(ny - 1)])) + T[2:nx, 1:(ny - 1)]) / (Δx ** 2)) + (((T[1:(nx - 1), 0:(ny - 2)] - (2 * T[1:(nx - 1), 1:(ny - 1)])) + T[1:(nx - 1), 2:ny]) / (Δy ** 2))))
+    f[int(1):int((nx - 1)), int(1):int((ny - 1))] = (α * ((((T[int(0):int((nx - 2)), int(1):int((ny - 1))] - (2 * T[int(1):int((nx - 1)), int(1):int((ny - 1))])) + T[int(2):int(nx), int(1):int((ny - 1))]) / (Δx ** 2)) + (((T[int(1):int((nx - 1)), int(0):int((ny - 2))] - (2 * T[int(1):int((nx - 1)), int(1):int((ny - 1))])) + T[int(1):int((nx - 1)), int(2):int(ny)]) / (Δy ** 2))))
     return f
 
 def solver(α, T0, Δx, Δy, Δt, nt):

@@ -208,7 +208,7 @@ class FloatLit:
     val: float
 
 
-Literal = Union[NatLit, FloatLit]
+Literal = Union[NatLit, FloatLit, int, float]
 
 
 @dataclass(frozen=True)

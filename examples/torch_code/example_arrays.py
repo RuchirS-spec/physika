@@ -20,7 +20,7 @@ def update_2d_array(x):
 
 # === Program ===
 x = torch.tensor([1, 2, 3, 5, 6, 7], device=DEVICE)
-y = (x[0:3] + x[0:3])
+y = (x[int(0):int(3)] + x[int(0):int(3)])
 z = (y + torch.tensor([1, 3, 4], device=DEVICE))
 print(x)
 print(y)

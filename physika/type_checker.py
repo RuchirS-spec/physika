@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any, Dict, Optional, Set
 
 from physika.utils.types import (
     check_function,
@@ -61,6 +61,12 @@ class TypeChecker:
     unified_ast : dict
         The unified AST dict produced by ``build_unified_ast()``, with keys
         ``"functions"``, ``"classes"``, and ``"program"``.
+    skip_functions: Optional[Set[str]]
+        Name of CIC elaborate and verified functions to skip from HM type
+        checking.
+    skip_methods: Optional[Set[str]]
+        Name of CIC elaborate and verified methods to skip from HM
+        type checking.
 
     Examples
     --------
@@ -91,21 +97,28 @@ class TypeChecker:
     ["Line 3: Function 'add2' expects 2 args, got 1"]
     """
 
-    def __init__(self, unified_ast: dict) -> None:
+    def __init__(
+        self,
+        unified_ast: dict,
+        skip_functions: Optional[Set[str]] = None,
+        skip_methods: Optional[Set[str]] = None,
+    ) -> None:
         self.unified_ast = unified_ast
         self.errors: list[str] = []
         self.type_env: dict = {}
         self.func_env: dict = {}
         self.class_env: dict = {}
+        self.skip_functions: Set[str] = skip_functions or set()
+        self.skip_methods: Set[str] = skip_methods or set()
 
     def run(self) -> list[str]:
         """Run type inference over the full unified AST.
 
-        Three passes:
+        Four passes:
 
         1. Register all function and class signatures.
-        2. Check function bodies
-        3. Check class bodies.
+        2. Check function bodies (skipping ``skip_functions``).
+        3. Check class bodies (skipping ``skip_methods``).
         4. Check top-level statements.
 
         Returns
@@ -152,12 +165,18 @@ class TypeChecker:
             )
 
         for name, fdef in self.unified_ast["functions"].items():
+            if name in self.skip_functions:
+                continue
             check_function(name, fdef, self.func_env, self.class_env,
                            self.errors.append)
 
         for name, cdef in self.unified_ast["classes"].items():
-            check_class(name, cdef, self.func_env, self.class_env,
-                        self.errors.append)
+            check_class(name,
+                        cdef,
+                        self.func_env,
+                        self.class_env,
+                        self.errors.append,
+                        skip_methods=self.skip_methods)
 
         for stmt in self.unified_ast["program"]:
             if stmt and stmt[0] not in ("func_def", "class_def"):

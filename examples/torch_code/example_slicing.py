@@ -7,7 +7,7 @@ from physika.runtime import print
 
 # === Functions ===
 def slice_demo_1d(a):
-    return a[:2]
+    return a[:int(2)]
 
 def slice_demo_2d(a):
     return a[:, int(0)]
@@ -24,7 +24,7 @@ class SliceDemo(nn.Module):
     def return_x(self, x):
         this = self
         x = torch.as_tensor(x, device=DEVICE).float()
-        return x[:4]
+        return x[:int(4)]
 
     def return_y(self, y):
         this = self
@@ -50,9 +50,9 @@ class SliceDemo(nn.Module):
 x = torch.tensor([1, 2, 3, 4, 5, 6, 7, 8], device=DEVICE)
 y = torch.tensor([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]], device=DEVICE)
 z = torch.tensor([[[1, 2], [3, 4]], [[5, 6], [7, 8]]], device=DEVICE)
-x_slice_1_to_3 = x[1:3]
-x_slice_start_to_4 = x[:4]
-y_rows_1_to_3 = y[1:3, :]
+x_slice_1_to_3 = x[int(1):int(3)]
+x_slice_start_to_4 = x[:int(4)]
+y_rows_1_to_3 = y[int(1):int(3), :]
 y_column_2 = y[:, int(2)]
 z_layer_1 = z[int(1), :, :]
 z_first_element_each_layer = z[:, int(0), int(0)]
@@ -87,7 +87,7 @@ z = torch.tensor([[[1, 2], [3, 4]], [[5, 6], [7, 8]]], device=DEVICE)
 x_assign = x
 y_assign = y
 z_assign = z
-x_assign[1:3] = torch.tensor([10, 20], device=DEVICE)
+x_assign[int(1):int(3)] = torch.tensor([10, 20], device=DEVICE)
 y_assign[:, int(0)] = torch.tensor([10, 20, 30, 40], device=DEVICE)
 z_assign[:, :, int(0)] = torch.tensor([10, 20], device=DEVICE)
 print(x_assign)

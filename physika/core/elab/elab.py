@@ -630,7 +630,7 @@ class Elab:
         Examples
         --------
         >>> from physika.core.environment import Environment
-        >>> from physika.core.elab import Elab
+        >>> from physika.core.elab.elab import Elab
         >>> from physika.core.expr import ForallE, Const, App, BVar, BinderInfo
         >>> elab = Elab(Environment())
         >>> # def id_real(x: ℝ): ℝ  →  Π (x : Real), Real
