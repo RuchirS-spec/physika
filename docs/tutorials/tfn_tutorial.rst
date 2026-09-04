@@ -15,8 +15,9 @@ it on a synthetic dataset of point masses to predict their moment of
 inertia.
 
 .. figure:: /_static/tutorial_files/tfn_message_passing.png
-   :width: 85%
+   :alt: Comparison of a GCN and a CNN processing a molecule
    :align: center
+   :width: 500px
 
    A pictorial demonstration of the message passing scheme in the
    Tensor Field Network.
@@ -137,9 +138,10 @@ turning a single distance into a higher-dimensional "soft histogram":
 
    \text{rbf}(r)_c = \exp\!\left(-\gamma\,(r - \text{centers}_c)^2\right), \qquad c = 1, \dots, \text{rbf\_count}
 
-.. figure:: /_static/tutorial_files/tfn_rbf_bumps.png
-   :width: 85%
+.. figure:: /_static/tutorial_files/gaussian_bumps.png
+   :alt: Comparison of a GCN and a CNN processing a molecule
    :align: center
+   :width: 500px
 
    The Gaussian bump functions defined by ``centers`` and ``gamma``,
    spanning ``[rbf_low, rbf_high]``.
@@ -278,9 +280,10 @@ the theory in [Cheng2022]_.
 
    Y_2 = \left[\frac{xy}{r^2},\ \frac{yz}{r^2},\ \frac{2z^2-x^2-y^2}{2\sqrt{3}\,r^2},\ \frac{zx}{r^2},\ \frac{x^2-y^2}{2r^2}\right]
 
-.. figure:: /_static/tutorial_files/tfn_y2_lobes.png
-   :width: 85%
+.. figure:: /_static/tutorial_files/l2_harmonics.png
+   :alt: Comparison of a GCN and a CNN processing a molecule
    :align: center
+   :width: 500px
 
    The five real l=2 spherical harmonic "orbital" shapes, matching the
    component order used by ``Y2`` below (xy, yz, z^2, zx, x^2-y^2).
@@ -702,13 +705,6 @@ Evaluating the Model
            result = total_loss / eval_samples
            return result
 
-.. figure:: /_static/tutorial_files/tfn_training_curve.png
-   :width: 85%
-   :align: center
-
-   ``moi_object.evaluate()`` loss vs. training step, sampled
-   periodically, showing the downward trend.
-
 Equivariance Check
 --------------------
 
@@ -763,14 +759,6 @@ Equivariance Check
                    worst = sq[i,j]
        result = sqrt(worst)
        return result
-
-.. figure:: /_static/tutorial_files/tfn_equivariance_check.png
-   :width: 85%
-   :align: center
-
-   Point cloud with predicted MOI ellipsoid, and the same rotated,
-   with predicted ellipsoid also rotated -- generated from the actual
-   ``pred_orig``/``pred_rot`` values from the check above.
 
 Full Code
 ----------
