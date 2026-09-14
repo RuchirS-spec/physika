@@ -19,6 +19,7 @@ Tutorials
    :caption: Population Dynamics
 
    learn_parameter_lotka_volterra_ode
+   chemostat_monod
 
 
 .. toctree::
@@ -29,6 +30,7 @@ Tutorials
    toggle_switch
    central_dogma
    selkov_glycolysis
+   michaelis_menten
 
 .. toctree::
    :maxdepth: 1
@@ -36,6 +38,7 @@ Tutorials
 
    fitzhugh_nagumo
    hodgkin_huxley
+   izhikevich
 
 .. toctree::
    :maxdepth: 1
@@ -96,9 +99,13 @@ Tutorials
    fft_tutorial
    fourier_neural_operator
    2d_pde_parameter_estimation
+   norm_flow
+   undirected_graph
 
 .. toctree::
    :maxdepth: 1
    :caption: Numerical solvers
 
    linear_solve_gaussian_elimination
+   linear_solve_lu_decomposition
+   linear_solve_helmholtz_equation
