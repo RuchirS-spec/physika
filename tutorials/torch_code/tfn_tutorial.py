@@ -192,16 +192,7 @@ def moi_tensor(points, masses, center_idx):
     Ixy = torch.sum(((0.0 - (x * y)) * m) if isinstance(((0.0 - (x * y)) * m), torch.Tensor) else torch.tensor(float(((0.0 - (x * y)) * m))))
     Iyz = torch.sum(((0.0 - (y * z)) * m) if isinstance(((0.0 - (y * z)) * m), torch.Tensor) else torch.tensor(float(((0.0 - (y * z)) * m))))
     Ixz = torch.sum(((0.0 - (x * z)) * m) if isinstance(((0.0 - (x * z)) * m), torch.Tensor) else torch.tensor(float(((0.0 - (x * z)) * m))))
-    moi = zero_2d(3, 3)
-    moi[int(0), int(0)] = Ixx
-    moi[int(1), int(1)] = Iyy
-    moi[int(2), int(2)] = Izz
-    moi[int(0), int(1)] = Ixy
-    moi[int(1), int(0)] = Ixy
-    moi[int(1), int(2)] = Iyz
-    moi[int(2), int(1)] = Iyz
-    moi[int(0), int(2)] = Ixz
-    moi[int(2), int(0)] = Ixz
+    moi = torch.tensor([[Ixx, Ixy, Ixz], [Ixy, Iyy, Iyz], [Ixz, Iyz, Izz]], device=DEVICE)
     return moi
 
 def random_points(n, max_coord):

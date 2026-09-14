@@ -251,16 +251,7 @@ def moi_tensor(points: ℝ[num_points, 3], masses: ℝ[num_points], center_idx: 
     Ixy = sum((0.0 - x*y) * m)
     Iyz = sum((0.0 - y*z) * m)
     Ixz = sum((0.0 - x*z) * m)
-    moi = zero_2d(3, 3)
-    moi[0,0] = Ixx
-    moi[1,1] = Iyy
-    moi[2,2] = Izz
-    moi[0,1] = Ixy
-    moi[1,0] = Ixy
-    moi[1,2] = Iyz
-    moi[2,1] = Iyz
-    moi[0,2] = Ixz
-    moi[2,0] = Ixz
+    moi: ℝ[3, 3] = [[Ixx, Ixy, Ixz], [Ixy, Iyy, Iyz], [Ixz, Iyz, Izz]]
     return moi
 
 # Defining the point-mass cloud coordinates 

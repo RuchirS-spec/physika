@@ -212,7 +212,7 @@ Mathematically, ``ssp`` is defined as:
    def ssp(x: ℝ): ℝ:
        return log(0.5 * exp(x) + 0.5)
 
-Spherical Harmonics
+Theory: Spherical Harmonics
 -----------------------------
 
 Wigner-D matrices tell us how a degree-:math:`\ell` feature is allowed
@@ -407,7 +407,7 @@ edge feature combined with a degree-0 node feature, reduced to degree
 0), and ``cg_202`` is ``CG(2,0,2)`` (a degree-2 edge feature combined
 with a degree-0 node feature, reduced to degree 2).
 
-Equivariant Message Passing
+Theory: Equivariant Message Passing
 --------------------------------------
 
 A TFN layer updates each node :math:`u` by aggregating, over every
@@ -446,7 +446,7 @@ neighbor :math:`v`, the tensor product of the edge feature
                results[a, m] = acc[m]
        return results
 
-Reassembling the Tensor
+Code: Reassembling the Tensor
 --------------------------------
 
 A 3x3 matrix is basically the tensor product of two ordinary 3D
@@ -503,9 +503,19 @@ transforming under its own clean representation:
 
 Defining the Point-Mass Cloud Coordinates
 --------------------------------------------
-Every training step calls ``random_points``/``random_masses`` to 
-generate a new, independent point-mass cloud, computes the loss 
-against the analytic ground truth for that cloud, and discards it.
+
+Unlike a typical supervised-learning setup with a fixed training set,
+this tutorial has no dataset at all: every training step calls
+``random_points``/``random_masses`` to generate a brand-new,
+independent point-mass cloud from scratch, computes the loss against
+the analytic ground truth for that one cloud, and discards it. There
+is nothing to overfit to and no epochs in the usual sense, since the
+model never sees the same input twice; each gradient step is instead
+a fresh Monte Carlo sample of the underlying physics. This mirrors
+the training loop in the reference implementation this tutorial is
+adapted from, [MOINotebook]_, which likewise draws a new random
+point cloud inside the loop on every step rather than iterating over
+a fixed dataset.
 
 .. code-block:: text
 
@@ -626,16 +636,7 @@ approximate.
        Ixy = sum((0.0 - x*y) * m)
        Iyz = sum((0.0 - y*z) * m)
        Ixz = sum((0.0 - x*z) * m)
-       moi = zero_2d(3, 3)
-       moi[0,0] = Ixx
-       moi[1,1] = Iyy
-       moi[2,2] = Izz
-       moi[0,1] = Ixy
-       moi[1,0] = Ixy
-       moi[1,2] = Iyz
-       moi[2,1] = Iyz
-       moi[0,2] = Ixz
-       moi[2,0] = Ixz
+       moi: ℝ[3, 3] = [[Ixx, Ixy, Ixz], [Ixy, Iyy, Iyz], [Ixz, Iyz, Izz]]
        return moi
 
 .. math::
@@ -670,44 +671,6 @@ where:
                    last_loss = current_loss
            return last_loss
 
-Plotting the Loss Curve
-------------------------------
-
-.. code-block:: text
-
-    loss_plot: ℝ[epochs] = zero_1d(epochs)
-    for step:ℕ(epochs):
-        current_loss = moi_object.loss_sample()
-        learnable_grads = grad(current_loss, moi_object.learnable_params)
-        moi_object.update(lr, learnable_grads)
-        loss_plot[step] = current_loss
-
-    plot_training_loss(loss_plot)
-
-.. note::
-   ``plot_training_loss`` is not a built-in Physika function. To use it,
-   add the following helper to ``physika/runtime.py``:
-
-   .. code-block:: python
-
-      import matplotlib.pyplot as plt
-      def plot_training_loss(loss_plot):
-
-            plt.plot(loss_plot.detach().numpy())
-
-            plt.xlabel("Training step")
-            plt.ylabel("MSE loss")
-            plt.yscale("log")
-            plt.title("Training Loss")
-            plt.show()
-
-.. figure:: /_static/tutorial_files/tfn_loss_curve.png
-   :alt: TFN training loss curve
-   :align: center
-   :width: 700px
-
-   Training loss over 300 epochs
-
 Evaluating the Model
 ----------------------
 
@@ -721,6 +684,44 @@ Evaluating the Model
                    total_loss = total_loss + current_loss
            result = total_loss / eval_samples
            return result
+
+Visualizing the Loss Curve
+------------------------------
+
+.. code-block:: text
+
+    loss_history: ℝ[epochs] = zero_1d(epochs)
+    for step:ℕ(epochs):
+        current_loss = moi_object.loss_sample()
+        learnable_grads = grad(current_loss, moi_object.learnable_params)
+        moi_object.update(lr, learnable_grads)
+        loss_history[step] = current_loss
+
+    plot_training_loss(loss_history)
+
+.. note::
+   ``plot_training_loss`` is not a built-in Physika function. To use it,
+   add the following helper to ``physika/runtime.py``:
+
+   .. code-block:: python
+
+      def plot_training_loss(loss_history):
+            import matplotlib.pyplot as plt
+
+            plt.plot(loss_history.detach().numpy())
+
+            plt.xlabel("Training step")
+            plt.ylabel("MSE loss")
+            plt.yscale("log")
+            plt.title("TFN Moment-of-Inertia: Training Loss")
+            plt.show()
+
+.. figure:: /_static/tutorial_files/tfn_loss_curve.png
+   :alt: TFN training loss curve
+   :align: center
+   :width: 700px
+
+   Training loss over 300 steps of stochastic gradient descent.
 
 Equivariance Check
 --------------------
@@ -1035,16 +1036,7 @@ Full Code
        Ixy = sum((0.0 - x*y) * m)
        Iyz = sum((0.0 - y*z) * m)
        Ixz = sum((0.0 - x*z) * m)
-       moi = zero_2d(3, 3)
-       moi[0,0] = Ixx
-       moi[1,1] = Iyy
-       moi[2,2] = Izz
-       moi[0,1] = Ixy
-       moi[1,0] = Ixy
-       moi[1,2] = Iyz
-       moi[2,1] = Iyz
-       moi[0,2] = Ixz
-       moi[2,0] = Ixz
+       moi: ℝ[3, 3] = [[Ixx, Ixy, Ixz], [Ixy, Iyy, Iyz], [Ixz, Iyz, Izz]]
        return moi
 
    # Defining the point-mass cloud coordinates 
