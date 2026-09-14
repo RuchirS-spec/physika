@@ -7,87 +7,81 @@ point-mass cloud.
 Introduction
 ------------
 
-Tensor Field Networks (TFNs) [Thomas2018]_ are a specialized neural
+Tensor Field Networks (TFNs) are a specialized neural
 network architecture designed to process 3D data, such as point
 clouds or atoms, while respecting 3D geometric transformations. In
 this tutorial, we implement a TFN from scratch in Physika and train
 it on a synthetic dataset of point masses to predict their moment of
-inertia.
+inertia. [Thomas2018]_
 
 .. figure:: /_static/tutorial_files/tfn_message_passing.png
    :alt: Comparison of a GCN and a CNN processing a molecule
    :align: center
    :width: 500px
 
-   A pictorial demonstration of the message passing scheme in the
-   Tensor Field Network.
+   Figure 1: A pictorial demonstration of the message passing scheme
+   in the Tensor Field Network. Figure from [Cheng2022]_.
 
 Equivariance
 ------------
 
-In 3D space, many properties are independent of the orientation of the
-object. For example, when predicting moment of inertia, the resulting
-rank-2 tensor should rotate accordingly as the point-mass cloud is
-rotated. In other words, the model is equivariant to global rotations.
+In 3D Euclidean space, many properties are independent of the pose
+of the object. For normal estimation on 3D point clouds, the normal
+vector rotates with the global rotation. The electron density
+mapping also rotates accordingly with the rotation of the atom
+coordinates. An ideal model in such scenarios should be robust to
+the transformation such that it makes predictions that also
+transform accordingly. In other words, the model is equivariant to
+the global transformation.
 
-**Mathematical definition:** a function :math:`f` is equivariant to a
-transformation :math:`g` if applying the transformation to the input
-first and then running :math:`f` gives the same result as running
-:math:`f` first and then applying a matching transformation
-:math:`\mathcal{T}g` to the output:
+Here, the transformation :math:`g` is always a rotation of 3D
+space. A function :math:`f` is **equivariant** to :math:`g` if
+applying :math:`g` to the input first and then running :math:`f`
+gives the same result as running :math:`f` first and then applying
+:math:`g` to the output:
 
 .. math::
 
-   f(g \cdot x) = (\mathcal{T}g)\, f(x)
+   f(g \cdot x) = g \cdot f(x)
 
 
 Spherical Tensors
 ------------------
 
-A **spherical tensor of rank** :math:`k` is a set of :math:`2k+1`
-quantities, indexed by :math:`q = -k, ..., k`, that transform under
+Any tensor can be decomposed into a basis of components indexed by
+rank :math:`\ell`, where each captures one specific direction of
+angular behavior. An ordinary Cartesian tensor is  actually a mix 
+of several of these components at once, which is why  rotating it 
+mixes its components together in a rank-dependent way, 
+blending those distinct directions back into one another. 
+
+This is why we use spherical tensors: so that each rank-:math:`\ell`
+component stays separate instead, rotating entirely within itself,
+never bleeding into another component.
+
+A **spherical tensor of rank** :math:`\ell` is a set of :math:`2\ell+1`
+quantities, indexed by :math:`q = -\ell, ..., \ell`, that transform under
 rotation via the Wigner D-matrix:
 
 .. math::
 
-   T^k_q \;\rightarrow\; \sum_{q'} \mathcal{D}^k_{qq'}(\mathcal{R})\, T^k_{q'}
+   T^\ell_q \;\rightarrow\; \sum_{q'} \mathcal{D}^\ell_{qq'}(\mathcal{R})\, T^\ell_{q'}
 
-The key property is **irreducibility**: a rank-:math:`k` spherical
-tensor transforms entirely within itself under any rotation. By
-contrast, an ordinary Cartesian tensor is *not* irreducible, it
-decomposes into a sum of spherical tensors of different ranks.
+The key property is **irreducibility**. The rank-:math:`\ell` component 
+of the spherical tensor transforms entirely within itself under any 
+rotation. By contrast, an ordinary Cartesian tensor is *not* 
+irreducible, it can be again decomposed into a sum of spherical 
+tensors of different ranks. Hence, a tensor written as a sum of
+spherical tensor components, each rotating entirely within itself,
+is said to be decomposed into irreducible parts.
 
 .. note::
    The :math:`s, p, d, f, ...` orbital shapes are exactly the rank
-   :math:`k = 0, 1, 2, 3, ...` spherical tensors, they're the
+   :math:`\ell = 0, 1, 2, 3, ...` spherical tensors, they're the
    angular part of the hydrogen atom's wavefunction,
-   :math:`Y_k^q(\theta,\phi)`, the same functions used as
+   :math:`Y_\ell^q(\theta,\phi)`, the same functions used as
    :math:`Y_0, Y_1, Y_2` throughout this tutorial.
 
-The Edge Tensor
----------------
-
-For every pair of points :math:`(u, v)` in the cloud, the **edge
-tensor** is the degree-:math:`\ell` geometric feature built from their
-relative position :math:`r = r_u - r_v`:
-
-The edge tensor handles **Translational invariance** by depending only on 
-the relative position :math:`r`, which is unchanged if the entire point cloud
-is shifted by a constant vector.
-
-.. math::
-
-   \mathsf{r}^\ell_{uv} = \varphi_\ell(r)\, Y_\ell(\hat{\mathbf{r}})
-
-It has two components, intentionally kept separate:
-
-- :math:`\varphi_\ell(r)` -- the *radial* part, a learned scalar
-  function of only the distance :math:`r = |r_{uv}|`. Since distance
-  is a rotation-invariant scalar, :math:`\varphi_\ell` can be an
-  unconstrained neural network (the `Radial Network`_).
-- :math:`Y_\ell(\hat{r})` -- the *angular* part, the fixed spherical
-  harmonic of the direction :math:`\hat{r} = r/|r|`. This is what
-  carries the rotation-equivariant behavior.
 
 Wigner-D Matrices
 ------------------
@@ -102,14 +96,31 @@ unitary matrix assigned to each rotation :math:`R`, one per degree
    D^0(R) = 1, \qquad D^1(R) = R
 
 :math:`\ell=0` (scalars) is untouched by rotation; :math:`\ell=1` *is*
-the ordinary 3x3 rotation matrix itself.
+the ordinary 3x3 rotation matrix itself.  [Cheng2022]_.
+
+Edge Tensor
+------------
+
+For every pair of points :math:`u, v` in the cloud, the edge tensor
+is the degree-:math:`\ell` feature built from their relative
+position :math:`r = r_u - r_v`:
+
+.. math::
+
+   \mathsf{r}^\ell_{uv} = \varphi_\ell(r)\, Y_\ell(\hat{\mathbf{r}})
+
+It has two parts. :math:`\varphi_\ell(r)` is the radial part: a
+scalar function of only the distance, so it never changes under
+rotation. :math:`Y_\ell(\hat{r})` is the angular part: it depends
+only on the direction, so it's what actually carries the rotation.
 
 Setup (Radial Basis Functions)
 -------------------------------
 
-We now set up the hyperparameters for the point-mass cloud and the
-Gaussian radial-basis-function (RBF) expansion used to featurize
-pairwise distances.
+We start with the invariant part of the edge tensor,
+:math:`\varphi_\ell(r)`, by setting up the hyperparameters for the
+point-mass cloud and the Gaussian radial-basis-function (RBF)
+expansion used to featurize pairwise distances.
 
 .. code-block:: text
 
@@ -138,8 +149,8 @@ turning a single distance into a higher-dimensional "soft histogram":
    :align: center
    :width: 500px
 
-   The Gaussian bump functions defined by ``centers`` and ``gamma``,
-   spanning ``[rbf_low, rbf_high]``.
+   Figure 2: The Gaussian bump functions defined by ``centers`` and
+   ``gamma``, spanning ``[rbf_low, rbf_high]``.
 
 Helper Functions
 -----------------
@@ -176,10 +187,10 @@ Helper Functions
                results[i, j] = sqrt(acc + 1e-12)
        return results
 
-- ``difference_matrix`` -- computes the relative vector
+- ``difference_matrix`` - computes the relative vector
   :math:`r_{ij} = r_i - r_j` for every pair of points,
   making it translation-invariant.
-- ``distance_matrix`` -- reduces each relative vector to its scalar
+- ``distance_matrix``  - reduces each relative vector to its scalar
   length :math:`|r_{ij}|` via a regularized norm.
 
 Activation Function
@@ -211,91 +222,6 @@ Mathematically, ``ssp`` is defined as:
 
    def ssp(x: ℝ): ℝ:
        return log(0.5 * exp(x) + 0.5)
-
-Theory: Spherical Harmonics
------------------------------
-
-Wigner-D matrices tell us how a degree-:math:`\ell` feature is allowed
-to transform, but not how to generate one. Spherical harmonics answer
-this: for a direction :math:`\hat{r} = r/|r|` on the unit sphere,
-:math:`Y_\ell : S^2 \to \mathbb{R}^{2\ell+1}` is a fixed, closed-form
-function of only the *direction*, satisfying the equivariance
-transformation law:
-
-.. math::
-
-   Y_\ell(\mathcal{R} \cdot \hat{\mathbf{r}}) = \mathcal{D}^\ell_\mathcal{R}\, Y_\ell(\hat{\mathbf{r}})
-
-It's what lets us build the **edge
-tensor**, the edge feature between two nodes:
-
-.. math::
-
-   \mathsf{r}^\ell = \varphi_\ell(r)\, Y_\ell(\hat{\mathbf{r}})
-
-:math:`\varphi_\ell` depends only on :math:`|r|` (invariant), whereas
-:math:`Y_\ell` depends only on :math:`\hat{r}` (equivariant), following
-the theory in [Cheng2022]_.
-
-**The three degrees used here:**
-
-- :math:`Y_0` (1 component) -- the constant :math:`1` (a scalar).
-- :math:`Y_1` (3 components) -- :math:`Y_1(\hat{r}) = \hat{r} =
-  r/|r|`, the ordinary unit vector. Here :math:`D^1_R = R`, because
-  rotating a unit vector is the same as applying the rotation matrix
-  to it.
-- :math:`Y_2` (5 components) -- forming an irreducible basis (similar to the
-  real d-orbital shapes):
-
-.. math::
-
-   Y_2 = \left[\frac{xy}{r^2},\ \frac{yz}{r^2},\ \frac{2z^2-x^2-y^2}{2\sqrt{3}\,r^2},\ \frac{zx}{r^2},\ \frac{x^2-y^2}{2r^2}\right]
-
-.. figure:: /_static/tutorial_files/tfn_l2_harmonics.png
-   :alt: Comparison of a GCN and a CNN processing a molecule
-   :align: center
-   :width: 500px
-
-   The five real l=2 spherical harmonic "orbital" shapes, matching the
-   component order used by ``Y2`` below (xy, yz, z^2, zx, x^2-y^2).
-
-.. code-block:: text
-
-   def Y0(rij: ℝ[num_points, num_points, 3]): ℝ[num_points, num_points, 1]:
-       results: ℝ[num_points, num_points, 1] = zero_3d(num_points, num_points, 1)
-       for i:ℕ(num_points):
-           for j:ℕ(num_points):
-               results[i, j, 0] = 1.0
-       return results
-
-   def Y1(rij: ℝ[num_points, num_points, 3]): ℝ[num_points, num_points, 3]:
-       results: ℝ[num_points, num_points, 3] = zero_3d(num_points, num_points, 3)
-       for i:ℕ(num_points):
-           for j:ℕ(num_points):
-               x = rij[i, j, 0]
-               y = rij[i, j, 1]
-               z = rij[i, j, 2]
-               r_norm = sqrt(x*x + y*y + z*z + 1e-12)
-               results[i, j, 0] = x / r_norm
-               results[i, j, 1] = y / r_norm
-               results[i, j, 2] = z / r_norm
-       return results
-
-   def Y2(rij: ℝ[num_points, num_points, 3]): ℝ[num_points, num_points, 5]:
-       results: ℝ[num_points, num_points, 5] = zero_3d(num_points, num_points, 5)
-       sqrt3: ℝ = sqrt(3.0)
-       for i:ℕ(num_points):
-           for j:ℕ(num_points):
-               x = rij[i, j, 0]
-               y = rij[i, j, 1]
-               z = rij[i, j, 2]
-               r2 = x*x + y*y + z*z + 1e-12
-               results[i, j, 0] = x*y / r2
-               results[i, j, 1] = y*z / r2
-               results[i, j, 2] = (2.0*z*z - x*x - y*y) / (2.0 * sqrt3 * r2)
-               results[i, j, 3] = z*x / r2
-               results[i, j, 4] = (x*x - y*y) / (2.0 * r2)
-       return results
 
 Radial Network
 ----------------
@@ -343,6 +269,80 @@ to the true radial profile dictated by the underlying physics.
            for j:ℕ(num_points):
                efeat = rbf[i, j]
                results[i, j] = radial_net(efeat, w1, b1, w2, b2)
+       return results
+
+Spherical Harmonics
+-----------------------------
+
+Now the equivariant part, :math:`Y_\ell(\hat{r})`. Wigner-D matrices
+tell us how a degree-:math:`\ell` feature is allowed to transform,
+but not how to generate one. Spherical harmonics answer this: for a
+direction :math:`\hat{r} = r/|r|` on the unit sphere,
+:math:`Y_\ell : S^2 \to \mathbb{R}^{2\ell+1}` is a fixed, closed-form
+function of only the *direction*, satisfying the equivariance
+transformation law:
+
+.. math::
+
+   Y_\ell(\mathcal{R} \cdot \hat{\mathbf{r}}) = \mathcal{D}^\ell_\mathcal{R}\, Y_\ell(\hat{\mathbf{r}})
+
+This is the :math:`Y_\ell(\hat{r})` from the edge tensor.
+
+**The three degrees used here:**
+
+- :math:`Y_0` (1 component) -- the constant :math:`1` (a scalar).
+- :math:`Y_1` (3 components) -- :math:`Y_1(\hat{r}) = \hat{r} =
+  r/|r|`, the ordinary unit vector. Here :math:`D^1_R = R`, because
+  rotating a unit vector is the same as applying the rotation matrix
+  to it.
+- :math:`Y_2` (5 components) -- forming an irreducible basis (similar to the
+  real d-orbital shapes):
+
+.. math::
+
+   Y_2 = \left[\frac{xy}{r^2},\ \frac{yz}{r^2},\ \frac{2z^2-x^2-y^2}{2\sqrt{3}\,r^2},\ \frac{zx}{r^2},\ \frac{x^2-y^2}{2r^2}\right]
+
+.. figure:: /_static/tutorial_files/tfn_l2_harmonics.png
+   :alt: Comparison of a GCN and a CNN processing a molecule
+   :align: center
+   :width: 500px
+
+   Figure 3: The five real l=2 spherical harmonic "orbital" shapes,
+   matching the component order used by ``Y2`` below (xy, yz, z^2, zx,
+   x^2-y^2). Figure from [Duda2015]_.
+
+.. code-block:: text
+
+   def Y0(rij: ℝ[num_points, num_points, 3]): ℝ[num_points, num_points, 1]:
+       results: ℝ[num_points, num_points, 1] = zero_3d(num_points, num_points, 1)
+       for i:ℕ(num_points):
+           for j:ℕ(num_points):
+               results[i, j, 0] = 1.0
+       return results
+
+   def Y1(rij: ℝ[num_points, num_points, 3]): ℝ[num_points, num_points, 3]:
+       results: ℝ[num_points, num_points, 3] = zero_3d(num_points, num_points, 3)
+       for i:ℕ(num_points):
+           for j:ℕ(num_points):
+               x: ℝ, y: ℝ, z: ℝ = rij[i, j, :]
+               r_norm = sqrt(x*x + y*y + z*z + 1e-12)
+               results[i, j, 0] = x / r_norm
+               results[i, j, 1] = y / r_norm
+               results[i, j, 2] = z / r_norm
+       return results
+
+   def Y2(rij: ℝ[num_points, num_points, 3]): ℝ[num_points, num_points, 5]:
+       results: ℝ[num_points, num_points, 5] = zero_3d(num_points, num_points, 5)
+       sqrt3: ℝ = sqrt(3.0)
+       for i:ℕ(num_points):
+           for j:ℕ(num_points):
+               x: ℝ, y: ℝ, z: ℝ = rij[i, j, :]
+               r2 = x*x + y*y + z*z + 1e-12
+               results[i, j, 0] = x*y / r2
+               results[i, j, 1] = y*z / r2
+               results[i, j, 2] = (2.0*z*z - x*x - y*y) / (2.0 * sqrt3 * r2)
+               results[i, j, 3] = z*x / r2
+               results[i, j, 4] = (x*x - y*y) / (2.0 * r2)
        return results
 
 Tensor Product Reduction & Clebsch-Gordan Decomposition
@@ -407,10 +407,11 @@ edge feature combined with a degree-0 node feature, reduced to degree
 0), and ``cg_202`` is ``CG(2,0,2)`` (a degree-2 edge feature combined
 with a degree-0 node feature, reduced to degree 2).
 
-Theory: Equivariant Message Passing
+Equivariant Message Passing
 --------------------------------------
 
-A TFN layer updates each node :math:`u` by aggregating, over every
+Combining the pieces built so far into one update rule, a
+TFN layer updates each node :math:`u` by aggregating, over every
 neighbor :math:`v`, the tensor product of the edge feature
 :math:`Y_J(\hat{r}_{uv})` with the neighbor's feature :math:`x_v^k`:
 
@@ -446,7 +447,7 @@ neighbor :math:`v`, the tensor product of the edge feature
                results[a, m] = acc[m]
        return results
 
-Code: Reassembling the Tensor
+Reassembling the Tensor
 --------------------------------
 
 A 3x3 matrix is basically the tensor product of two ordinary 3D
@@ -481,48 +482,26 @@ transforming under its own clean representation:
        results: ℝ[num_points, 3, 3] = zero_3d(num_points, 3, 3)
        sqrt3: ℝ = sqrt(3.0)
        for a:ℕ(num_points):
-           d_xy = out2[a, 0]
-           d_yz = out2[a, 1]
-           d_z2 = out2[a, 2]
-           d_zx = out2[a, 3]
-           d_x2y2 = out2[a, 4]
+           d_xy: ℝ, d_yz: ℝ, d_z2: ℝ, d_zx: ℝ, d_x2y2: ℝ = out2[a, :]
            d_z2_scaled = d_z2 / sqrt3
            Mxx = 0.0 - d_z2_scaled + d_x2y2 + out0[a]
            Myy = 0.0 - d_z2_scaled - d_x2y2 + out0[a]
            Mzz = 2.0 * d_z2_scaled + out0[a]
-           results[a, 0, 0] = Mxx
-           results[a, 0, 1] = d_xy
-           results[a, 0, 2] = d_zx
-           results[a, 1, 0] = d_xy
-           results[a, 1, 1] = Myy
-           results[a, 1, 2] = d_yz
-           results[a, 2, 0] = d_zx
-           results[a, 2, 1] = d_yz
-           results[a, 2, 2] = Mzz
+           results[a] = [[Mxx, d_xy, d_zx], [d_xy, Myy, d_yz], [d_zx, d_yz, Mzz]]
        return results
 
 Defining the Point-Mass Cloud Coordinates
 --------------------------------------------
 
-Unlike a typical supervised-learning setup with a fixed training set,
-this tutorial has no dataset at all: every training step calls
-``random_points``/``random_masses`` to generate a brand-new,
+Every training step calls
+``random_points``/ ``random_masses`` to generate a brand-new,
 independent point-mass cloud from scratch, computes the loss against
-the analytic ground truth for that one cloud, and discards it. There
-is nothing to overfit to and no epochs in the usual sense, since the
-model never sees the same input twice; each gradient step is instead
-a fresh Monte Carlo sample of the underlying physics. This mirrors
-the training loop in the reference implementation this tutorial is
-adapted from, [MOINotebook]_, which likewise draws a new random
-point cloud inside the loop on every step rather than iterating over
-a fixed dataset.
+the analytic ground truth for that one cloud, and discards it. 
 
 .. code-block:: text
 
    # sampled from a uniform distribution
-   max_coord: ℝ = 0.5
-   min_mass: ℝ = 0.5
-   max_mass: ℝ = 2.0
+   max_coord: ℝ, min_mass: ℝ, max_mass: ℝ = 0.5, 0.5, 2.0
 
    def random_points(n: ℝ, max_coord: ℝ): ℝ[m, 3]:
        pts: ℝ[n, 3] = for i : ℕ(n) → ε : ℝ[3] ~ 𝒰(-max_coord, max_coord, 3)
@@ -576,14 +555,11 @@ where:
 
    def mse(pred: ℝ[3, 3], target: ℝ[3, 3]): ℝ:
        diff: ℝ[3,3] = pred - target
-       result = sum(diff * diff) / 9.0
+       result: ℝ = sum(diff * diff) / 9.0
        return result
 
 Model Definition
 -----------------
-
-This model and its training loop are adapted from [MOINotebook]_,
-based on the reference implementation in [SmidtCode]_.
 
 .. code-block:: text
 
@@ -603,13 +579,30 @@ based on the reference implementation in [SmidtCode]_.
            moi: ℝ[num_points, 3, 3] = matrix_from_0_2(out0, out2)
            return moi
        def loss_sample() → ℝ:
-           points = random_points(num_points, max_coord)
-           masses = random_masses(num_points, min_mass, max_mass)
+           points: ℝ[num_points, 3] = random_points(num_points, max_coord)
+           masses: ℝ[num_points] = random_masses(num_points, min_mass, max_mass)
            masses[center_idx] = 0.0
-           target = moi_tensor(points, masses, center_idx)
-           pred_full = this(points, masses, centers, gamma)
-           pred = pred_full[center_idx]
-           result = mse(pred, target)
+           target: ℝ[3, 3] = moi_tensor(points, masses, center_idx)
+           pred_full: ℝ[num_points, 3, 3] = this(points, masses, centers, gamma)
+           pred: ℝ[3, 3] = pred_full[center_idx]
+           result: ℝ = mse(pred, target)
+           return result
+       def train(steps: ℕ, lr: ℝ) → ℝ:
+           last_loss: ℝ = 0
+           for step:ℕ(steps):
+               for rep:ℕ(1):
+                   current_loss: ℝ = this.loss_sample()
+                   learnable_grads = grad(current_loss, this.learnable_params)
+                   this.update(lr, learnable_grads)
+                   last_loss = current_loss
+           return last_loss
+       def evaluate() → ℝ:
+           total_loss: ℝ = 0
+           for s:ℕ(eval_samples):
+               for rep:ℕ(1):
+                   current_loss: ℝ = this.loss_sample()
+                   total_loss = total_loss + current_loss
+           result: ℝ = total_loss / eval_samples
            return result
 
 Ground Truth
@@ -623,9 +616,7 @@ approximate.
 .. code-block:: text
 
    def moi_tensor(points: ℝ[num_points, 3], masses: ℝ[num_points], center_idx: ℝ): ℝ[3, 3]:
-       cx = points[center_idx, 0]
-       cy = points[center_idx, 1]
-       cz = points[center_idx, 2]
+       cx: ℝ, cy: ℝ, cz: ℝ = points[center_idx, :]
        x: ℝ[num_points] = points[:, 0] - cx
        y: ℝ[num_points] = points[:, 1] - cy
        z: ℝ[num_points] = points[:, 2] - cz
@@ -662,10 +653,10 @@ where:
 .. code-block:: text
 
        def train(steps: ℕ, lr: ℝ) → ℝ:
-           last_loss = 0
+           last_loss: ℝ = 0
            for step:ℕ(steps):
                for rep:ℕ(1):
-                   current_loss = this.loss_sample()
+                   current_loss: ℝ = this.loss_sample()
                    learnable_grads = grad(current_loss, this.learnable_params)
                    this.update(lr, learnable_grads)
                    last_loss = current_loss
@@ -674,15 +665,18 @@ where:
 Evaluating the Model
 ----------------------
 
+``evaluate`` reports the model's average loss over several fresh
+samples.
+
 .. code-block:: text
 
        def evaluate() → ℝ:
-           total_loss = 0
+           total_loss: ℝ = 0
            for s:ℕ(eval_samples):
                for rep:ℕ(1):
-                   current_loss = this.loss_sample()
+                   current_loss: ℝ = this.loss_sample()
                    total_loss = total_loss + current_loss
-           result = total_loss / eval_samples
+           result: ℝ = total_loss / eval_samples
            return result
 
 Visualizing the Loss Curve
@@ -721,7 +715,8 @@ Visualizing the Loss Curve
    :align: center
    :width: 700px
 
-   Training loss over 300 steps of stochastic gradient descent.
+   Figure 4: Training loss over 300 steps of stochastic gradient
+   descent.
 
 Equivariance Check
 --------------------
@@ -730,15 +725,9 @@ Equivariance Check
 
    def transpose3x3(M: ℝ[3, 3]): ℝ[3, 3]:
        T = zero_2d(3, 3)
-       T[0,0] = M[0,0]
-       T[0,1] = M[1,0]
-       T[0,2] = M[2,0]
-       T[1,0] = M[0,1]
-       T[1,1] = M[1,1]
-       T[1,2] = M[2,1]
-       T[2,0] = M[0,2]
-       T[2,1] = M[1,2]
-       T[2,2] = M[2,2]
+       T[0, :] = M[:, 0]
+       T[1, :] = M[:, 1]
+       T[2, :] = M[:, 2]
        return T
 
    def rotation_matrix_z(theta: ℝ): ℝ[3, 3]:
@@ -830,43 +819,6 @@ Full Code
    def ssp(x: ℝ): ℝ:
        return log(0.5 * exp(x) + 0.5)
 
-   # Spherical Harmonics
-   def Y0(rij: ℝ[num_points, num_points, 3]): ℝ[num_points, num_points, 1]:
-       results: ℝ[num_points, num_points, 1] = zero_3d(num_points, num_points, 1)
-       for i:ℕ(num_points):
-           for j:ℕ(num_points):
-               results[i, j, 0] = 1.0
-       return results
-
-   def Y1(rij: ℝ[num_points, num_points, 3]): ℝ[num_points, num_points, 3]:
-       results: ℝ[num_points, num_points, 3] = zero_3d(num_points, num_points, 3)
-       for i:ℕ(num_points):
-           for j:ℕ(num_points):
-               x = rij[i, j, 0]
-               y = rij[i, j, 1]
-               z = rij[i, j, 2]
-               r_norm = sqrt(x*x + y*y + z*z + 1e-12)
-               results[i, j, 0] = x / r_norm
-               results[i, j, 1] = y / r_norm
-               results[i, j, 2] = z / r_norm
-       return results
-
-   def Y2(rij: ℝ[num_points, num_points, 3]): ℝ[num_points, num_points, 5]:
-       results: ℝ[num_points, num_points, 5] = zero_3d(num_points, num_points, 5)
-       sqrt3: ℝ = sqrt(3.0)
-       for i:ℕ(num_points):
-           for j:ℕ(num_points):
-               x = rij[i, j, 0]
-               y = rij[i, j, 1]
-               z = rij[i, j, 2]
-               r2 = x*x + y*y + z*z + 1e-12
-               results[i, j, 0] = x*y / r2
-               results[i, j, 1] = y*z / r2
-               results[i, j, 2] = (2.0*z*z - x*x - y*y) / (2.0 * sqrt3 * r2)
-               results[i, j, 3] = z*x / r2
-               results[i, j, 4] = (x*x - y*y) / (2.0 * r2)
-       return results
-
    # Radial Network 
    def gaussian_rbf(dij: ℝ[num_points, num_points], centers: ℝ[rbf_count], gamma: ℝ): ℝ[num_points, num_points, rbf_count]:
        results: ℝ[num_points, num_points, rbf_count] = zero_3d(num_points, num_points, rbf_count)
@@ -900,6 +852,39 @@ Full Code
            for j:ℕ(num_points):
                efeat = rbf[i, j]
                results[i, j] = radial_net(efeat, w1, b1, w2, b2)
+       return results
+
+   # Spherical Harmonics
+   def Y0(rij: ℝ[num_points, num_points, 3]): ℝ[num_points, num_points, 1]:
+       results: ℝ[num_points, num_points, 1] = zero_3d(num_points, num_points, 1)
+       for i:ℕ(num_points):
+           for j:ℕ(num_points):
+               results[i, j, 0] = 1.0
+       return results
+
+   def Y1(rij: ℝ[num_points, num_points, 3]): ℝ[num_points, num_points, 3]:
+       results: ℝ[num_points, num_points, 3] = zero_3d(num_points, num_points, 3)
+       for i:ℕ(num_points):
+           for j:ℕ(num_points):
+               x: ℝ, y: ℝ, z: ℝ = rij[i, j, :]
+               r_norm = sqrt(x*x + y*y + z*z + 1e-12)
+               results[i, j, 0] = x / r_norm
+               results[i, j, 1] = y / r_norm
+               results[i, j, 2] = z / r_norm
+       return results
+
+   def Y2(rij: ℝ[num_points, num_points, 3]): ℝ[num_points, num_points, 5]:
+       results: ℝ[num_points, num_points, 5] = zero_3d(num_points, num_points, 5)
+       sqrt3: ℝ = sqrt(3.0)
+       for i:ℕ(num_points):
+           for j:ℕ(num_points):
+               x: ℝ, y: ℝ, z: ℝ = rij[i, j, :]
+               r2 = x*x + y*y + z*z + 1e-12
+               results[i, j, 0] = x*y / r2
+               results[i, j, 1] = y*z / r2
+               results[i, j, 2] = (2.0*z*z - x*x - y*y) / (2.0 * sqrt3 * r2)
+               results[i, j, 3] = z*x / r2
+               results[i, j, 4] = (x*x - y*y) / (2.0 * r2)
        return results
 
    # Clebsch-Gordan lookup + tensor product reduction 
@@ -953,29 +938,17 @@ Full Code
        results: ℝ[num_points, 3, 3] = zero_3d(num_points, 3, 3)
        sqrt3: ℝ = sqrt(3.0)
        for a:ℕ(num_points):
-           d_xy = out2[a, 0]
-           d_yz = out2[a, 1]
-           d_z2 = out2[a, 2]
-           d_zx = out2[a, 3]
-           d_x2y2 = out2[a, 4]
+           d_xy: ℝ, d_yz: ℝ, d_z2: ℝ, d_zx: ℝ, d_x2y2: ℝ = out2[a, :]
            d_z2_scaled = d_z2 / sqrt3
            Mxx = 0.0 - d_z2_scaled + d_x2y2 + out0[a]
            Myy = 0.0 - d_z2_scaled - d_x2y2 + out0[a]
            Mzz = 2.0 * d_z2_scaled + out0[a]
-           results[a, 0, 0] = Mxx
-           results[a, 0, 1] = d_xy
-           results[a, 0, 2] = d_zx
-           results[a, 1, 0] = d_xy
-           results[a, 1, 1] = Myy
-           results[a, 1, 2] = d_yz
-           results[a, 2, 0] = d_zx
-           results[a, 2, 1] = d_yz
-           results[a, 2, 2] = Mzz
+           results[a] = [[Mxx, d_xy, d_zx], [d_xy, Myy, d_yz], [d_zx, d_yz, Mzz]]
        return results
 
    def mse(pred: ℝ[3, 3], target: ℝ[3, 3]): ℝ:
        diff: ℝ[3,3] = pred - target
-       result = sum(diff * diff) / 9.0
+       result: ℝ = sum(diff * diff) / 9.0
        return result
 
    center_idx: ℝ = 0.0
@@ -995,37 +968,35 @@ Full Code
            moi: ℝ[num_points, 3, 3] = matrix_from_0_2(out0, out2)
            return moi
        def loss_sample() → ℝ:
-           points = random_points(num_points, max_coord)
-           masses = random_masses(num_points, min_mass, max_mass)
+           points: ℝ[num_points, 3] = random_points(num_points, max_coord)
+           masses: ℝ[num_points] = random_masses(num_points, min_mass, max_mass)
            masses[center_idx] = 0.0
-           target = moi_tensor(points, masses, center_idx)
-           pred_full = this(points, masses, centers, gamma)
-           pred = pred_full[center_idx]
-           result = mse(pred, target)
+           target: ℝ[3, 3] = moi_tensor(points, masses, center_idx)
+           pred_full: ℝ[num_points, 3, 3] = this(points, masses, centers, gamma)
+           pred: ℝ[3, 3] = pred_full[center_idx]
+           result: ℝ = mse(pred, target)
            return result
        def train(steps: ℕ, lr: ℝ) → ℝ:
-           last_loss = 0
+           last_loss: ℝ = 0
            for step:ℕ(steps):
                for rep:ℕ(1):
-                   current_loss = this.loss_sample()
+                   current_loss: ℝ = this.loss_sample()
                    learnable_grads = grad(current_loss, this.learnable_params)
                    this.update(lr, learnable_grads)
                    last_loss = current_loss
            return last_loss
        def evaluate() → ℝ:
-           total_loss = 0
+           total_loss: ℝ = 0
            for s:ℕ(eval_samples):
                for rep:ℕ(1):
-                   current_loss = this.loss_sample()
+                   current_loss: ℝ = this.loss_sample()
                    total_loss = total_loss + current_loss
-           result = total_loss / eval_samples
+           result: ℝ = total_loss / eval_samples
            return result
 
    # Ground Truth 
    def moi_tensor(points: ℝ[num_points, 3], masses: ℝ[num_points], center_idx: ℝ): ℝ[3, 3]:
-       cx = points[center_idx, 0]
-       cy = points[center_idx, 1]
-       cz = points[center_idx, 2]
+       cx: ℝ, cy: ℝ, cz: ℝ = points[center_idx, :]
        x: ℝ[num_points] = points[:, 0] - cx
        y: ℝ[num_points] = points[:, 1] - cy
        z: ℝ[num_points] = points[:, 2] - cz
@@ -1041,9 +1012,7 @@ Full Code
 
    # Defining the point-mass cloud coordinates 
    # sampled from a uniform distribution
-   max_coord: ℝ = 0.5
-   min_mass: ℝ = 0.5
-   max_mass: ℝ = 2.0
+   max_coord: ℝ, min_mass: ℝ, max_mass: ℝ = 0.5, 0.5, 2.0
 
    def random_points(n: ℝ, max_coord: ℝ): ℝ[m, 3]:
        pts: ℝ[n, 3] = for i : ℕ(n) → ε : ℝ[3] ~ 𝒰(-max_coord, max_coord, 3)
@@ -1056,15 +1025,9 @@ Full Code
    # Equivariance Check
    def transpose3x3(M: ℝ[3, 3]): ℝ[3, 3]:
        T = zero_2d(3, 3)
-       T[0,0] = M[0,0]
-       T[0,1] = M[1,0]
-       T[0,2] = M[2,0]
-       T[1,0] = M[0,1]
-       T[1,1] = M[1,1]
-       T[1,2] = M[2,1]
-       T[2,0] = M[0,2]
-       T[2,1] = M[1,2]
-       T[2,2] = M[2,2]
+       T[0, :] = M[:, 0]
+       T[1, :] = M[:, 1]
+       T[2, :] = M[:, 2]
        return T
 
    def rotation_matrix_z(theta: ℝ): ℝ[3, 3]:
@@ -1164,6 +1127,10 @@ References
 
 .. [Cheng2022] Cheng, C. (2022). A Less Mathematical Introduction to
    Tensor Field Networks. https://ccr-cheng.github.io/blog/2022/tfn/
+
+.. [Duda2015] Duda, J. (2015). Normalized rotation shape descriptors
+   and lossy compression of molecular shape.
+   https://www.researchgate.net/publication/282403228
 
 .. [SmidtCode] tensorfield-torch: reference PyTorch implementation of
    Tensor Field Networks.

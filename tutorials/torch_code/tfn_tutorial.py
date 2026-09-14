@@ -50,9 +50,7 @@ def Y1(rij):
     results = zero_3d(num_points, num_points, 3)
     for i in range(int(0), int(num_points)):
         for j in range(int(0), int(num_points)):
-            x = rij[int(i), int(j), int(0)]
-            y = rij[int(i), int(j), int(1)]
-            z = rij[int(i), int(j), int(2)]
+            x, y, z = rij[int(i), int(j), :]
             r_norm = torch.sqrt(((((x * x) + (y * y)) + (z * z)) + 1e-12) if isinstance(((((x * x) + (y * y)) + (z * z)) + 1e-12), torch.Tensor) else torch.tensor(float(((((x * x) + (y * y)) + (z * z)) + 1e-12))))
             results[int(i), int(j), int(0)] = (x / r_norm)
             results[int(i), int(j), int(1)] = (y / r_norm)
@@ -64,9 +62,7 @@ def Y2(rij):
     sqrt3 = torch.sqrt(3.0 if isinstance(3.0, torch.Tensor) else torch.tensor(float(3.0)))
     for i in range(int(0), int(num_points)):
         for j in range(int(0), int(num_points)):
-            x = rij[int(i), int(j), int(0)]
-            y = rij[int(i), int(j), int(1)]
-            z = rij[int(i), int(j), int(2)]
+            x, y, z = rij[int(i), int(j), :]
             r2 = ((((x * x) + (y * y)) + (z * z)) + 1e-12)
             results[int(i), int(j), int(0)] = ((x * y) / r2)
             results[int(i), int(j), int(1)] = ((y * z) / r2)
@@ -153,24 +149,12 @@ def matrix_from_0_2(out0, out2):
     results = zero_3d(num_points, 3, 3)
     sqrt3 = torch.sqrt(3.0 if isinstance(3.0, torch.Tensor) else torch.tensor(float(3.0)))
     for a in range(int(0), int(num_points)):
-        d_xy = out2[int(a), int(0)]
-        d_yz = out2[int(a), int(1)]
-        d_z2 = out2[int(a), int(2)]
-        d_zx = out2[int(a), int(3)]
-        d_x2y2 = out2[int(a), int(4)]
+        d_xy, d_yz, d_z2, d_zx, d_x2y2 = out2[int(a), :]
         d_z2_scaled = (d_z2 / sqrt3)
         Mxx = (((0.0 - d_z2_scaled) + d_x2y2) + out0[int(a)])
         Myy = (((0.0 - d_z2_scaled) - d_x2y2) + out0[int(a)])
         Mzz = ((2.0 * d_z2_scaled) + out0[int(a)])
-        results[int(a), int(0), int(0)] = Mxx
-        results[int(a), int(0), int(1)] = d_xy
-        results[int(a), int(0), int(2)] = d_zx
-        results[int(a), int(1), int(0)] = d_xy
-        results[int(a), int(1), int(1)] = Myy
-        results[int(a), int(1), int(2)] = d_yz
-        results[int(a), int(2), int(0)] = d_zx
-        results[int(a), int(2), int(1)] = d_yz
-        results[int(a), int(2), int(2)] = Mzz
+        results[int(a)] = torch.tensor([[Mxx, d_xy, d_zx], [d_xy, Myy, d_yz], [d_zx, d_yz, Mzz]], device=DEVICE)
     return results
 
 def mse(pred, target):
@@ -179,9 +163,7 @@ def mse(pred, target):
     return result
 
 def moi_tensor(points, masses, center_idx):
-    cx = points[int(center_idx), int(0)]
-    cy = points[int(center_idx), int(1)]
-    cz = points[int(center_idx), int(2)]
+    cx, cy, cz = points[int(center_idx), :]
     x = (points[:, int(0)] - cx)
     y = (points[:, int(1)] - cy)
     z = (points[:, int(2)] - cz)
@@ -205,15 +187,9 @@ def random_masses(n, min_mass, max_mass):
 
 def transpose3x3(M):
     T = zero_2d(3, 3)
-    T[int(0), int(0)] = M[int(0), int(0)]
-    T[int(0), int(1)] = M[int(1), int(0)]
-    T[int(0), int(2)] = M[int(2), int(0)]
-    T[int(1), int(0)] = M[int(0), int(1)]
-    T[int(1), int(1)] = M[int(1), int(1)]
-    T[int(1), int(2)] = M[int(2), int(1)]
-    T[int(2), int(0)] = M[int(0), int(2)]
-    T[int(2), int(1)] = M[int(1), int(2)]
-    T[int(2), int(2)] = M[int(2), int(2)]
+    T[int(0), :] = M[:, int(0)]
+    T[int(1), :] = M[:, int(1)]
+    T[int(2), :] = M[:, int(2)]
     return T
 
 def rotation_matrix_z(theta):
@@ -303,7 +279,7 @@ class MOIModel(nn.Module):
         last_loss = 0
         for step in range(int(0), int(steps)):
             for rep in range(int(0), int(1)):
-                current_loss = self.loss_sample()
+                c, u, r, r, e, n, t, _, l, o, s, s = self.loss_sample()
                 learnable_grads = compute_grad(current_loss, self.learnable_params)
                 self.update(lr, learnable_grads)
                 last_loss = current_loss
@@ -314,7 +290,7 @@ class MOIModel(nn.Module):
         total_loss = 0
         for s in range(int(0), int(eval_samples)):
             for rep in range(int(0), int(1)):
-                current_loss = self.loss_sample()
+                c, u, r, r, e, n, t, _, l, o, s, s = self.loss_sample()
                 total_loss = (total_loss + current_loss)
         result = (total_loss / eval_samples)
         return result
@@ -341,9 +317,7 @@ hidden = 16
 cg_000 = torch.tensor([[[1.0]]], device=DEVICE)
 cg_202 = torch.tensor([[[1.0, 0.0, 0.0, 0.0, 0.0]], [[0.0, 1.0, 0.0, 0.0, 0.0]], [[0.0, 0.0, 1.0, 0.0, 0.0]], [[0.0, 0.0, 0.0, 1.0, 0.0]], [[0.0, 0.0, 0.0, 0.0, 1.0]]], device=DEVICE)
 center_idx = 0.0
-max_coord = 0.5
-min_mass = 0.5
-max_mass = 2.0
+max_coord, min_mass, max_mass = 0.5, 0.5, 2.0
 w_init_low = (-0.2)
 w_init_high = 0.2
 w1_0 = torch.distributions.Uniform(w_init_low, w_init_high).rsample((int(16), int(30),))
