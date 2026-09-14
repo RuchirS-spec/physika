@@ -57,9 +57,7 @@ def Y1(rij: ℝ[num_points, num_points, 3]): ℝ[num_points, num_points, 3]:
     results: ℝ[num_points, num_points, 3] = zero_3d(num_points, num_points, 3)
     for i:ℕ(num_points):
         for j:ℕ(num_points):
-            x = rij[i, j, 0]
-            y = rij[i, j, 1]
-            z = rij[i, j, 2]
+            x: ℝ, y: ℝ, z: ℝ = rij[i, j, :]
             r_norm = sqrt(x*x + y*y + z*z + 1e-12)
             results[i, j, 0] = x / r_norm
             results[i, j, 1] = y / r_norm
@@ -71,9 +69,7 @@ def Y2(rij: ℝ[num_points, num_points, 3]): ℝ[num_points, num_points, 5]:
     sqrt3: ℝ = sqrt(3.0)
     for i:ℕ(num_points):
         for j:ℕ(num_points):
-            x = rij[i, j, 0]
-            y = rij[i, j, 1]
-            z = rij[i, j, 2]
+            x: ℝ, y: ℝ, z: ℝ = rij[i, j, :]
             r2 = x*x + y*y + z*z + 1e-12
             results[i, j, 0] = x*y / r2
             results[i, j, 1] = y*z / r2
@@ -168,29 +164,17 @@ def matrix_from_0_2(out0: ℝ[num_points], out2: ℝ[num_points, 5]): ℝ[num_po
     results: ℝ[num_points, 3, 3] = zero_3d(num_points, 3, 3)
     sqrt3: ℝ = sqrt(3.0)
     for a:ℕ(num_points):
-        d_xy = out2[a, 0]
-        d_yz = out2[a, 1]
-        d_z2 = out2[a, 2]
-        d_zx = out2[a, 3]
-        d_x2y2 = out2[a, 4]
+        d_xy: ℝ, d_yz: ℝ, d_z2: ℝ, d_zx: ℝ, d_x2y2: ℝ = out2[a, :]
         d_z2_scaled = d_z2 / sqrt3
         Mxx = 0.0 - d_z2_scaled + d_x2y2 + out0[a]
         Myy = 0.0 - d_z2_scaled - d_x2y2 + out0[a]
         Mzz = 2.0 * d_z2_scaled + out0[a]
-        results[a, 0, 0] = Mxx
-        results[a, 0, 1] = d_xy
-        results[a, 0, 2] = d_zx
-        results[a, 1, 0] = d_xy
-        results[a, 1, 1] = Myy
-        results[a, 1, 2] = d_yz
-        results[a, 2, 0] = d_zx
-        results[a, 2, 1] = d_yz
-        results[a, 2, 2] = Mzz
+        results[a] = [[Mxx, d_xy, d_zx], [d_xy, Myy, d_yz], [d_zx, d_yz, Mzz]]
     return results
 
 def mse(pred: ℝ[3, 3], target: ℝ[3, 3]): ℝ:
     diff: ℝ[3,3] = pred - target
-    result = sum(diff * diff) / 9.0
+    result: ℝ = sum(diff * diff) / 9.0
     return result
 
 center_idx: ℝ = 0.0
@@ -210,37 +194,35 @@ class MOIModel(w1_0: ℝ[hidden, rbf_count], b1_0: ℝ[hidden, 1], w2_0: ℝ[1, 
         moi: ℝ[num_points, 3, 3] = matrix_from_0_2(out0, out2)
         return moi
     def loss_sample() → ℝ:
-        points = random_points(num_points, max_coord)
-        masses = random_masses(num_points, min_mass, max_mass)
+        points: ℝ[num_points, 3] = random_points(num_points, max_coord)
+        masses: ℝ[num_points] = random_masses(num_points, min_mass, max_mass)
         masses[center_idx] = 0.0
-        target = moi_tensor(points, masses, center_idx)
-        pred_full = this(points, masses, centers, gamma)
-        pred = pred_full[center_idx]
-        result = mse(pred, target)
+        target: ℝ[3, 3] = moi_tensor(points, masses, center_idx)
+        pred_full: ℝ[num_points, 3, 3] = this(points, masses, centers, gamma)
+        pred: ℝ[3, 3] = pred_full[center_idx]
+        result: ℝ = mse(pred, target)
         return result
     def train(steps: ℕ, lr: ℝ) → ℝ:
-        last_loss = 0
+        last_loss: ℝ = 0
         for step:ℕ(steps):
             for rep:ℕ(1):
-                current_loss = this.loss_sample()
+                current_loss: ℝ = this.loss_sample()
                 learnable_grads = grad(current_loss, this.learnable_params)
                 this.update(lr, learnable_grads)
                 last_loss = current_loss
         return last_loss
     def evaluate() → ℝ:
-        total_loss = 0
+        total_loss: ℝ = 0
         for s:ℕ(eval_samples):
             for rep:ℕ(1):
-                current_loss = this.loss_sample()
+                current_loss: ℝ = this.loss_sample()
                 total_loss = total_loss + current_loss
-        result = total_loss / eval_samples
+        result: ℝ = total_loss / eval_samples
         return result
 
 # Ground Truth 
 def moi_tensor(points: ℝ[num_points, 3], masses: ℝ[num_points], center_idx: ℝ): ℝ[3, 3]:
-    cx = points[center_idx, 0]
-    cy = points[center_idx, 1]
-    cz = points[center_idx, 2]
+    cx: ℝ, cy: ℝ, cz: ℝ = points[center_idx, :]
     x: ℝ[num_points] = points[:, 0] - cx
     y: ℝ[num_points] = points[:, 1] - cy
     z: ℝ[num_points] = points[:, 2] - cz
@@ -256,9 +238,7 @@ def moi_tensor(points: ℝ[num_points, 3], masses: ℝ[num_points], center_idx: 
 
 # Defining the point-mass cloud coordinates 
 # sampled from a uniform distribution
-max_coord: ℝ = 0.5
-min_mass: ℝ = 0.5
-max_mass: ℝ = 2.0
+max_coord: ℝ, min_mass: ℝ, max_mass: ℝ = 0.5, 0.5, 2.0
 
 def random_points(n: ℝ, max_coord: ℝ): ℝ[m, 3]:
     pts: ℝ[n, 3] = for i : ℕ(n) → ε : ℝ[3] ~ 𝒰(-max_coord, max_coord, 3)
@@ -271,15 +251,9 @@ def random_masses(n: ℝ, min_mass: ℝ, max_mass: ℝ): ℝ[m]:
 # Equivariance Check
 def transpose3x3(M: ℝ[3, 3]): ℝ[3, 3]:
     T = zero_2d(3, 3)
-    T[0,0] = M[0,0]
-    T[0,1] = M[1,0]
-    T[0,2] = M[2,0]
-    T[1,0] = M[0,1]
-    T[1,1] = M[1,1]
-    T[1,2] = M[2,1]
-    T[2,0] = M[0,2]
-    T[2,1] = M[1,2]
-    T[2,2] = M[2,2]
+    T[0, :] = M[:, 0]
+    T[1, :] = M[:, 1]
+    T[2, :] = M[:, 2]
     return T
 
 def rotation_matrix_z(theta: ℝ): ℝ[3, 3]:
