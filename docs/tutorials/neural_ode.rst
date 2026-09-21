@@ -33,7 +33,7 @@ read the NeuralODE paper which has explained the concepts in more detail. [Chen_
 Define the Neural network (ODEFunc)
 -------------------------------------
 
-So lets quickly implement the ODEFunc which will be a Feed forward neural network:
+So let's quickly implement the ODEFunc, which will be a feed-forward neural network:
 
 .. code-block:: text
 
@@ -59,8 +59,8 @@ This is a simple Feed forward neural network with one hidden layer, we can initi
 
     model: ODEFunc = ODEFunc(W1, B1, W2, B2)
 
-Input layer has 2 neurons, which corresponds to two components :math:`[q, p]` which is explained in dataset section, Hidden layer has
-total 128 neurons and output layer has again 2 neurons which represents :math:`[\dot{q}, \dot{p}]`.
+The input layer has 2 neurons, which correspond to two components :math:`[q, p]` which is explained in the dataset section.
+The hidden layer has total 128 neurons and output layer has 2 neurons which represents :math:`[\dot{q}, \dot{p}]`.
 
 
 
@@ -141,7 +141,7 @@ We can create a trajectory by:
 
     t_start, t_end, Δt: ℝ = 0.0, 15.0, 0.1
 
-    n_steps: ℕ = int((t_end - t_start) / Δt) + 1
+    n_steps: ℕ = (t_end - t_start) / Δt + 1
     timesteps: ℝ[n_steps] = linspace(t_start, t_end, n_steps)
     y0: ℝ[2,1] = [[1.0], [0.0]]
 
@@ -160,7 +160,32 @@ which eventually helps in predicting better results.
 
    Figure 1: Phase space trajectory (true-trajectory)
 
+.. note::
 
+    To visualize ``true trajectory`` use a runtime function as ``plot_phase_space``
+
+    .. code-block:: python
+
+        def plot_phase_space(true_trajectory):
+            import matplotlib.pyplot as plt
+
+            true_trajectory = true_trajectory.detach().numpy()
+
+            true_x = true_trajectory[:, 0, 0]
+            true_y = true_trajectory[:, 1, 0]
+
+
+            plt.figure(figsize=(6, 6))
+
+            plt.plot(true_x, true_y, linewidth=2)
+
+            plt.xlabel("q")
+            plt.ylabel("p")
+            plt.title("True phase-space trajectory")
+
+            plt.axis("equal")
+            plt.grid(True)
+            plt.legend()
 
 Neural ODE algorithm
 ----------------------
@@ -173,7 +198,7 @@ In this section we will implement the main algorithm of NeuralODE, in paper it i
    :width: 700px
    :name: algorithm_1
 
-   Figure 2: Reverse-mode derivative of an ODE initial value problem
+   Figure 2: Reverse-mode derivative of an ODE initial value problem [Chen_NeuralODE]_
 
 
 Before implementing algorithm, lets try to understand the easiest part, which is **Input** and **return** values, They are
@@ -590,7 +615,7 @@ Full code
 
     t_start, t_end, Δt: ℝ = 0.0, 15.0, 0.1
 
-    n_steps: ℕ = int((t_end - t_start) / Δt) + 1
+    n_steps: ℕ = (t_end - t_start) / Δt + 1
     timesteps: ℝ[n_steps] = linspace(t_start, t_end, n_steps)
     y0: ℝ[2,1] = [[1.0], [0.0]]
 

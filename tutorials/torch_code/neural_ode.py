@@ -188,7 +188,7 @@ class AdamOptimizer(nn.Module):
 
 # === Program ===
 t_start, t_end, Δt = 0.0, 15.0, 0.1
-n_steps = (int(((t_end - t_start) / Δt)) + 1)
+n_steps = (((t_end - t_start) / Δt) + 1)
 timesteps = linspace(t_start, t_end, n_steps)
 y0 = torch.tensor([[1.0], [0.0]], device=DEVICE)
 true_trajectory = generate_dataset(y0, Δt, timesteps)
