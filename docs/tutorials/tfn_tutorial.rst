@@ -1,4 +1,4 @@
-Tensor Field Networks - Moment of Inertia
+Tensor Field Networks 
 ============================================
 
 Tensor Field Networks for predicting the moment of inertia of a
@@ -38,11 +38,10 @@ Here, the transformation :math:`g` is always a rotation of 3D
 space. A function :math:`f` is equivariant to :math:`g` if applying
 :math:`g` to the input first and then running :math:`f` gives the
 same result as running :math:`f` first and then applying :math:`g`
-to the output: :math:`f(gx) = gf(x)`. Concretely for this tutorial:
-rotate the point cloud first and then predict its moment of
-inertia, or predict the moment of inertia first and then rotate
-that result -- either order gives the same answer.
-
+to the output: :math:`f(gx) = gf(x)`. This means that rotating the point
+cloud first and then predicting its moment of inertia, or predicting 
+its moment of inertia first and then rotating the result, both give
+the same answer.
 
 Spherical Tensors
 ------------------
@@ -51,10 +50,10 @@ Any tensor can be decomposed into a basis of components indexed by
 rank :math:`\ell`, where each captures one specific direction of
 angular behavior. An ordinary Cartesian tensor is 
 actually a mix of several of these components at once, which is why 
-rotating it mixes its components together in a rank-dependent way, 
+rotating it mixes its components with each other in a rank-dependent way, 
 blending those distinct directions back into one another. 
 
-This is why we use spherical tensors: so that each rank-:math:`\ell`
+This is why we use spherical tensors, so that each rank-:math:`\ell`
 component stays separate instead, rotating entirely within itself,
 never bleeding into another component.
 
@@ -134,11 +133,11 @@ expansion used to featurize pairwise distances.
    gamma: ℝ = 1.0 / rbf_spacing
    hidden: ℝ = 16
 
-A raw distance :math:`r` is just one number, too little for a small
-MLP to shape a geometric profile from. So instead of feeding :math:`r`
-directly into the network, we expand it into a series of Gaussian
-bumps spread evenly across :math:`[\text{rbf\_low}, \text{rbf\_high}]`,
-turning a single distance into a higher-dimensional "soft histogram":
+A raw distance :math:`r` is just one number, not much for a small
+MLP to shape a geometric profile out of. We fix this by expanding it 
+into a series of Gaussian bumps spread evenly across :math:`[\text{rbf\_low}, 
+\text{rbf\_high}]`, turning a single distance into a higher-dimensional 
+"soft histogram":
 
 .. math::
 
@@ -191,7 +190,7 @@ Helper Functions
 - ``difference_matrix`` - computes the relative vector
   :math:`r_{ij} = r_i - r_j` for every pair of points,
   making it translation-invariant.
-- ``distance_matrix``  - reduces each relative vector to its scalar
+- ``distance_matrix`` - reduces each relative vector to its scalar
   length :math:`|r_{ij}|` via a regularized norm.
 
 Activation Function
@@ -498,7 +497,7 @@ Defining the Point-Mass Cloud Coordinates
 --------------------------------------------
 
 Every training step calls
-``random_points``/ ``random_masses`` to generate a brand-new,
+``random_points``/``random_masses`` to generate a brand-new,
 independent point-mass cloud from scratch, computes the loss against
 the analytic ground truth for that one cloud, and discards it. 
 
