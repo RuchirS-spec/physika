@@ -198,7 +198,7 @@ In this section we will implement the main algorithm of NeuralODE, in paper it i
    :width: 700px
    :name: algorithm_1
 
-   Figure 2: Reverse-mode derivative of an ODE initial value problem [Chen_NeuralODE]_
+   Reverse-mode derivative of an ODE initial value problem [Chen_NeuralODE]_
 
 
 Before implementing algorithm, lets try to understand the easiest part, which is **Input** and **return** values, They are
@@ -297,22 +297,13 @@ lets map our Physika code with the actual function,
 Just to recall from our algorithm, we just learned what is **Input** to our outer function, and what it **returns**, and we also learned and implemented **aug_dynamics** function:
 The only remaining parts are, defining augmented state and solving reverse time ODE, which we will implement it in outer function.
 
-.. figure:: /_static/tutorial_files/neural_ode/algorithm_1.png
-   :alt: algorithm_1
-   :align: center
-   :width: 700px
-   :name: 
 
-   
-
-
-
-The reason this algorithm called as Reverse mode derivative is because, once we do forward solve from :math:`t_0` to :math:`t_1`, we again solve
-the same ODE backwards but this time we keep a adjoint value which is considered as final state of forward trajectory, and then we use
-``aug_dynamics`` to calculate how its changing, but as we used ``rk4_step`` while going forward, we need another to go backwards which accepts model parameters, this is the main
+The reason :ref:`algorithm 1 <algorithm_1>` is called Reverse mode derivative is because, once we do forward solve from :math:`t_0` to :math:`t_1`, we again solve
+the same ODE backwards, but this time we keep an adjoint value which is considered as the final state of the forward trajectory, and then we use
+``aug_dynamics`` to calculate how it's changing, but as we used ``rk4_step`` while going forward, we need another to go backwards which accepts model parameters; this is the main
 logic of the outer function.
 
-In physika, we are defining the outer function named as ``adjoint_solver`` and the reverse rk4-step as ``rk4_step_adjoint``:
+In physika, we define the outer function named as ``adjoint_solver`` and the reverse rk4-step as ``rk4_step_adjoint``:
 
 Here is the implementation of ``rk4_step_adjoint``:
 
