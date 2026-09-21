@@ -6,8 +6,12 @@ from physika.runtime import DEVICE
 from physika.runtime import print
 
 # === Functions ===
+def zero_1d_array(len):
+    results = torch.stack([(i * 0) for _fi_i in range(int(len)) for i in [torch.tensor(float(_fi_i), device=DEVICE)]])
+    return results
+
 def linspace(start, end, n):
-    x = torch.zeros(int(n))
+    x = zero_1d_array(n)
     dx = ((end - start) / (n - 1))
     for i in range(int(0), int(n)):
         x[int(i)] = (start + (i * dx))

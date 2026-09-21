@@ -3,9 +3,12 @@
 # Helper functions
 # --------------------------------
 
+def zero_1d_array(len: ℝ): ℝ[m]:
+    results: ℝ[len] = for i: ℕ(len) -> i*0
+    return results
 
 def linspace(start: ℝ, end: ℝ, n: ℕ): ℝ[n]:
-    x: ℝ[n] = zeros(n)
+    x: ℝ[n] = zero_1d_array(n)
     dx: ℝ = (end - start) / (n - 1)
     for i:ℕ(0, n):
         x[i] = start + i * dx
