@@ -56,7 +56,7 @@ def damped_oscillator(state: ℝ[2,1]): ℝ[2,1]:
     q, p: ℝ = state[0,0], state[1,0]
     gamma: ℝ = 0.2
     dq: ℝ = p
-    dp: ℝ = 0.0 - q - gamma * p
+    dp: ℝ = q - gamma * p
     return [[dq], [dp]] 
 
 

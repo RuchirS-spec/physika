@@ -45,7 +45,7 @@ def damped_oscillator(state):
     q, p = state[int(0), int(0)], state[int(1), int(0)]
     gamma = 0.2
     dq = p
-    dp = ((0.0 - q) - (gamma * p))
+    dp = (q - (gamma * p))
     return torch.tensor([[dq], [dp]], device=DEVICE)
 
 def generate_dataset(y0, Δt, timesteps):

@@ -44,7 +44,7 @@ So let's quickly implement the ODEFunc, which will be a feed-forward neural netw
             return out
 
 
-This is a simple Feed forward neural network with one hidden layer, we can initialize the ``ODEFunc`` class by:
+This is a simple feed forward neural network with one hidden layer, we can initialize the ``ODEFunc`` class by:
 
 .. code-block:: text
 
@@ -85,7 +85,7 @@ We can represent this equation in physika as:
         q, p: ℝ = state[0,0], state[1,0]
         α: ℝ = 0.2
         dq: ℝ = p
-        dp: ℝ = 0.0 - q - α * p
+        dp: ℝ = q - α * p
         return [[dq], [dp]] 
 
 To generate the dataset, we need to numerically integrate the damped oscillator equation. In this tutorial, we will use the classical
@@ -588,7 +588,7 @@ Full code
         q, p: ℝ = state[0,0], state[1,0]
         gamma: ℝ = 0.2
         dq: ℝ = p
-        dp: ℝ = 0.0 - q - gamma * p
+        dp: ℝ = q - gamma * p
         return [[dq], [dp]] 
 
 
