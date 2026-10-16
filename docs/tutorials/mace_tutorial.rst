@@ -8,12 +8,12 @@ Introduction
 
 Message Passing Atomic Cluster Expansion (MACE) is a framework for learning interatomic potentials, extensively used in computational chemistry and materials science.
 It combines the symmetry-adapted basis of the Atomic Cluster Expansion (ACE) with the equivariant message passing of graph neural networks.
-This results in an interatomic potential whose energy is invariant to rotations, translations, and permutations, while being efficient and accurate [Batatia2022]_ [Batatia2022Design]_.
+This results in an interatomic potential whose energy is invariant to rotations, translations, and permutations, while being efficient and accurate [Batatia2022]_.
 
 .. figure:: /_static/tutorial_files/mace_overview.png
    :alt: structure to atomic environments, learnable features and atomic energies
-   :align: centera
-   :width: 700pxa
+   :align: center
+   :width: 700px
 
    Figure 1: Overview of MACE [MACETutorials]_.
 
@@ -85,7 +85,7 @@ We load the weights of the released model and compute the predicted energies of 
 
       def load_mace_weights(index):
           if not _MACE_WEIGHTS:
-              import mace  s
+              import mace
               model = torch.hub.load_state_dict_from_url(_MACE_URL)
               state = model.state_dict()
 
@@ -1253,14 +1253,13 @@ References
 
 .. [Batatia2022] Batatia, I., Kovács, D. P., Simm, G. N. C., Ortner, C., & Csányi, G. (2022). *MACE: Higher Order Equivariant Message Passing Neural Networks for Fast and Accurate Force Fields*. Advances in Neural Information Processing Systems (NeurIPS). arXiv:2206.07697. https://arxiv.org/abs/2206.07697
 
-.. [Batatia2022Design] Batatia, I., Batzner, S., Kovács, D. P., Musaelian, A., Simm, G. N. C., Drautz, R., Ortner, C., Kozinsky, B., & Csányi, G. (2022). *The Design Space of E(3)-Equivariant Atom-Centered Interatomic Potentials*. arXiv:2205.06643. https://arxiv.org/abs/2205.06643
-
 .. [TFN2018] Thomas, N., Smidt, T., Kearnes, S., Yang, L., Li, L., Kohlhoff, K., & Riley, P. (2018). *Tensor Field Networks: Rotation- and Translation-Equivariant Neural Networks for 3D Point Clouds*. arXiv:1802.08219. https://arxiv.org/abs/1802.08219
 
 .. [PhysikaTFN] Physika documentation. *Tensor Field Networks*. https://physika.readthedocs.io/en/latest/tutorials/tfn_tutorial.html
 
 .. [e3nn] Geiger, M., & Smidt, T. (2022). *e3nn: Euclidean Neural Networks*. arXiv:2207.09453. https://arxiv.org/abs/2207.09453
 
-.. [MACETutorials] ACEsuit. *MACE tutorials*, https://github.com/ACEsuit/mace-tutorials
+.. [MACETutorials] ACEsuit. *MACE tutorials*, in particular ``T03_MACE_Theory.ipynb`` and ``MACE_developer.ipynb``. https://github.com/ACEsuit/mace-tutorials
 
 .. [MACEMP0] Batatia, I., Benner, P., Chiang, Y., Elena, A. M., Kovács, D. P., Riebesell, J., et al. (2023). *A foundation model for atomistic materials chemistry*. arXiv:2401.00096. https://arxiv.org/abs/2401.00096
+
