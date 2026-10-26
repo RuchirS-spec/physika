@@ -157,41 +157,55 @@ def linear(message, w0, w1, w2, w3):
 
 def B_features_1(A, U):
     num_atoms = len(A)
-    B1 = torch.zeros(int(num_atoms), int(num_channels), int(1), device=DEVICE)
+    num_paths = len(U[int(0)])
+    B1 = torch.zeros(int(num_atoms), int(num_channels), int(num_paths), device=DEVICE)
     for atom in range(int(0), int(num_atoms)):
         B1[int(atom)] = (A[int(atom)] @ U)
     return B1
 
 def B_features_2(A, U):
     num_atoms = len(A)
-    B2 = torch.zeros(int(num_atoms), int(num_channels), int(4), device=DEVICE)
+    num_paths = len(U[int(0), int(0)])
+    B2 = torch.zeros(int(num_atoms), int(num_channels), int(num_paths), device=DEVICE)
     for atom in range(int(0), int(num_atoms)):
         for i in range(int(0), int(16)):
             M = (A[int(atom)] @ U[int(i)])
-            for p in range(int(0), int(4)):
+            for p in range(int(0), int(num_paths)):
                 B2[int(atom), :, int(p)] = (B2[int(atom), :, int(p)] + (A[int(atom), :, int(i)] * M[:, int(p)]))
     return B2
 
 def B_features_3(A, U):
     num_atoms = len(A)
-    B3 = torch.zeros(int(num_atoms), int(num_channels), int(23), device=DEVICE)
+    num_paths = len(U[int(0), int(0), int(0)])
+    B3 = torch.zeros(int(num_atoms), int(num_channels), int(num_paths), device=DEVICE)
     for atom in range(int(0), int(num_atoms)):
         for i in range(int(0), int(16)):
             for j in range(int(0), int(16)):
                 M = (A[int(atom)] @ U[int(i), int(j)])
-                for p in range(int(0), int(23)):
+                for p in range(int(0), int(num_paths)):
                     B3[int(atom), :, int(p)] = (B3[int(atom), :, int(p)] + ((A[int(atom), :, int(i)] * A[int(atom), :, int(j)]) * M[:, int(p)]))
     return B3
 
 def weighted_sum(B1, B2, B3, node_attrs, wp1, wp2, wp3):
     num_atoms = len(B1)
     m = torch.zeros(int(num_atoms), int(num_channels), device=DEVICE)
-    m = (m + ((node_attrs @ wp1[:, int(0), :]) * B1[:, :, int(0)]))
-    for p in range(int(0), int(4)):
+    for p in range(int(0), int(len(B1[int(0), int(0)]))):
+        m = (m + ((node_attrs @ wp1[:, int(p), :]) * B1[:, :, int(p)]))
+    for p in range(int(0), int(len(B2[int(0), int(0)]))):
         m = (m + ((node_attrs @ wp2[:, int(p), :]) * B2[:, :, int(p)]))
-    for p in range(int(0), int(23)):
+    for p in range(int(0), int(len(B3[int(0), int(0)]))):
         m = (m + ((node_attrs @ wp3[:, int(p), :]) * B3[:, :, int(p)]))
     return m
+
+def scalar_product(A, node_attrs):
+    return weighted_sum(B_features_1(A, U1), B_features_2(A, U2), B_features_3(A, U3), node_attrs, w_prod1, w_prod2, w_prod3)
+
+def vector_product(A, node_attrs):
+    num_atoms = len(A)
+    out = torch.zeros(int(num_atoms), int(num_channels), int(3), device=DEVICE)
+    for m in range(int(0), int(3)):
+        out[:, :, int(m)] = weighted_sum(B_features_1(A, U1v[int(m)]), B_features_2(A, U2v[int(m)]), B_features_3(A, U3v[int(m)]), node_attrs, w_prod1v, w_prod2v, w_prod3v)
+    return out
 
 def skip_tp(node_feats, node_attrs, w):
     num_atoms = len(node_feats)
@@ -205,18 +219,71 @@ def skip_tp(node_feats, node_attrs, w):
 def node_update(m, sc, wp):
     return (((m @ wp) / torch.sqrt(num_channels if isinstance(num_channels, torch.Tensor) else torch.tensor(float(num_channels)))) + sc)
 
+def node_update_vectors(mv, wp):
+    num_atoms = len(mv)
+    out = torch.zeros(int(num_atoms), int(num_channels), int(3), device=DEVICE)
+    for atom in range(int(0), int(num_atoms)):
+        out[int(atom)] = ((wp @ mv[int(atom)]) / torch.sqrt(num_channels if isinstance(num_channels, torch.Tensor) else torch.tensor(float(num_channels))))
+    return out
+
 def readout(node_feats, w):
     return ((node_feats @ w) / torch.sqrt(num_channels if isinstance(num_channels, torch.Tensor) else torch.tensor(float(num_channels))))
 
-def mace_layer(node_feats, node_attrs, edge_feats, edge_attrs, edge_index, w_up, w_r1, w_r2, w_r3, w_r4, w_0, w_1, w_2, w_3, w_prod1, w_prod2, w_prod3, w_sc, w_p):
-    num_atoms = len(node_feats)
-    node_feats_up = linear_up(node_feats, w_up)
-    tp_weights = radial_mlp(edge_feats, w_r1, w_r2, w_r3, w_r4)
-    mji = conv_tp(node_feats_up, edge_attrs, tp_weights, edge_index)
-    message = linear(neighbor_sum(mji, edge_index, num_atoms), w_0, w_1, w_2, w_3)
-    m = weighted_sum(B_features_1(message, U1), B_features_2(message, U2), B_features_3(message, U3), node_attrs, w_prod1, w_prod2, w_prod3)
-    sc = skip_tp(node_feats, node_attrs, w_sc)
-    return node_update(m, sc, w_p)
+def linear_up_vectors(node_vecs, w):
+    num_atoms = len(node_vecs)
+    out = torch.zeros(int(num_atoms), int(num_channels), int(3), device=DEVICE)
+    for atom in range(int(0), int(num_atoms)):
+        out[int(atom)] = ((w @ node_vecs[int(atom)]) / torch.sqrt(num_channels if isinstance(num_channels, torch.Tensor) else torch.tensor(float(num_channels))))
+    return out
+
+def neighbor_sum_second(mji, edge_index, num_atoms):
+    num_edges = len(mji)
+    message = torch.zeros(int(num_atoms), int(num_channels), int(40), device=DEVICE)
+    for edge in range(int(0), int(num_edges)):
+        sender, receiver = edge_index[:, int(edge)]
+        message[int(receiver)] = (message[int(receiver)] + mji[int(edge)])
+    return message
+
+def conv_tp_second(up, up_vecs, edge_attrs, tp_weights, edge_index):
+    num_edges = len(edge_attrs)
+    mji = torch.zeros(int(num_edges), int(num_channels), int(40), device=DEVICE)
+    y1 = torch.zeros(int(3), int(1), device=DEVICE)
+    y2 = torch.zeros(int(5), int(1), device=DEVICE)
+    y3 = torch.zeros(int(7), int(1), device=DEVICE)
+    for edge in range(int(0), int(num_edges)):
+        sender, receiver = edge_index[:, int(edge)]
+        s, v = up[int(sender)], up_vecs[int(sender)]
+        y1[:, int(0)] = edge_attrs[int(edge), int(1):int(4)]
+        y2[:, int(0)] = edge_attrs[int(edge), int(4):int(9)]
+        y3[:, int(0)] = edge_attrs[int(edge), int(9):int(16)]
+        d = (v @ y1)
+        mji[int(edge), :, int(0)] = ((tp_weights[int(edge), int(0):int(128)] * s) * edge_attrs[int(edge), int(0)])
+        mji[int(edge), :, int(1)] = ((tp_weights[int(edge), int(128):int(256)] * d[:, int(0)]) / torch.sqrt(3.0 if isinstance(3.0, torch.Tensor) else torch.tensor(float(3.0))))
+        for m in range(int(0), int(3)):
+            a = (v @ (cg_121[:, :, int(m)] @ y2))
+            mji[int(edge), :, int((2 + m))] = ((tp_weights[int(edge), int(256):int(384)] * s) * y1[int(m), int(0)])
+            mji[int(edge), :, int((5 + m))] = ((tp_weights[int(edge), int(384):int(512)] * v[:, int(m)]) * edge_attrs[int(edge), int(0)])
+            mji[int(edge), :, int((8 + m))] = ((tp_weights[int(edge), int(512):int(640)] * torch.sqrt(3.0 if isinstance(3.0, torch.Tensor) else torch.tensor(float(3.0)))) * a[:, int(0)])
+        for m in range(int(0), int(5)):
+            b = (v @ (cg_112[:, :, int(m)] @ y1))
+            c = (v @ (cg_132[:, :, int(m)] @ y3))
+            mji[int(edge), :, int((11 + m))] = ((tp_weights[int(edge), int(640):int(768)] * s) * y2[int(m), int(0)])
+            mji[int(edge), :, int((16 + m))] = ((tp_weights[int(edge), int(768):int(896)] * torch.sqrt(5.0 if isinstance(5.0, torch.Tensor) else torch.tensor(float(5.0)))) * b[:, int(0)])
+            mji[int(edge), :, int((21 + m))] = ((tp_weights[int(edge), int(896):int(1024)] * torch.sqrt(5.0 if isinstance(5.0, torch.Tensor) else torch.tensor(float(5.0)))) * c[:, int(0)])
+        for m in range(int(0), int(7)):
+            d3 = (v @ (cg_123[:, :, int(m)] @ y2))
+            mji[int(edge), :, int((26 + m))] = ((tp_weights[int(edge), int(1024):int(1152)] * s) * y3[int(m), int(0)])
+            mji[int(edge), :, int((33 + m))] = ((tp_weights[int(edge), int(1152):int(1280)] * torch.sqrt(7.0 if isinstance(7.0, torch.Tensor) else torch.tensor(float(7.0)))) * d3[:, int(0)])
+    return mji
+
+def linear_second(message, w0, w1, w2, w3, w4, w5, w6, w7, w8, w9):
+    num_atoms = len(message)
+    out = torch.zeros(int(num_atoms), int(num_channels), int(16), device=DEVICE)
+    out[:, :, int(0):int(1)] = (((w0 @ message[:, :, int(0):int(1)]) + (w1 @ message[:, :, int(1):int(2)])) / torch.sqrt(256.0 if isinstance(256.0, torch.Tensor) else torch.tensor(float(256.0))))
+    out[:, :, int(1):int(4)] = ((((w2 @ message[:, :, int(2):int(5)]) + (w3 @ message[:, :, int(5):int(8)])) + (w4 @ message[:, :, int(8):int(11)])) / torch.sqrt(384.0 if isinstance(384.0, torch.Tensor) else torch.tensor(float(384.0))))
+    out[:, :, int(4):int(9)] = ((((w5 @ message[:, :, int(11):int(16)]) + (w6 @ message[:, :, int(16):int(21)])) + (w7 @ message[:, :, int(21):int(26)])) / torch.sqrt(384.0 if isinstance(384.0, torch.Tensor) else torch.tensor(float(384.0))))
+    out[:, :, int(9):int(16)] = (((w8 @ message[:, :, int(26):int(33)]) + (w9 @ message[:, :, int(33):int(40)])) / torch.sqrt(256.0 if isinstance(256.0, torch.Tensor) else torch.tensor(float(256.0))))
+    return (out / avg_num_neighbors)
 
 def readout2(node_feats, w1, w2):
     hidden = silu(((node_feats @ w1) / torch.sqrt(num_channels if isinstance(num_channels, torch.Tensor) else torch.tensor(float(num_channels)))))
@@ -230,9 +297,21 @@ def mace_energy(positions, numbers):
     lengths = edge_lengths(vectors)
     edge_feats, edge_attrs = radial_embedding(lengths), spherical_harmonics(vectors, lengths)
     node_feats0 = node_embedding(node_attrs, w_embed)
-    node_feats1 = mace_layer(node_feats0, node_attrs, edge_feats, edge_attrs, edge_index, w_up, w_r1, w_r2, w_r3, w_r4, w_0, w_1, w_2, w_3, w_prod1, w_prod2, w_prod3, w_sc, w_p)
+    node_feats_up = linear_up(node_feats0, w_up)
+    tp_weights = radial_mlp(edge_feats, w_r1, w_r2, w_r3, w_r4)
+    mji = conv_tp(node_feats_up, edge_attrs, tp_weights, edge_index)
+    message = linear(neighbor_sum(mji, edge_index, num_atoms), w_0, w_1, w_2, w_3)
+    sc = skip_tp(node_feats0, node_attrs, w_sc)
+    node_feats1 = node_update(scalar_product(message, node_attrs), sc, w_p)
+    node_vecs1 = node_update_vectors(vector_product(message, node_attrs), w_pv)
     node_energies = readout(node_feats1, w_readout)
-    node_feats2 = mace_layer(node_feats1, node_attrs, edge_feats, edge_attrs, edge_index, w2_up, w2_r1, w2_r2, w2_r3, w2_r4, w2_0, w2_1, w2_2, w2_3, w2_prod1, w2_prod2, w2_prod3, w2_sc, w2_p)
+    node_feats_up2 = linear_up(node_feats1, w2_up)
+    node_vecs_up2 = linear_up_vectors(node_vecs1, w2_up_v)
+    tp_weights2 = radial_mlp(edge_feats, w2_r1, w2_r2, w2_r3, w2_r4)
+    mji2 = conv_tp_second(node_feats_up2, node_vecs_up2, edge_attrs, tp_weights2, edge_index)
+    message2 = linear_second(neighbor_sum_second(mji2, edge_index, num_atoms), w2_0, w2_1, w2_2, w2_3, w2_4, w2_5, w2_6, w2_7, w2_8, w2_9)
+    sc2 = skip_tp(node_feats1, node_attrs, w2_sc)
+    node_feats2 = node_update(weighted_sum(B_features_1(message2, U1), B_features_2(message2, U2), B_features_3(message2, U3), node_attrs, w2_prod1, w2_prod2, w2_prod3), sc2, w2_p)
     node_energies2 = readout2(node_feats2, w2_ro1, w2_ro2)
     atom_energies = (node_attrs @ atomic_energies)
     energy = ((torch.sum(atom_energies if isinstance(atom_energies, torch.Tensor) else torch.tensor(float(atom_energies))) + (scale * (torch.sum(node_energies if isinstance(node_energies, torch.Tensor) else torch.tensor(float(node_energies))) + torch.sum(node_energies2 if isinstance(node_energies2, torch.Tensor) else torch.tensor(float(node_energies2)))))) + (shift * num_atoms))
@@ -245,7 +324,7 @@ methane_positions = torch.tensor([[0.0, 0.0, 0.0], [0.629, 0.629, 0.629], [(-0.6
 methane_numbers = torch.tensor([6.0, 1.0, 1.0, 1.0, 1.0], device=DEVICE)
 formaldehyde_positions = torch.tensor([[0.0, 0.0, 0.0], [0.0, 0.0, 1.205], [0.0, 0.94, (-0.587)], [0.0, (-0.94), (-0.587)]], device=DEVICE)
 formaldehyde_numbers = torch.tensor([6.0, 8.0, 1.0, 1.0], device=DEVICE)
-reference_energies = torch.tensor([(-12.602195), (-23.842101), (-21.815578)], device=DEVICE)
+reference_energies = torch.tensor([(-12.655106), (-23.912676), (-21.853748)], device=DEVICE)
 scale, shift = 0.8041538754478097, 0.16409696359187365
 z_table = torch.tensor([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0, 24.0, 25.0, 26.0, 27.0, 28.0, 29.0, 30.0, 31.0, 32.0, 33.0, 34.0, 35.0, 36.0, 37.0, 38.0, 39.0, 40.0, 41.0, 42.0, 43.0, 44.0, 45.0, 46.0, 47.0, 48.0, 49.0, 50.0, 51.0, 52.0, 53.0, 54.0, 55.0, 56.0, 57.0, 58.0, 59.0, 60.0, 61.0, 62.0, 63.0, 64.0, 65.0, 66.0, 67.0, 68.0, 69.0, 70.0, 71.0, 72.0, 73.0, 74.0, 75.0, 76.0, 77.0, 78.0, 79.0, 80.0, 81.0, 82.0, 83.0, 84.0, 85.0, 86.0, 87.0, 88.0, 89.0], device=DEVICE)
 r_cut = 6.0
@@ -278,21 +357,39 @@ w_3 = (torch.exp(torch.zeros(int(128), int(128), device=DEVICE) if isinstance(to
 U1 = (torch.exp(torch.zeros(int(16), int(1), device=DEVICE) if isinstance(torch.zeros(int(16), int(1), device=DEVICE), torch.Tensor) else torch.tensor(float(torch.zeros(int(16), int(1), device=DEVICE)))) / 128.0)
 U2 = (torch.exp(torch.zeros(int(16), int(16), int(4), device=DEVICE) if isinstance(torch.zeros(int(16), int(16), int(4), device=DEVICE), torch.Tensor) else torch.tensor(float(torch.zeros(int(16), int(16), int(4), device=DEVICE)))) / 128.0)
 U3 = (torch.exp(torch.zeros(int(16), int(16), int(16), int(23), device=DEVICE) if isinstance(torch.zeros(int(16), int(16), int(16), int(23), device=DEVICE), torch.Tensor) else torch.tensor(float(torch.zeros(int(16), int(16), int(16), int(23), device=DEVICE)))) / 128.0)
+U1v = (torch.exp(torch.zeros(int(3), int(16), int(1), device=DEVICE) if isinstance(torch.zeros(int(3), int(16), int(1), device=DEVICE), torch.Tensor) else torch.tensor(float(torch.zeros(int(3), int(16), int(1), device=DEVICE)))) / 128.0)
+U2v = (torch.exp(torch.zeros(int(3), int(16), int(16), int(6), device=DEVICE) if isinstance(torch.zeros(int(3), int(16), int(16), int(6), device=DEVICE), torch.Tensor) else torch.tensor(float(torch.zeros(int(3), int(16), int(16), int(6), device=DEVICE)))) / 128.0)
+U3v = (torch.exp(torch.zeros(int(3), int(16), int(16), int(16), int(51), device=DEVICE) if isinstance(torch.zeros(int(3), int(16), int(16), int(16), int(51), device=DEVICE), torch.Tensor) else torch.tensor(float(torch.zeros(int(3), int(16), int(16), int(16), int(51), device=DEVICE)))) / 128.0)
 w_prod1 = (torch.exp(torch.zeros(int(89), int(1), int(128), device=DEVICE) if isinstance(torch.zeros(int(89), int(1), int(128), device=DEVICE), torch.Tensor) else torch.tensor(float(torch.zeros(int(89), int(1), int(128), device=DEVICE)))) / 128.0)
 w_prod2 = (torch.exp(torch.zeros(int(89), int(4), int(128), device=DEVICE) if isinstance(torch.zeros(int(89), int(4), int(128), device=DEVICE), torch.Tensor) else torch.tensor(float(torch.zeros(int(89), int(4), int(128), device=DEVICE)))) / 128.0)
 w_prod3 = (torch.exp(torch.zeros(int(89), int(23), int(128), device=DEVICE) if isinstance(torch.zeros(int(89), int(23), int(128), device=DEVICE), torch.Tensor) else torch.tensor(float(torch.zeros(int(89), int(23), int(128), device=DEVICE)))) / 128.0)
+w_prod1v = (torch.exp(torch.zeros(int(89), int(1), int(128), device=DEVICE) if isinstance(torch.zeros(int(89), int(1), int(128), device=DEVICE), torch.Tensor) else torch.tensor(float(torch.zeros(int(89), int(1), int(128), device=DEVICE)))) / 128.0)
+w_prod2v = (torch.exp(torch.zeros(int(89), int(6), int(128), device=DEVICE) if isinstance(torch.zeros(int(89), int(6), int(128), device=DEVICE), torch.Tensor) else torch.tensor(float(torch.zeros(int(89), int(6), int(128), device=DEVICE)))) / 128.0)
+w_prod3v = (torch.exp(torch.zeros(int(89), int(51), int(128), device=DEVICE) if isinstance(torch.zeros(int(89), int(51), int(128), device=DEVICE), torch.Tensor) else torch.tensor(float(torch.zeros(int(89), int(51), int(128), device=DEVICE)))) / 128.0)
 w_sc = (torch.exp(torch.zeros(int(128), int(89), int(128), device=DEVICE) if isinstance(torch.zeros(int(128), int(89), int(128), device=DEVICE), torch.Tensor) else torch.tensor(float(torch.zeros(int(128), int(89), int(128), device=DEVICE)))) / 128.0)
 w_p = (torch.exp(torch.zeros(int(128), int(128), device=DEVICE) if isinstance(torch.zeros(int(128), int(128), device=DEVICE), torch.Tensor) else torch.tensor(float(torch.zeros(int(128), int(128), device=DEVICE)))) / 128.0)
+w_pv = (torch.exp(torch.zeros(int(128), int(128), device=DEVICE) if isinstance(torch.zeros(int(128), int(128), device=DEVICE), torch.Tensor) else torch.tensor(float(torch.zeros(int(128), int(128), device=DEVICE)))) / 128.0)
 w_readout = (torch.exp(torch.zeros(int(128), int(1), device=DEVICE) if isinstance(torch.zeros(int(128), int(1), device=DEVICE), torch.Tensor) else torch.tensor(float(torch.zeros(int(128), int(1), device=DEVICE)))) / 128.0)
 w2_up = (torch.exp(torch.zeros(int(128), int(128), device=DEVICE) if isinstance(torch.zeros(int(128), int(128), device=DEVICE), torch.Tensor) else torch.tensor(float(torch.zeros(int(128), int(128), device=DEVICE)))) / 128.0)
+w2_up_v = (torch.exp(torch.zeros(int(128), int(128), device=DEVICE) if isinstance(torch.zeros(int(128), int(128), device=DEVICE), torch.Tensor) else torch.tensor(float(torch.zeros(int(128), int(128), device=DEVICE)))) / 128.0)
 w2_r1 = (torch.exp(torch.zeros(int(10), int(64), device=DEVICE) if isinstance(torch.zeros(int(10), int(64), device=DEVICE), torch.Tensor) else torch.tensor(float(torch.zeros(int(10), int(64), device=DEVICE)))) / 128.0)
 w2_r2 = (torch.exp(torch.zeros(int(64), int(64), device=DEVICE) if isinstance(torch.zeros(int(64), int(64), device=DEVICE), torch.Tensor) else torch.tensor(float(torch.zeros(int(64), int(64), device=DEVICE)))) / 128.0)
 w2_r3 = (torch.exp(torch.zeros(int(64), int(64), device=DEVICE) if isinstance(torch.zeros(int(64), int(64), device=DEVICE), torch.Tensor) else torch.tensor(float(torch.zeros(int(64), int(64), device=DEVICE)))) / 128.0)
-w2_r4 = (torch.exp(torch.zeros(int(64), int(512), device=DEVICE) if isinstance(torch.zeros(int(64), int(512), device=DEVICE), torch.Tensor) else torch.tensor(float(torch.zeros(int(64), int(512), device=DEVICE)))) / 128.0)
+w2_r4 = (torch.exp(torch.zeros(int(64), int(1280), device=DEVICE) if isinstance(torch.zeros(int(64), int(1280), device=DEVICE), torch.Tensor) else torch.tensor(float(torch.zeros(int(64), int(1280), device=DEVICE)))) / 128.0)
+cg_121 = (torch.exp(torch.zeros(int(3), int(5), int(3), device=DEVICE) if isinstance(torch.zeros(int(3), int(5), int(3), device=DEVICE), torch.Tensor) else torch.tensor(float(torch.zeros(int(3), int(5), int(3), device=DEVICE)))) / 128.0)
+cg_112 = (torch.exp(torch.zeros(int(3), int(3), int(5), device=DEVICE) if isinstance(torch.zeros(int(3), int(3), int(5), device=DEVICE), torch.Tensor) else torch.tensor(float(torch.zeros(int(3), int(3), int(5), device=DEVICE)))) / 128.0)
+cg_132 = (torch.exp(torch.zeros(int(3), int(7), int(5), device=DEVICE) if isinstance(torch.zeros(int(3), int(7), int(5), device=DEVICE), torch.Tensor) else torch.tensor(float(torch.zeros(int(3), int(7), int(5), device=DEVICE)))) / 128.0)
+cg_123 = (torch.exp(torch.zeros(int(3), int(5), int(7), device=DEVICE) if isinstance(torch.zeros(int(3), int(5), int(7), device=DEVICE), torch.Tensor) else torch.tensor(float(torch.zeros(int(3), int(5), int(7), device=DEVICE)))) / 128.0)
 w2_0 = (torch.exp(torch.zeros(int(128), int(128), device=DEVICE) if isinstance(torch.zeros(int(128), int(128), device=DEVICE), torch.Tensor) else torch.tensor(float(torch.zeros(int(128), int(128), device=DEVICE)))) / 128.0)
 w2_1 = (torch.exp(torch.zeros(int(128), int(128), device=DEVICE) if isinstance(torch.zeros(int(128), int(128), device=DEVICE), torch.Tensor) else torch.tensor(float(torch.zeros(int(128), int(128), device=DEVICE)))) / 128.0)
 w2_2 = (torch.exp(torch.zeros(int(128), int(128), device=DEVICE) if isinstance(torch.zeros(int(128), int(128), device=DEVICE), torch.Tensor) else torch.tensor(float(torch.zeros(int(128), int(128), device=DEVICE)))) / 128.0)
 w2_3 = (torch.exp(torch.zeros(int(128), int(128), device=DEVICE) if isinstance(torch.zeros(int(128), int(128), device=DEVICE), torch.Tensor) else torch.tensor(float(torch.zeros(int(128), int(128), device=DEVICE)))) / 128.0)
+w2_4 = (torch.exp(torch.zeros(int(128), int(128), device=DEVICE) if isinstance(torch.zeros(int(128), int(128), device=DEVICE), torch.Tensor) else torch.tensor(float(torch.zeros(int(128), int(128), device=DEVICE)))) / 128.0)
+w2_5 = (torch.exp(torch.zeros(int(128), int(128), device=DEVICE) if isinstance(torch.zeros(int(128), int(128), device=DEVICE), torch.Tensor) else torch.tensor(float(torch.zeros(int(128), int(128), device=DEVICE)))) / 128.0)
+w2_6 = (torch.exp(torch.zeros(int(128), int(128), device=DEVICE) if isinstance(torch.zeros(int(128), int(128), device=DEVICE), torch.Tensor) else torch.tensor(float(torch.zeros(int(128), int(128), device=DEVICE)))) / 128.0)
+w2_7 = (torch.exp(torch.zeros(int(128), int(128), device=DEVICE) if isinstance(torch.zeros(int(128), int(128), device=DEVICE), torch.Tensor) else torch.tensor(float(torch.zeros(int(128), int(128), device=DEVICE)))) / 128.0)
+w2_8 = (torch.exp(torch.zeros(int(128), int(128), device=DEVICE) if isinstance(torch.zeros(int(128), int(128), device=DEVICE), torch.Tensor) else torch.tensor(float(torch.zeros(int(128), int(128), device=DEVICE)))) / 128.0)
+w2_9 = (torch.exp(torch.zeros(int(128), int(128), device=DEVICE) if isinstance(torch.zeros(int(128), int(128), device=DEVICE), torch.Tensor) else torch.tensor(float(torch.zeros(int(128), int(128), device=DEVICE)))) / 128.0)
 w2_prod1 = (torch.exp(torch.zeros(int(89), int(1), int(128), device=DEVICE) if isinstance(torch.zeros(int(89), int(1), int(128), device=DEVICE), torch.Tensor) else torch.tensor(float(torch.zeros(int(89), int(1), int(128), device=DEVICE)))) / 128.0)
 w2_prod2 = (torch.exp(torch.zeros(int(89), int(4), int(128), device=DEVICE) if isinstance(torch.zeros(int(89), int(4), int(128), device=DEVICE), torch.Tensor) else torch.tensor(float(torch.zeros(int(89), int(4), int(128), device=DEVICE)))) / 128.0)
 w2_prod3 = (torch.exp(torch.zeros(int(89), int(23), int(128), device=DEVICE) if isinstance(torch.zeros(int(89), int(23), int(128), device=DEVICE), torch.Tensor) else torch.tensor(float(torch.zeros(int(89), int(23), int(128), device=DEVICE)))) / 128.0)
